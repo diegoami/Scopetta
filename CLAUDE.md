@@ -8,10 +8,10 @@ step, the 1997 card art, one opponent formula with three weight vectors.
 `PLAN.md` is the architecture and the plan, and it is the reference for
 anything this file does not state. Section 7 says how the work is organised:
 one iteration per session, a fresh-context review per pull request, CI on every
-pull request. Section 0 lists the seven decisions that were the owner's to make,
-each with a default; all seven are confirmed. Tressette is the reference for everything the plan does
-not state, and Discola for everything Tressette does not; clone both beside
-this repo if they are not already there.
+pull request. Section 0 lists the seven decisions that were the owner's to
+make, each with a default; all seven are confirmed. Tressette is the reference
+for everything the plan does not state, and Discola for everything Tressette
+does not; clone both beside this repo if they are not already there.
 
 This file is a stub. Iteration 0 expands it into this repo's version of
 Tressette's `CLAUDE.md`: the same rules, reworded for this game. Until then,
