@@ -33,9 +33,10 @@ and the sections below say what moves.
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
 
-None of the seven has been confirmed yet. Decision 6 is the one the owner is
-most likely to feel at the table, and it is worth playing iteration 3 before
-settling it.
+All seven were confirmed by the owner before iteration 0, on the day the
+plan was written. Decision 6 is the one the owner is most likely to feel at
+the table, and it is the one to revisit after playing iteration 3 if it
+turns out to hide the rule rather than teach it.
 
 ## 1. What "in the spirit of Discola" means here
 
@@ -955,9 +956,9 @@ Discola's last recorded commit, for whatever Tressette did not change, is
 
 ### 7.6 The owner's part
 
-Confirm the seven defaults in §0, or change them: 1, 2, 5 and 7 before
-iteration 1; 3, 4 and 6 before iteration 4, and 6 is best judged by playing
-iteration 3 first. Start each iteration. Play the game after iterations 3 and
+The seven defaults in §0 are confirmed. Revisit decision 6 after playing
+iteration 3 if the one-tap rhythm hides the capture rule rather than teaching
+it. Start each iteration. Play the game after iterations 3 and
 5 — the harness measures strength, and only a player can measure whether it
 is fun — and file what you find as `defect` issues.
 
