@@ -123,6 +123,13 @@ The sette di denari is the *settebello*.
   the same rng, so a seed still names one deal.
 - When both hands are empty the dealer gives three more each, and no more to
   the table. Six rounds in all: 36 cards played, 4 dealt to the table.
+- A hand is held **sorted**, as the house sorts them: by suit in the sprite
+  sheets' order — denari, coppe, spade, bastoni — and within a suit by value,
+  highest first. The engine sorts it when it deals it, at the start of the
+  deal and at every round; a card played leaves a hole, and nothing re-sorts
+  a hand mid-round, because a card that moves under the thumb is a misplay.
+  Tressette is adding the same sort as this plan is confirmed; iteration 1
+  takes its function's name and its order so the three games read alike.
 - The non-dealer plays first, in every round. The deal alternates. On a cold
   start you play first, so the opponent deals, matching Discola and Tressette,
   where you lead the first deal.
@@ -208,6 +215,7 @@ rngSeed(seed)                      // a seeded rng, versioned with the engine, w
 // a deal
 newDeal(state, rng)                // shuffle, redeal on three re, three each and four up, set who plays
 distribuisci(state)                // the next round of three each; called when both hands are empty
+ordina(hand)                       // the house sort: suit, then value descending; called by the two above
 prese(tavola, card)                // every legal capture for this card: [] to lay it down, else
                                    // a list of index sets — singles only, if any single matches
 gioca(state, who, slot, presa)     // play a card; presa is one of prese()'s sets, required when non-empty
@@ -246,7 +254,7 @@ One mutable object, as in Discola. `render()` reads it and writes the DOM.
 ```
 cards[40]          the shuffled deck
 next               index of the next card to deal; 40 − next is the deck
-hands[2][3]        BASSO = 0 (you), ALTO = 1 (them); null = empty slot
+hands[2][3]        BASSO = 0 (you), ALTO = 1 (them); null = empty slot; sorted when dealt, holes kept
 tavola[]           the face-up cards, in the order they landed
 prese[2][]         each player's captured cards; the page shows a count, the engine scores them
 scope[2]           scope made this deal
@@ -521,7 +529,8 @@ settings ──Cambia avversario──► confirm ─► start
   margin. A phrase that can be wrong about the deal it describes is worse
   than no phrase.
 
-Keys: `1`–`3` play a card, or raise it when a capture needs choosing; `Space`
+Keys: `1`–`3` play a card by its sorted slot, or raise it when a capture
+needs choosing; `Space`
 cycles the proposed capture; `Enter` confirms it; `Escape` puts the card
 back, or backs out of a sheet. The `6winouj64ie` easter egg is kept, and it
 comes back to the table: only `1`–`3` are card keys here, so the `6` and the
@@ -679,7 +688,8 @@ nothing else.
 
 `engine.js` per §3.2, with a seeded rng. `tools/engine.test.mjs` on
 `node --test`: values and primiera values; the deal, the redeal on three re,
-six rounds; `prese` — single before sum, every sum found, none invented,
+six rounds; every hand sorted as §2.2 says at the deal and after each round,
+and a hole left where a card was played; `prese` — single before sum, every sum found, none invented,
 empty when nothing takes; `gioca` refuses a play that must capture and does
 not, and a capture that is not one of `prese()`'s; a scopa counted, and not
 counted on the 36th play; the leftovers to the last taker; `scoreDeal` on
@@ -708,6 +718,13 @@ comment promising not to use it.
 `check.yml` runs `node --test 'tools/**/*.test.mjs'` — the glob, because
 Node 22 reads a bare directory as a module path — on pull requests and on
 pushes to `main` only, so a pull request branch does not run twice.
+
+**The sort is the engine's, and it is here, not later.** Ties in `compGioca`
+go to the lowest slot, so the order of a hand is part of what the golden
+fixture freezes; a sort added after the fixture is recorded changes plays
+nobody chose to change and costs a re-record. Tressette is adding its sort
+after its fixture froze and pays exactly that. Here the sort is in before
+iteration 2 records anything.
 
 **Done when** the tests pass locally and in the Action, and the engine has no
 DOM reference.
@@ -1014,8 +1031,9 @@ claim, not a measurement; the estimates in §3.7 say they are estimates, and
 the one measurement in §3.4 says what it counted.
 
 **The ancestors move.** Tressette is shipped and still takes defects; it
-moved twice between this plan being written and being confirmed, and the
-first of those moves rewrote decision 5. Discola moved twice during
+moved twice between this plan being written and being confirmed, the first
+of those moves rewrote decision 5, and a third — the hand sort of §2.2 — was
+announced before it landed. Discola moved twice during
 Tressette's iteration 0 alone. Anything forked is a snapshot with a commit.
 When an iteration forks, it records the commit here and in its pull request,
 and the next iteration that forks checks for movement first.
