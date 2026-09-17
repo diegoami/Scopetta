@@ -114,8 +114,17 @@ written down.
 
 **The fan** — the assertions Tressette needed and Briscola did not, because a
 hand of ten cards overlaps. This game's hand is three whole cards and never
-fans; iteration 3 moves every assertion in this section to the table row, which
-is where up to thirteen cards overlap here. The step of the fan matches the page's own
+fans, so iteration 3 splits this section three ways rather than moving it, per
+PLAN.md §3.7. **Four assertions move to the table row**, where up to thirteen
+cards overlap here: the strip floor, the steps being even, the last card whole,
+and the row staying inside the table. **The raised card and the say line stay
+in the hand** and carry over unchanged — §3.7 lists both among the assertions
+that do. **The dimming assertion has no subject in this game and is dropped,
+not moved**: dimming means "the rule forbids this card", and no card in a Scopa
+hand is ever forbidden. Capture is compulsory only in the sense that a card
+which *can* take must take; §2.3 leaves the player free to play a different
+card that takes nothing. There is no follow-suit rule to forbid anything.
+The step of the fan matches the page's own
 `--strip`, which catches margins that have drifted from the token at any
 `--overlap`; and the strip is either 24px wide or at least `.45` of a card,
 which is the share the design gives its tightest orientation. Both terms are

@@ -682,7 +682,8 @@ iteration 3, worded so in `CLAUDE.md`), `netlify.toml`, `.gitignore`,
 `CLAUDE.md` into this repo's version: the same rules, reworded for the table
 row rather than the fan. Empty `public/index.html` with the doctype,
 `lang="it"`, the charset, the viewport meta, the title and the font links —
-the four head tags the document pass asserts. A two-line `README.md`
+four of which are the head tags the document pass asserts, the title and the
+font links being there because the page will want them. A two-line `README.md`
 pointing at this file; iteration 6 rewrites it.
 
 **Done when** the repo holds exactly what the paragraph above names, and
@@ -882,8 +883,19 @@ built iteration 0's head commit and put three checks and a deploy preview on
 its pull request. So every pull request carries a preview from the first one,
 and iteration 3 gets one for the table while it is being reviewed rather than
 after it merges. What the preview shows until then is a blank page, which is
-correct. Netlify parsing `netlify.toml` and accepting its header blocks is
-also, from here on, a real check on that file rather than a claim about it.
+correct.
+
+**What nobody has checked is what the site publishes**, and the paragraph above
+says why it cannot be checked from here: the container cannot reach the live
+URL, and the preview refuses it too (`CONNECT tunnel failed, response 403`).
+`netlify.toml` sets `publish = "public"` and its own comment records that
+Discola once published `.` and served a private repo's documents from the live
+site. The file should win over any directory set in the Netlify UI, but should
+is not a measurement, and this repo's root is `PLAN.md` and `CLAUDE.md`. So it
+is one line for the owner, worth spending now that the site is live three
+iterations early rather than at iteration 6: **confirm that
+`scopetta.netlify.app/PLAN.md` returns 404.** If it does not, the project is
+set to publish the root and the setting needs changing, not the file.
 
 **Done when** the live URL plays and the handover document would let a
 stranger take the project over. The first half of that cannot be asserted
