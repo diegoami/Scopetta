@@ -9,13 +9,14 @@ their weights, and a UI check calibrated against the defects that actually
 ship.
 
 **Status: nothing is built.** This document is the plan. It becomes `SPEC.md`
-once the game exists, the way Discola's did and Tressette's will.
+once the game exists, the way Discola's and Tressette's did.
 
 Tressette is the ancestor this game forks from, not Discola: Tressette already
-has the engine in its own file, the check with three passes, CI with two jobs,
+has the engine in its own file, the check with four passes, CI with two jobs,
 the line above the hand that is always in the budget, the floating toast, the
-seeded rng and the golden fixture. Discola is the grandparent, and the
-reference for whatever Tressette did not change.
+seeded rng, the golden fixture, and a handover in `SPEC.md` written for a
+stranger. Discola is the grandparent, and the reference for whatever Tressette
+did not change.
 
 ---
 
@@ -656,10 +657,10 @@ this project to learn again.
 
 ### 0 — Scaffold (½ day)
 
-Fork from **Tressette at `c8253d9`** ("The lever the ladder missed, and a
-player in every corner"), and write the commit into the pull request. Before
-forking, check whether Tressette has moved: it moved once between this plan
-being written and being confirmed, and its iteration 6 is still open.
+Fork from **Tressette at `ed445bd`** ("Iteration 6 — ship: the handover and
+the front door"), and write the commit into the pull request. Before forking,
+check whether Tressette has moved: it moved twice between this plan being
+written and being confirmed, and a shipped project still takes defects.
 
 Copy from Tressette: `public/decks/`, `tools/pack_cards.py`,
 `tools/check_ui.mjs` and the `ui-check` skill (both **dormant** until
@@ -840,12 +841,25 @@ every weight of the whole roster, Piero's rolled seven included.
 
 ### 6 — Ship (½ day)
 
-Netlify site. README with the rules as played and provenance. `SPEC.md`
-written from this document and what actually got built, including the
-"known gaps" list.
+README with the rules as played and provenance. `SPEC.md` written from this
+document and what actually got built, in the shape of Tressette's: what it
+is, the repository, the engine contract, the rules as implemented, the
+opponent and where every number came from, the layout, the checks,
+persistence, what the project learned, the known gaps, provenance.
+
+**The Netlify site is not this iteration's**, and that is Tressette's lesson
+rather than this plan's idea: its owner connected the site during iteration
+4, so every pull request from then on carried a deploy preview, and both of
+that iteration's defects were found on a preview rather than at the live
+URL after the merge. So the site is connected by the owner as soon as
+iteration 3 has a table to look at, publishing `public/` and nothing else,
+and iteration 6 inherits it.
 
 **Done when** the live URL plays and the handover document would let a
-stranger take the project over.
+stranger take the project over. The first half of that cannot be asserted
+from inside the project: the container the work is done in cannot reach the
+live URL, so the check asserts the directory `netlify.toml` publishes, and
+the owner asserts the URL by playing it, and says so in the pull request.
 
 **Total: 7–8 days**, with the table and the opponent the two estimates that
 can slip.
@@ -884,8 +898,9 @@ can slip.
 ## 7. How this gets built
 
 Written for a builder starting with no context. Read this section, then the
-rest of this document, then Tressette's `PLAN.md` — its iteration
-retrospectives are the part that matters — then Discola.
+rest of this document, then Tressette's `SPEC.md` and its `PLAN.md` — the
+handover says what exists, and the plan's iteration retrospectives say what
+it cost to learn, which is the part that matters — then Discola.
 
 ### 7.1 One builder, one iteration per session
 
@@ -894,10 +909,10 @@ decides when each iteration starts. Each iteration is one session, opened
 with:
 
 > Do iteration N of PLAN.md in `diegoami/Scopetta`. Read PLAN.md in full
-> first, then `diegoami/Tressette` (`CLAUDE.md`, `PLAN.md`, `public/engine.js`,
-> `public/index.html`, `tools/check_ui.mjs`, `tools/selfplay.mjs`,
-> `.claude/skills/ui-check`), then `diegoami/discola-web` (`SPEC.md`), then
-> the previous iteration's pull request. Work on a branch named
+> first, then `diegoami/Tressette` (`SPEC.md` first, then `CLAUDE.md`,
+> `PLAN.md`, `public/engine.js`, `public/index.html`, `tools/check_ui.mjs`,
+> `tools/selfplay.mjs`, `.claude/skills/ui-check`), then `diegoami/discola-web`
+> (`SPEC.md`), then the previous iteration's pull request. Work on a branch named
 > `iteration-N-<slug>` off the default branch. Stop at the iteration's "Done
 > when": do not start the next one. Finish with every check green, commit,
 > push, and open a pull request with the description in §7.4.
@@ -911,7 +926,9 @@ needs the engine's `prese`, the check needs the table's markup, the profiles
 need the harness. Subagents earn their keep in one place: read-only
 exploration of the two ancestors while the builder works.
 
-Both ancestors are references. If they are not beside this repo, clone them:
+Both ancestors are references, and Tressette's `SPEC.md` is the one document
+that says in one place what the fork inherits. If they are not beside this
+repo, clone them:
 `https://github.com/diegoami/Tressette` and
 `https://github.com/diegoami/discola-web`.
 
@@ -996,16 +1013,16 @@ figure in this document that is not followed by how it was obtained is a
 claim, not a measurement; the estimates in §3.7 say they are estimates, and
 the one measurement in §3.4 says what it counted.
 
-**The ancestors move.** Tressette is a live repository with its iteration 6
-open and defects being filed against it; it moved once between this plan
-being written and being confirmed, and that move rewrote decision 5. Discola
-moved twice during Tressette's iteration 0 alone. Anything forked is a snapshot with a commit.
+**The ancestors move.** Tressette is shipped and still takes defects; it
+moved twice between this plan being written and being confirmed, and the
+first of those moves rewrote decision 5. Discola moved twice during
+Tressette's iteration 0 alone. Anything forked is a snapshot with a commit.
 When an iteration forks, it records the commit here and in its pull request,
 and the next iteration that forks checks for movement first.
 
 | Forked | From | At | By |
 |---|---|---|---|
-| decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `c8253d9` | iteration 0 |
+| decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `ed445bd` | iteration 0 |
 | CSS and table markup | Tressette | to be recorded | iteration 3 |
 | selfplay harness | Tressette | to be recorded | iteration 2 |
 
