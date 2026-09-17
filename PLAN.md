@@ -129,7 +129,11 @@ The sette di denari is the *settebello*.
   deal and at every round; a card played leaves a hole, and nothing re-sorts
   a hand mid-round, because a card that moves under the thumb is a misplay.
   Tressette is adding the same sort as this plan is confirmed; iteration 1
-  takes its function's name and its order so the three games read alike.
+  takes its function's name and its order so the three games read alike. As of
+  iteration 0's fork it had not landed — `ed445bd` has no sort in its
+  `engine.js`, checked rather than assumed — so iteration 1 looks again, and
+  if there is still no name to take it uses `ordina` per §3.2 and records here
+  that this game went first.
 - The non-dealer plays first, in every round. The deal alternates. On a cold
   start you play first, so the opponent deals, matching Discola and Tressette,
   where you lead the first deal.
@@ -678,7 +682,8 @@ iteration 3, worded so in `CLAUDE.md`), `netlify.toml`, `.gitignore`,
 `CLAUDE.md` into this repo's version: the same rules, reworded for the table
 row rather than the fan. Empty `public/index.html` with the doctype,
 `lang="it"`, the charset, the viewport meta, the title and the font links —
-the four head tags the document pass asserts. A two-line `README.md`
+four of which are the head tags the document pass asserts, the title and the
+font links being there because the page will want them. A two-line `README.md`
 pointing at this file; iteration 6 rewrites it.
 
 **Done when** the repo holds exactly what the paragraph above names, and
@@ -872,6 +877,29 @@ URL after the merge. So the site is connected by the owner as soon as
 iteration 3 has a table to look at, publishing `public/` and nothing else,
 and iteration 6 inherits it.
 
+**It was in fact connected at iteration 0**, earlier than the paragraph above
+expected and further in the direction its lesson points: the site `scopetta`
+built iteration 0's head commit and put three checks and a deploy preview on
+its pull request. So every pull request carries a preview from the first one,
+and iteration 3 gets one for the table while it is being reviewed rather than
+after it merges. What the preview shows until then is a blank page, which is
+correct.
+
+**What nobody has checked is what the site publishes**, and the paragraph above
+says why it cannot be checked from here: the container cannot reach the live
+URL, and the preview refuses it too (`CONNECT tunnel failed, response 403`).
+`netlify.toml` sets `publish = "public"` and its own comment records that
+Discola once published `.` and served a private repo's documents from the live
+site. The file should win over any directory set in the Netlify UI, but should
+is not a measurement, and this repo's root is `PLAN.md` and `CLAUDE.md`.
+
+**The owner's call at iteration 0 was not to verify it, and to ship.** So it
+stays unverified on purpose rather than by oversight, and this paragraph is
+where that is written down. The place it stops being free is iteration 6, whose
+"Done when" already turns on the owner playing the live URL and saying so —
+`scopetta.netlify.app/PLAN.md` returning 404 is one line of that same pass, and
+the setting rather than the file is what changes if it does not.
+
 **Done when** the live URL plays and the handover document would let a
 stranger take the project over. The first half of that cannot be asserted
 from inside the project: the container the work is done in cannot reach the
@@ -1043,6 +1071,17 @@ and the next iteration that forks checks for movement first.
 | decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `ed445bd` | iteration 0 |
 | CSS and table markup | Tressette | to be recorded | iteration 3 |
 | selfplay harness | Tressette | to be recorded | iteration 2 |
+
+Iteration 0 checked for movement before forking, as the paragraph above says
+to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
+the fork is the one the table names. Iterations 2 and 3 check again.
+
+**Check movement against the remote, not against the clone beside this repo.**
+At iteration 0 that clone's own `main` was stale at `caaef0f` — iteration 5,
+two merges behind — while its working tree was checked out at `ed445bd`. A
+`git log main` there would have reported the ancestor as *older* than the
+pinned commit and invited a fork from the wrong place; `git ls-remote --heads
+origin` reports `ed445bd` and is the check to run.
 
 Discola's last recorded commit, for whatever Tressette did not change, is
 `22c4b9c`.
