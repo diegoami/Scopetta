@@ -34,8 +34,11 @@ and the sections below say what moves.
 | 5 | The opponents | **The house's four names — Franco, Valerio, Graziano and Piero — with as many of them at the table as the formula has corners for.** Tressette's iteration 5 ended with four, one to each corner of the two weights that turned out to decide the game a profile plays, after a first pass had cut the roster to three by pricing one lever and missing the other. So the count here is what iteration 2's ladder finds: two levers make four corners and four names; one lever makes two, and the roster says so. Franco is the house standard whatever the count, and Piero is rolled once per session. | Nothing in the code moves either way — `rollProfiles` returns whatever the roster is — but a name that is not a different player by measurement does not go on the start sheet. |
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
+| 8 | What *scopa d'assi* means, if it is ever wanted | **Not built, and not guessed at.** Raised by iteration 1: §5 lists it among the variants left out, but this plan never says what it does, and the house rule genuinely differs — in some it is another name for *asso piglia tutto*, in others a scopa scored for an asso played to an empty table. The other three variants are live branches behind constants that are off; this one is a documented gap instead, because a constant guessing between two rules would be worse than none. | Nothing, unless the owner wants it. If so, say which of the two it is and it becomes a fourth constant like the others. |
 
-All seven were confirmed by the owner before iteration 0. Decision 5 was
+The first seven were confirmed by the owner before iteration 0. The eighth was
+raised by iteration 1 and is open, but it blocks nothing: its default is the
+game as specified, and answering it later costs one constant. Decision 5 was
 confirmed twice: first as a roster of three, on the day the plan was written;
 then, after Tressette's roster went back to four the same day — the review of
 its iteration 5 found a second lever — in the form the row has now, in the
@@ -131,9 +134,27 @@ The sette di denari is the *settebello*.
   Tressette is adding the same sort as this plan is confirmed; iteration 1
   takes its function's name and its order so the three games read alike. As of
   iteration 0's fork it had not landed — `ed445bd` has no sort in its
-  `engine.js`, checked rather than assumed — so iteration 1 looks again, and
-  if there is still no name to take it uses `ordina` per §3.2 and records here
-  that this game went first.
+  `engine.js`, checked rather than assumed.
+
+  **Iteration 1 looked again, and the two games have gone different ways on
+  purpose.** Tressette's sort landed at `dec1c74` while this iteration was
+  being written, and it is not the same thing: `ordinaMano(hand)` returns
+  **slot indices**, a display order, and deliberately does *not* reorder
+  `state.hands`. Its reason is worth reading before anyone here is tempted to
+  copy it — a slot is a card's identity, `mosseLegali` returns slot indices,
+  `gioca` takes one and `compGioca` breaks ties on the lowest, so a hand that
+  sorted itself would move every one of those under its callers and change
+  which card the opponent plays.
+
+  That reason does not reach this game, and the difference is the deal. Here
+  the sort happens **only when a hand is dealt**, before any play of the round,
+  so a slot is stable for as long as a card is held — which is the property
+  Tressette's objection is actually about. Scopetta therefore sorts
+  `state.hands` in `ordina`, as §2.2 above specifies, and iteration 2's fixture
+  freezes that order from the start rather than inheriting one. So: this game
+  went first, and it kept its own name and its own meaning. `ordina` sorts
+  cards; `ordinaMano` sorts slots; they are not the same function and should
+  not be made to look like one.
 - The non-dealer plays first, in every round. The deal alternates. On a cold
   start you play first, so the opponent deals, matching Discola and Tressette,
   where you lead the first deal.
@@ -191,6 +212,7 @@ public/engine.js    rules + opponent. Pure functions over a plain state object. 
 public/decks/*.png  the five sprite sheets, byte-identical copies from Tressette
 tools/check_ui.mjs  the UI check, forked from Tressette and extended for the table (§3.7)
 tools/engine.test.mjs   unit tests on node --test, no dependencies
+tools/break.mjs     every rule broken on purpose, and whether a test caught it (§4 iteration 1)
 tools/opponent.test.mjs the trap suite and the golden test
 tools/selfplay.mjs  headless matches: profile vs profile, vs baselines; the tuning loop
 tools/golden.json   the frozen plays, re-recorded by `selfplay.mjs --golden`
@@ -250,6 +272,20 @@ once per trick, because there are no tricks.
 `gioca` ends the deal itself: after the 36th play it hands the leftovers to
 the last taker and sets `over`, so the search in §3.4 reaches a real end of
 deal and scores it with the real `scoreDeal`, not a proxy.
+
+**And it deals the next round itself**, decided in iteration 1 and recorded
+here because §3.5's flow draws `distribuisci` as the caller's step and §3.2 is
+what iteration 3 reads. When a play empties both hands and the deal is not
+over, `gioca` calls `distribuisci` and returns `nuovoGiro: true`. The reason is
+the state that would otherwise exist: a deal sitting with two empty hands and
+nobody dealing is reachable and nothing detects it. `distribuisci` stays
+callable on its own and throws on an empty deck.
+
+The page needs the flag rather than `plays % 6`, and not only for tidiness:
+both hands are empty **for a beat** between rounds, §4 iteration 3 names that
+as one of the states the check must put the page in, and after `gioca` returns
+the state no longer shows it. `nuovoGiro` is how the page knows to draw the
+beat before the new hand.
 
 ### 3.3 State
 
@@ -572,6 +608,13 @@ player has one. So the check renders a table of thirteen, not the largest a
 random deal happened to produce; the engine test reports the largest it saw
 in 10,000 deals so that the two numbers can be compared, and if a deal ever
 produced fourteen the proof above is wrong and the bound moves.
+
+Iteration 1 measured it: **twelve**, on seed 7755, over 10,000 random-legal
+deals — the figure `node --test 'tools/**/*.test.mjs'` prints. The bound holds
+and is not tight, which is the case this paragraph was written for. A
+random-legal player is not an adversary trying to fill the table, so twelve is
+a floor under what is reachable rather than the maximum; the check still
+renders thirteen, and the test still fails at fourteen.
 
 Thirteen cards do not sit side by side on a phone. Two rules, in this order:
 
@@ -915,7 +958,7 @@ can slip.
 |---|---|
 | Scopone, scientifico or otherwise | A different game: ten cards each, four players, partners, a whole theory of *spariglio*. Nothing here precludes it — `prese`, `gioca` and `scoreDeal` are the same rules — but the table is not. |
 | A match to 11 across deals | The traditional form, left out on the owner's standing call for one deal per partita. `scoreDeal` returns per-deal points, so a running total, a second dialog and a saved match are additions, not a redesign. The case for it is stronger here than in Tressette, because a single deal draws more often; §0 says so. |
-| Napola, asso piglia tutto, re bello, scopa d'assi, scopa a quindici | Variants. Each is a named constant or a branch away, and the about screen says which Scopa this is. |
+| Napola, asso piglia tutto, re bello, scopa d'assi, scopa a quindici | Variants. Each is a named constant or a branch away, and the about screen says which Scopa this is. Iteration 1 made three of them constants read by a real branch — `NAPOLA`, `ASSO_PIGLIA_TUTTO`, `RE_BELLO` — each with a test that flips it and watches the branch fire, because a constant nothing consults would not make a change one line, it would only look as though it had. Scopa d'assi is the exception and is a gap rather than a constant, for the reason §0 decision 8 gives; the question lives there, not here, because a second copy of an open question goes stale. |
 | Multiplayer, accounts, a server | Same reason as Discola: any server is an operational liability that outlives interest. |
 | A framework or build step | Same reason as Discola. |
 | Localisation | The terms of art are Italian. |
@@ -1076,6 +1119,15 @@ Iteration 0 checked for movement before forking, as the paragraph above says
 to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
 the fork is the one the table names. Iterations 2 and 3 check again.
 
+**Tressette moved again during iteration 1**, from `ed445bd` to `dec1c74` —
+the hand sort of §2.2, which landed the other way round from this game's. What
+that means for anything forked from it is in §2.2. What it means here is the
+tally: three moves so far, twice between this plan being written and confirmed
+and once **in the middle of an iteration**, while its work was being written.
+Iteration 0 checked and found it unmoved, so a check is not a formality in
+either direction. Iterations 2 and 3 fork from `dec1c74` or later and record
+which.
+
 **Check movement against the remote, not against the clone beside this repo.**
 At iteration 0 that clone's own `main` was stale at `caaef0f` — iteration 5,
 two merges behind — while its working tree was checked out at `ed445bd`. A
@@ -1088,7 +1140,11 @@ Discola's last recorded commit, for whatever Tressette did not change, is
 
 ### 7.6 The owner's part
 
-The seven defaults in §0 are confirmed. Revisit decision 6 after playing
+The first seven defaults in §0 are confirmed. **Decision 8 is open and is one
+question**, raised by iteration 1: if you ever want *scopa d'assi*, say which
+rule you mean — another name for *asso piglia tutto*, or a scopa scored for an
+asso played to an empty table. Nothing waits on it; the default is the game as
+specified, and the answer costs one constant. Revisit decision 6 after playing
 iteration 3 if the one-tap rhythm hides the capture rule rather than teaching
 it. Start each iteration. Play the game after iterations 3 and
 5 — the harness measures strength, and only a player can measure whether it
