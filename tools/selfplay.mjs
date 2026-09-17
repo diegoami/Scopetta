@@ -7,6 +7,7 @@
 //   node tools/selfplay.mjs --try KEY=V,KEY=V    a whole candidate at once
 //   node tools/selfplay.mjs --differ 200         how often two profiles differ
 //   node tools/selfplay.mjs --tempo 400          the tempo question
+//   node tools/selfplay.mjs --paired KEY=V       what one change is worth, paired
 //   node tools/selfplay.mjs --fifth 200          what the fifth round would cost
 //   node tools/selfplay.mjs --golden > tools/golden.json
 //
@@ -118,9 +119,8 @@ function match(n, a, b, watch){
 }
 
 // The noise floor: how far a rate can wander on this many deals before it means
-// anything. A draw is common in Scopa — §2.4 — so the headline number is the
-// score rate, wins plus half the draws, which is what a win rate means when a
-// third of deals are drawn.
+// anything. A draw is common in Scopa — §2.4, and measured at about one deal in
+// eight — so the headline number is the score rate, wins plus half the draws.
 const floor95 = (p, n) => 1.96 * Math.sqrt(p * (1 - p) / n);
 const scoreRate = r => (r.wins + r.draws / 2) / r.deals;
 
@@ -154,6 +154,10 @@ const sameMove = (a, b) =>
 /* ---- what each weight costs, and what it buys -------------------------------- */
 
 function ladder(key, values, n){
+  // Validated, because `--ladder SCOPA_BONUS 0,1000` used to print "from
+  // Franco's undefined" and a confident 0.00%: a silent fake confirmation for
+  // anyone re-auditing a weight that had been removed.
+  if (!WEIGHT_KEYS.includes(key)) throw new Error(`no such weight: ${key}`);
   console.log(`\n${key}, from Franco's ${FRANCO[key]}, ${n} seeds mirrored\n`);
   console.log("  value   vs greedy   differs from Franco");
   const rows = [];
@@ -182,9 +186,11 @@ function ladder(key, values, n){
 const RANGES = {
   CARTE_WEIGHT:       [0, 0.5, 1, 2, 4],
   DENARI_WEIGHT:      [0, 1, 2, 4, 8],
+  SETTEBELLO_BONUS:   [0, 3, 6, 12, 25],
   PRIMIERA_WEIGHT:    [0, 0.2, 0.4, 0.8, 1.6],
   SCOPA_RISK_PENALTY: [0, 3, 6, 12, 24],
   GIFT_FACTOR:        [0, 0.25, 0.5, 1, 2],
+  TEMPO_BONUS:        [0, 2, 5, 12, 25],
 };
 
 function ladderAll(n){
@@ -241,30 +247,78 @@ function probe(n){
 // other legal play was a capture it declined, and on its next turn the table
 // held a sweep it could no longer reach.
 function tempo(n){
-  let laidWithTakeAvailable = 0, lays = 0, decisions = 0;
+  // §4 asks: "does the opponent lay low cards into a table it could have swept
+  // next turn had it waited?" That is about tempo Franco *forfeits*, and the
+  // first version of this function measured two adjacent things instead — what
+  // it declines, and what it gives away. Both are worth knowing and are printed
+  // below, but neither is the question, and the question was being closed on
+  // them.
+  //
+  // Measured directly: at every decision with a real choice, try each legal
+  // play, let the opponent answer it with greedy-take, and ask whether Franco
+  // would then hold a sweep. If some play would have left it one and the play
+  // it made did not, it gave the tempo up.
+  let decisions = 0, chances = 0, took = 0, gave = 0;
+  let lays = 0, laidWithTake = 0;
+
+  const sweepAvailable = st => {
+    const who = st.deveGiocare;
+    return st.tavola.length > 0 &&
+      mosse(st, who).some(x => x.presa.length === st.tavola.length);
+  };
+
   const watch = (state, who) => {
     if (state.giro >= CODA_FROM) return;
     const all = mosse(state, who);
     if (all.length < 2) return;
     decisions++;
-    const m = compGioca(state, FRANCO);
-    if (!m || m.presa.length) return;
-    lays++;
-    if (all.some(x => x.presa.length)) laidWithTakeAvailable++;
+
+    const chosen = compGioca(state, FRANCO);
+    if (!chosen) return;
+    if (!chosen.presa.length){
+      lays++;
+      if (all.some(x => x.presa.length)) laidWithTake++;
+    }
+
+    // Would this play leave me a sweep after their reply?
+    const leavesSweep = play => {
+      const st = JSON.parse(JSON.stringify(state));
+      try {
+        gioca(st, who, play.slot, play.presa);
+        if (st.over || st.deveGiocare === who) return false;
+        const reply = greedyTake(st);
+        gioca(st, st.deveGiocare, reply.slot, reply.presa);
+        if (st.over || st.deveGiocare !== who) return false;
+        return sweepAvailable(st);
+      } catch { return false; }
+    };
+
+    const any = all.filter(leavesSweep);
+    if (!any.length) return;
+    chances++;
+    if (any.some(x => x.slot === chosen.slot && x.presa.join() === chosen.presa.join())) took++;
+    else gave++;
   };
+
   match(n, "franco", "greedy", watch);
+
   console.log(`\ntempo, ${n} seeds mirrored\n`);
   console.log(`  decisions with a real choice: ${decisions}`);
-  console.log(`  Franco laid a card: ${lays} (${(100 * lays / decisions).toFixed(1)}%)`);
-  console.log(`  of those, a capture was available and declined: ${laidWithTakeAvailable}` +
-              ` (${(100 * laidWithTakeAvailable / Math.max(1, lays)).toFixed(1)}% of lays)`);
-  console.log(`\n  A capture declined is only a defect if what it leaves is worse, so the`);
-  console.log(`  question §4 actually asks is what the play leaves. That is the table below:`);
-  console.log(`  how often the very next play sweeps what this one left behind.\n`);
+  console.log(`\n  §4's question — tempo forfeited:\n`);
+  console.log(`  some play would have left Franco a sweep next turn: ${chances}` +
+              ` (${(100 * chances / decisions).toFixed(2)}%)`);
+  console.log(`    it chose one of them: ${took}`);
+  console.log(`    it gave the tempo up: ${gave}` +
+              `  (${(100 * gave / decisions).toFixed(2)}% of decisions,` +
+              ` ${(100 * gave / Math.max(1, chances)).toFixed(1)}% of the chances)`);
+  console.log(`\n  This assumes a greedy reply and that a sweep is always worth having,`);
+  console.log(`  so it is an upper bound on what a 2-ply term could recover, not a defect count.`);
 
-  // The measurement the risk term exists for: a play is punished when the
-  // opponent answers it with a scopa. Counted for each player against the same
-  // adversary, so the two numbers can be compared.
+  console.log(`\n  and the two adjacent numbers, which are not the question:\n`);
+  console.log(`  Franco laid a card: ${lays} (${(100 * lays / decisions).toFixed(1)}%),` +
+              ` of which a capture was available and declined: ${laidWithTake}` +
+              ` (${(100 * laidWithTake / Math.max(1, lays)).toFixed(1)}%)`);
+
   for (const [who, other] of [["franco", "greedy"], ["greedy", "franco"]]){
     let left = 0, swept = 0;
     for (let seed = SEED_FROM; seed < SEED_FROM + n; seed++){
@@ -278,8 +332,7 @@ function tempo(n){
           gioca(st, w, m.slot, m.presa);
           if (mine && !st.over && st.tavola.length){
             left++;
-            const reply = mosse(st, st.deveGiocare);
-            if (reply.some(x => x.presa.length === st.tavola.length)) swept++;
+            if (mosse(st, st.deveGiocare).some(x => x.presa.length === st.tavola.length)) swept++;
           }
         }
       }
@@ -287,8 +340,6 @@ function tempo(n){
     console.log(`  ${who.padEnd(8)} left a table the reply could sweep: ` +
                 `${swept} of ${left}  (${(100 * swept / left).toFixed(2)}%)`);
   }
-  console.log(`\n  A 2-ply term is the candidate only if the first number is not already`);
-  console.log(`  well under the second — the 1-ply risk term is what makes the difference.`);
 }
 
 /* ---- what the fifth round would cost ----------------------------------------- */
@@ -369,7 +420,11 @@ function fifth(n){
 
 function differ(n, spec){
   const P = { ...FRANCO };
-  for (const pair of spec.split(",")){ const [k, v] = pair.split("="); P[k] = Number(v); }
+  for (const pair of spec.split(",")){
+    const [k, v] = pair.split("=");
+    if (!WEIGHT_KEYS.includes(k)) throw new Error(`no such weight: ${k}`);
+    P[k] = Number(v);
+  }
   let differs = 0, decisions = 0;
   match(n, "franco", "greedy", (state, who) => {
     if (!isDecision(state, who)) return;
@@ -378,6 +433,55 @@ function differ(n, spec){
   });
   console.log(`\n${spec} differs from Franco in ${(100 * differs / decisions).toFixed(2)}%` +
               ` of ${decisions} decisions, over ${n} seeds mirrored`);
+}
+
+/* ---- paired comparison -------------------------------------------------------- */
+
+// Two vectors on the *same* deals against the *same* opponent, differenced deal
+// by deal. Iteration 2's review showed why this matters: two vectors that
+// differ on 0.1% of plays differ on about 1.3% of deals, so almost all the
+// noise is shared and cancels here while an unpaired ±1.8 band cannot see the
+// effect at all. It is also the test that proved the tuning bought nothing — it
+// is not a test that finds differences wherever it looks.
+//
+//   node tools/selfplay.mjs --paired TEMPO_BONUS=0 1500
+//
+// reports what the OVERRIDE is worth relative to Franco, positive meaning
+// Franco is better.
+function paired(spec, n){
+  const Q = { ...FRANCO };
+  for (const pair of spec.split(",")){
+    const [k, v] = pair.split("=");
+    if (!WEIGHT_KEYS.includes(k)) throw new Error(`no such weight: ${k}`);
+    Q[k] = Number(v);
+  }
+  const outcome = (P, seed, asBasso) => {
+    const rng = rngSeed(seed);
+    const st = newDeal({}, rng);
+    while (!st.over){
+      const who = st.deveGiocare;
+      const mine = asBasso ? who === BASSO : who === ALTO;
+      const m = mine ? compGioca(st, P) : greedyTake(st, rng);
+      gioca(st, who, m.slot, m.presa);
+    }
+    const p = scoreDeal(st).punti, me = asBasso ? BASSO : ALTO;
+    return p[me] > p[1 - me] ? 1 : p[me] === p[1 - me] ? 0.5 : 0;
+  };
+  const diffs = [];
+  let a = 0, b = 0;
+  for (let seed = SEED_FROM; seed < SEED_FROM + n; seed++)
+    for (const asBasso of [true, false]){
+      const x = outcome(FRANCO, seed, asBasso), y = outcome(Q, seed, asBasso);
+      a += x; b += y; diffs.push(x - y);
+    }
+  const m = diffs.length, mean = diffs.reduce((x, y) => x + y, 0) / m;
+  const sd = Math.sqrt(diffs.reduce((x, y) => x + (y - mean) ** 2, 0) / (m - 1));
+  const se = sd / Math.sqrt(m);
+  console.log(`\npaired, ${spec}, ${n} seeds from ${SEED_FROM}, mirrored\n`);
+  console.log(`  Franco ${(100 * a / m).toFixed(2)}%   ${spec} ${(100 * b / m).toFixed(2)}%`);
+  console.log(`  Franco − it: ${(100 * mean >= 0 ? "+" : "")}${(100 * mean).toFixed(2)}%` +
+              ` ± ${(100 * 1.96 * se).toFixed(2)}   z = ${(mean / se).toFixed(2)}   over ${m} deals`);
+  console.log(`\n  |z| under about 2 is nothing. Positive means Franco is the better vector.`);
 }
 
 /* ---- tuning ------------------------------------------------------------------ */
@@ -451,6 +555,7 @@ else if (argv[0] === "--try") tryCandidate(argv[1], n(2) || 1000);
 else if (argv[0] === "--differ") differ(n(2) || 200, argv[1]);
 else if (argv[0] === "--tempo") tempo(n(1) || 400);
 else if (argv[0] === "--fifth") fifth(n(1) || 200);
+else if (argv[0] === "--paired") paired(argv[1], n(2) || 1500);
 else if (argv[0] === "--tune") tune(n(1) || 400);
 else if (argv[0] === "--golden") console.log(JSON.stringify(goldenFixture(), null, 1));
 else {

@@ -138,14 +138,24 @@ a seed is re-run with it.
 Discola's engine was a transcription of a 1997 original, so its rule was
 *change a weight, not the formula*. Here the formula is ours until v1.0 — and
 from v1.0 the same rule applies for a different reason: the golden fixture
-freezes the plays, and a formula change invalidates it. There are **five**
-weights, and the settings sheet discloses five. The plan drafted seven;
-iteration 2 laddered all of them and two could not move a play at any magnitude
-anyone would tune them to — a scopa already wins the argmax on its own, and the
-settebello is already the highest card `worth` knows — so they went. A sixth is
-not invented to match Discola's twelve or Tressette's eleven, and the test of
-whether a weight belongs is the ladder, not the count: under 1% of the
-decisions the weights actually make and it is removed, not tuned around.
+freezes the plays, and a formula change invalidates it. There are **seven**
+weights and the settings sheet discloses seven — but not the seven the plan
+drafted: iteration 2's ladder cut `SCOPA_BONUS`, which cannot promote a play a
+sweep already wins, and added `TEMPO_BONUS`, which §4's tempo question turned
+out to want. The count is a coincidence; the membership is the measurement.
+
+**A weight under §4's 1% bar is a question, not a verdict.** `SETTEBELLO_BONUS`
+moves 0.45% of decisions and was removed on that rule, with a reason that was
+false — `bestMine` is per suit, so the settebello's primiera gain collapses as
+soon as any denaro is in the pile, and the engine declined the point in §3.4's
+own first trap. Paired on the same deals it is worth half a point. The rule is
+a proxy for *cannot change the outcome*, and it fails when a point lives in one
+card. Measure the plays a weight moves, then ask whether they decide anything.
+
+**And a term that guesses may only guess at what a human could count.** The
+tempo term samples hands from `fuori`; a version that reads the opponent's real
+hand scores far better and is cheating, which is most of where its gain came
+from.
 
 One exception to "score every legal play and make the highest" is deliberate
 and belongs in the source with its reason: from `CODA_FROM` on — the sixth

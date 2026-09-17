@@ -465,38 +465,49 @@ function pHold(U, k, h){
 
 /* --- the opponent ----------------------------------------------------------- */
 
-// §3.4. **Five.** The plan proposed seven and said the ladder would decide, and
-// it did: iteration 2 measured every one of the seven across its range over
-// 6,000 deals, counting only the decisions the weights actually make, and two
-// of them could not move a play at any magnitude anyone would tune them to.
+// §3.4. **Six.** The plan proposed seven and said the ladder would decide. It
+// decided one of them: SCOPA_BONUS could not move a play at any magnitude —
+// 0.04% of decisions over 6,000 deals, and 0.01% at a value of 1000 — so it is
+// gone, and that is a measurement rather than an argument. Restoring it at 8 or
+// 25 and comparing paired on the same deals gives -0.03% and +0.03% of score
+// rate, z = -1.41 and +0.47: nothing.
 //
-//   SCOPA_BONUS       at 1000: 0.01% of decisions, 5 of 40,133
-//   SETTEBELLO_BONUS  at 1000: 0.13% of decisions, 53 of 40,132
+// SETTEBELLO_BONUS was cut with it and has been put back, which is the more
+// useful half of the story. The ladder said 0.41%, under §4's 1% bar, and the
+// reason given for cutting it was that "the settebello is already the highest
+// card `worth` knows". That was false. `bestMine` is per suit, so once a decent
+// denaro is in the pile the settebello's primiera gain collapses while a seven
+// of a bare suit keeps its whole 21: with a 6 of denari taken, worth(7 denari)
+// is 4.2 and worth(7 bastoni) is 9.4, and the engine declined the settebello in
+// §3.4's own first trap. In self-play the settebello was capturable in 652
+// positions with a real choice and declined in 44 of them, 6.75%.
 //
-// Both are structurally redundant rather than merely small, which is why no
-// range would have saved them. A scopa takes the whole table, so it already
-// maximises the captured term and already leaves nothing for the gift term to
-// subtract — it wins the argmax without a bonus, and a bonus cannot promote a
-// play that is already top. The settebello is a denaro with the highest
-// primiera value of any card, so `worth` ranks it first on the two terms it
-// already has.
-//
-// They move plays only when set negative — a bonus turned into a penalty,
-// which no profile would do and which costs seven to nine points of score rate.
-// Removing both changed the play in 0.41% of decisions and the result not at
-// all: 60.0% ± 1.8 against greedy-take, where all seven scored 59.7% ± 1.8.
+// **So §4's 1% rule has an exception, and it is worth writing down**: the rule
+// is a proxy for "cannot change the outcome", and the proxy fails when a point
+// is concentrated in a single card. Few plays, high stakes each. Measured
+// paired on the same deals against the same opponent, restoring the term is
+// worth +0.40% and +0.62% of score rate on two held-out ranges (z = 2.69 and
+// 3.40) and +1.33% and +1.27% on the settebello point itself (z = 6.37, 6.04).
+// An unpaired comparison cannot see it: two vectors differing on 0.1% of plays
+// differ on about 1.3% of deals, so the noise is shared and cancels only under
+// pairing.
 //
 // Discola had twelve weights and Tressette eleven because their formulas had
-// that many live terms. Five is what this one has. §4: a weight that moves
-// under 1% of plays is removed, not tuned around, and the settings sheet
-// discloses what is left.
+// that many live terms. Six is what this one has.
 const WEIGHT_KEYS = [
   "CARTE_WEIGHT",        // a card is a card, toward the carte point
   "DENARI_WEIGHT",       // a denaro is worth more, toward the denari point
+  "SETTEBELLO_BONUS",    // the settebello is a point on its own, and one card
   "PRIMIERA_WEIGHT",     // a high card in a suit I am weak in, toward primiera
   "SCOPA_RISK_PENALTY",  // leaving a table they can sweep, by the chance of it
   "GIFT_FACTOR",         // leaving cards they can pair, by worth and by chance
+  "TEMPO_BONUS",         // keeping a sweep alive for my next turn (§4's tempo question)
 ];
+
+// How many hands to guess at for the tempo term. Six: the gain is already
+// there at six and barely moves at sixteen (+1.47/+1.97 against +1.63/+2.28),
+// and six is what fits the page's budget.
+const TEMPO_SAMPLES = 6;
 
 function weights(values){
   const P = {};
@@ -509,7 +520,7 @@ function weights(values){
 // returns whatever that turns out to be. Franco is the house standard either
 // way.
 function rollProfiles(rng){
-  return { Franco: weights([1, 2, 0.4, 6, 0.5]) };
+  return { Franco: weights([1, 2, 6, 0.4, 6, 0.5, 5]) };
 }
 
 // §3.4, the one quantity every term is built from. `mine` is my captured pile:
@@ -520,9 +531,10 @@ function rollProfiles(rng){
 function worth(c, bestMine, P){
   let w = P.CARTE_WEIGHT;
   if (c.s === DENARI) w += P.DENARI_WEIGHT;
-  // No settebello term: it is a denaro with the highest primiera value there
-  // is, so the two terms above already rank it first. Measured, not assumed —
-  // see WEIGHT_KEYS.
+  // The settebello is a whole point living in one card, and the terms above do
+  // not cover it: `bestMine` is per suit, so its primiera gain vanishes as soon
+  // as any decent denaro is in the pile. See WEIGHT_KEYS.
+  if (isSettebello(c)) w += P.SETTEBELLO_BONUS;
   const gain = primiera(c.n) - bestMine[c.s];
   if (gain > 0) w += gain * P.PRIMIERA_WEIGHT;
   return w;
@@ -591,6 +603,62 @@ function valutaMossa(state, who, mossa, P, ctx){
   return score;
 }
 
+// §4's tempo question, answered yes and built. "Does the opponent lay low cards
+// into a table it could have swept next turn had it waited?" — measured, it
+// gave up such a chance in about half the positions that offered one, and a
+// term that prices them is worth +1.5% to +2.3% of score rate on two held-out
+// ranges (z = 3.0 and 4.2), paired on the same deals.
+//
+// **It may not look at their hand.** §3.4's whole knowledge section exists
+// because the engine gives the opponent nothing a human could not count, and a
+// 2-ply term that copies the state and replies with their real cards is
+// cheating. Measured, that cheat is worth +1.9% to +3.4% — so the cheat is
+// where most of the apparent gain lives, and a term built on it would have
+// looked better and been illegitimate.
+//
+// The honest version guesses. It draws TEMPO_SAMPLES plausible hands from
+// `fuori`, plays each out one ply — my play, their reply by this same formula —
+// and scores the fraction of them in which I am left holding a sweep. A cheaper
+// proxy with no opponent model at all, "does a card I still hold sweep what
+// this play leaves", is worth nothing measurable (z = -0.15 to +0.86): the gain
+// comes from the reply, not from the table.
+//
+// The samples are a deterministic spread rather than a random draw, because the
+// golden fixture freezes the play and a fixture that depends on an rng the page
+// does not share is not a fixture.
+function tempoShare(state, me, mossa, hidden, P){
+  const h = state.hands[altro(me)].filter(c => c).length;
+  const mine = state.hands[me].filter(c => c).length;
+  if (!h || hidden.length < h) return 0;
+
+  // If this play and their reply end the round, my next turn begins with three
+  // cards I cannot know, so the question has no answer and the honest one is
+  // "no information" rather than a guess at cards the engine may not see. It
+  // also keeps `gioca` from dealing a round inside a hypothetical, which it
+  // would otherwise do — correctly, and from a deck the engine must not read.
+  if (mine <= 1 && h <= 1) return 0;
+
+  let hits = 0;
+  for (let k = 0; k < TEMPO_SAMPLES; k++){
+    const pick = [], used = new Set();
+    for (let j = 0; j < h; j++){
+      let idx = (k * 7 + j * 13 + 3) % hidden.length;
+      while (used.has(idx)) idx = (idx + 1) % hidden.length;
+      used.add(idx); pick.push(hidden[idx]);
+    }
+    const st = cloneState(state);
+    st.hands[altro(me)] = ordina(pick.map(c => ({ ...c })));
+    gioca(st, me, mossa.slot, mossa.presa);
+    if (st.over || st.deveGiocare === me) continue;
+    const reply = compGioca(st, P, 1);  // depth 1: their reply prices no tempo
+    if (!reply) continue;
+    gioca(st, st.deveGiocare, reply.slot, reply.presa);
+    if (st.over || st.deveGiocare !== me || !st.tavola.length) continue;
+    if (mosse(st, me).some(x => x.presa.length === st.tavola.length)) hits++;
+  }
+  return hits / TEMPO_SAMPLES;
+}
+
 /* --- the sixth round, played out exactly ------------------------------------ */
 
 // §3.4. From this round on the deck is empty and `fuori` is their hand exactly,
@@ -656,7 +724,7 @@ function coda(state, me){
 // §3.4. Two branches. For five rounds, score every legal play with the
 // profile's weights and make the highest. In the sixth, where nothing is
 // hidden, play it out exactly.
-function compGioca(state, P){
+function compGioca(state, P, depth = 0){
   const me = state.deveGiocare;
   const hidden = fuori(state, me);
   const theirCards = state.hands[altro(me)].filter(c => c).length;
@@ -685,7 +753,11 @@ function compGioca(state, P){
 
   let best = null, bestScore = -Infinity;
   for (const m of mosse(state, me)){
-    const score = valutaMossa(state, me, m, P, ctx);
+    let score = valutaMossa(state, me, m, P, ctx);
+    // The tempo term, at the root only: inside a guess the opponent answers
+    // without pricing tempo of its own, which is what stops this recursing.
+    if (depth === 0 && P.TEMPO_BONUS)
+      score += P.TEMPO_BONUS * tempoShare(state, me, m, hidden, P);
     if (score > bestScore){ bestScore = score; best = m; }
   }
   return best ? { slot: best.slot, presa: best.presa } : null;
@@ -702,6 +774,6 @@ Object.assign(globalThis, {
   ASSO_PIGLIA_TUTTO, NAPOLA, RE_BELLO,
   ordina, newDeal, distribuisci, prese, gioca,
   scoreDeal, vincitore, primieraTotale,
-  WEIGHT_KEYS, weights, rollProfiles, compGioca,
+  WEIGHT_KEYS, weights, rollProfiles, compGioca, TEMPO_SAMPLES, tempoShare,
   fuori, pHold, worth, bestPrimieraHeld, mosse, valutaMossa, CODA_FROM, coda
 });

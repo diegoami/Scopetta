@@ -19,7 +19,8 @@ const SOURCE = process.env.SCOPETTA_ENGINE
 runInThisContext(readFileSync(SOURCE, "utf8"));
 
 const { BASSO, ALTO, DENARI, rngSeed, newDeal, gioca, scoreDeal,
-        WEIGHT_KEYS, rollProfiles, compGioca, mosse, CODA_FROM } = globalThis;
+        WEIGHT_KEYS, rollProfiles, compGioca, mosse, CODA_FROM,
+        tempoShare, fuori } = globalThis;
 
 const FRANCO = rollProfiles(rngSeed(1)).Franco;
 const card = (s, n) => ({ s, n });
@@ -59,9 +60,19 @@ const played = (state, m) => state.hands[state.deveGiocare][m.slot];
 test("with two sevens on the table, it takes the settebello", () => {
   // §3.4's first trap. Single before sum leaves exactly two captures, and only
   // one of them is a point.
+  //
+  // **The pile is not empty, and that is the whole test.** `worth`'s primiera
+  // term is per suit, so with nothing taken yet the settebello and a seven of
+  // any other suit are worth the same on that term and the denari weight
+  // decides — the trap passes without the settebello term existing. Take one
+  // decent denaro first and the settebello's primiera gain collapses while the
+  // seven of bastoni keeps its whole 21: 4.2 against 9.4, and the engine
+  // declines the point. Written with an empty pile, this trap was decoration,
+  // and it was the argument for removing SETTEBELLO_BONUS.
   const s = position({
     tavola: [card(1, 7), card(DENARI, 7)],
-    hands: [[card(2, 7), null, null], [card(3, 10), card(3, 9), null]]
+    hands: [[card(2, 7), null, null], [card(3, 10), card(3, 9), null]],
+    prese: [[card(DENARI, 6)], []]
   });
   const choices = realChoice(s);
   assert.equal(choices.length, 2, "both sevens are on offer");
@@ -82,10 +93,35 @@ test("offered 4+3 or 5+2 for a seven, it takes the pair with the denaro", () => 
   assert.deepEqual(m.presa, [0, 1], "it left the denaro on the table");
 });
 
+test("offered the same card in two suits, it takes the denaro", () => {
+  // Nothing named the denari term: §3.4's 4+3 / 5+2 trap does not, because
+  // 4+3 and 5+2 have the same primiera sum, so dropping DENARI_WEIGHT leaves
+  // them tied and the tie-break picks the card the trap expects anyway.
+  //
+  // Two fives, same value, same primiera, differing only in suit — and the
+  // denaro is in the *higher* index on purpose, so a tie would find the other
+  // one and the assertion means something.
+  const s = position({
+    tavola: [card(2, 5), card(DENARI, 5)],
+    hands: [[card(1, 5), null, null], [card(3, 10), card(3, 9), null]]
+  });
+  const choices = realChoice(s);
+  assert.equal(choices.length, 2, "both fives are on offer");
+  assert.deepEqual(choices.map(m => m.presa), [[0], [1]], "and the denaro is the second");
+  const m = compGioca(s, FRANCO);
+  assert.deepEqual(m.presa, [1], "it took the five of spade and left the denaro");
+});
+
 test("it lays the card that leaves the table hardest to sweep", () => {
-  // §3.4's third trap. The table holds a 6. Laying the 2 leaves 8, and three
-  // 8s are still out; laying the 5 leaves 11, which no single card takes.
-  // Neither card captures, so only what it leaves can decide.
+  // §3.4's third trap. Neither card captures, so only what it leaves can
+  // decide: laying the 2 leaves a table of 8, inside the risk term's 1..10
+  // window, and laying the 5 leaves 11, outside it.
+  //
+  // §3.4 tells this story as a counting one — "three 8s still out and no 3s" —
+  // and with an empty pile nothing is counted at all: every 8 and every 3 is
+  // still in `fuori`. The assertion is real and it does catch the risk term
+  // going missing, but it passes on the window rather than on the count, and
+  // the comment used to claim otherwise.
   const s = position({
     tavola: [card(1, 6)],
     hands: [[card(2, 5), card(3, 2), null], [card(0, 10), card(0, 9), card(0, 8)]],
@@ -136,7 +172,12 @@ test("on the 35th play it takes a worthless card, for the leftovers", () => {
 });
 
 test("the deal's last card can sweep, and the score shows no scopa for it", () => {
-  // §3.4's sixth trap. The search must not chase a point the rules do not give.
+  // §3.4's sixth trap: the last card of the deal sweeps and scores nothing.
+  //
+  // Note it is the formula answering, not the search — at the 36th play the
+  // opponent's hand is empty, so `theirCards > 0` fails and `compGioca` falls
+  // through. The assertion is on `gioca` and `scoreDeal` and holds either way;
+  // the label used to say the search, which was wrong.
   const s = position({
     giro: 5, plays: 35, deveGiocare: ALTO, mazziere: ALTO,
     tavola: [card(1, 4)],
@@ -151,23 +192,75 @@ test("the deal's last card can sweep, and the score shows no scopa for it", () =
   assert.deepEqual(scoreDeal(s).scope, [0, 0], "the last card scored a scopa");
 });
 
-test("the search declines a capture the formula takes, and wins four more cards", () => {
-  // §3.4 offers a worked ending and says "both lays score zero, so the formula
-  // plays the lower slot". That is not quite this engine: the gift term prices
-  // what a lay leaves, so two lays rarely tie, and a trap built on §3.4's
-  // position passes even with the search switched off — which tools/break.mjs
-  // caught. §4's warning, exactly: a position built by hand to be convenient
-  // is built to be wrong in the way that matters.
+test("§3.4's own ending: it lays the five, which only playing it out finds", () => {
+  // The position PLAN.md §3.4 found by brute force over random endings, and the
+  // one that says why the formula cannot do the sixth round. Two cards each,
+  // they play last, and neither of my cards takes anything, so both lays score
+  // exactly zero — the table sums to 33, which is outside the risk term's
+  // window, and `fuori` is their two cards, so every pHold on the table is 0
+  // and the gift term vanishes too. The formula ties to the lower slot and
+  // plays the six; only the search finds the five.
   //
-  // So this one was found the way §3.4 found its own — by brute force over
-  // real endings, comparing the engine against itself with CODA_FROM moved
-  // past the sixth round. It is seed 84 at the 33rd play, reached in ordinary
-  // play and then written down.
+  //   Lay the 6: they lay the 2, my 5 takes nothing, their 3 takes the asso and
+  //   the 2 — the last capture, and the leftovers with it. Eight cards to none.
+  //   Lay the 5: whichever card they lay, my 6 takes the asso and the 5, their
+  //   last card takes nothing, and the eight cards are mine.
+  //
+  // **All forty cards are accounted for, and that is the point.** Written with
+  // empty piles this trap tests nothing at all: `fuori` is then 34 cards rather
+  // than 2, `compGioca`'s guard refuses the search, and the formula answers in
+  // both configurations — its gift terms no longer tie, so it picks the five
+  // for the wrong reason and the trap passes with the search switched off. It
+  // was written that way first, and the conclusion drawn was that §3.4 was
+  // wrong about its own engine. §3.4 was right; the reconstruction was not.
+  const rest = [];
+  const used = new Set([[1,10],[2,7],[3,9],[1,1],[0,6],[1,5],[2,2],[3,3]]
+    .map(([a, b]) => a * 16 + b));
+  for (let su = 0; su < 4; su++)
+    for (let n = 1; n <= 10; n++)
+      if (!used.has(su * 16 + n)) rest.push(card(su, n));
+
+  const build = () => position({
+    giro: 5, plays: 32, deveGiocare: BASSO, mazziere: ALTO, ultimaPresa: BASSO,
+    tavola: [card(1, 10), card(2, 7), card(3, 9), card(1, 1)],
+    hands: [[card(DENARI, 6), card(1, 5), null], [card(2, 2), card(3, 3), null]],
+    prese: [rest.slice(0, 15).map(c => ({ ...c })), rest.slice(15).map(c => ({ ...c }))]
+  });
+
+  const s = build();
+  assert.equal(s.prese[BASSO].length + s.prese[ALTO].length + s.tavola.length + 4, 40,
+    "the sixth round forces every card to be somewhere");
+  const choices = realChoice(s);
+  assert.equal(choices.length, 2, "two cards, neither of which takes anything");
+  assert.ok(choices.every(m => m.presa.length === 0), "and no capture on offer");
+  assert.equal(s.hands[BASSO][0].n, 6, "the six is in the lower slot, where a tie finds it");
+
+  const m = compGioca(s, FRANCO);
+  assert.equal(m.slot, 1, "it laid the six — the play the formula makes and the search refuses");
+
+  // Played out with the real rules rather than asserted about.
+  const run = first => {
+    const st = build();
+    gioca(st, BASSO, first.slot, first.presa);
+    while (!st.over){
+      const mm = compGioca(st, FRANCO);
+      gioca(st, st.deveGiocare, mm.slot, mm.presa);
+    }
+    return st.prese[BASSO].length;
+  };
+  const five = run({ slot: 1, presa: [] });
+  const six  = run({ slot: 0, presa: [] });
+  assert.ok(five - six >= 8, `laying the five won ${five - six} cards more, not the eight §3.4 counts`);
+});
+
+test("the search declines a capture the formula takes, and wins four more cards", () => {
+  // A second ending, found the way §3.4 found its own — by brute force over
+  // real endings, comparing the engine against itself with CODA_FROM moved past
+  // the sixth round. Seed 84 at the 33rd play, reached in ordinary play.
   //
   // The formula plays the 6 of bastoni and takes the 6 of denari: a capture,
   // and it looks free. The search lays the re instead and declines it, because
   // taking the 6 hands them the last capture and the leftovers with it.
-  // Twenty-five cards against twenty-one.
   const s = position({
     giro: 5, plays: 32, deveGiocare: BASSO, mazziere: ALTO,
     ultimaPresa: BASSO, scope: [0, 1],
@@ -264,6 +357,42 @@ test("the search expects the opponent to play against it, not to help", () => {
     "it assumed the opponent would cooperate");
 });
 
+test("the tempo term guesses at nothing it cannot see", () => {
+  // §3.4: the engine gives the opponent nothing a human could not count. The
+  // tempo term guesses at their hand, and it must not guess past the end of a
+  // round: with one card each left, the next round is dealt before my next
+  // turn, and what I would hold then is in a deck the engine may not read.
+  // Without the guard, `gioca` deals that round inside the hypothetical — from
+  // the real deck.
+  const closing = position({
+    giro: 2, plays: 16,
+    tavola: [card(1, 6), card(2, 4)],
+    hands: [[card(3, 5), null, null], [null, null, card(0, 9)]],
+    prese: [[card(DENARI, 2)], [card(1, 3)]]
+  });
+  assert.equal(closing.hands[BASSO].filter(c => c).length, 1);
+  assert.equal(closing.hands[ALTO].filter(c => c).length, 1);
+  assert.equal(
+    tempoShare(closing, BASSO, mosse(closing, BASSO)[0], fuori(closing, BASSO), FRANCO),
+    0, "it guessed past a round boundary");
+
+  // And with room left in the round it does answer, so the zero above is the
+  // guard rather than a term that never fires. Taken from real play — seed 1 at
+  // the eighth play — rather than invented, because the first invented position
+  // here never fired and would have made the assertion above vacuous.
+  const open = position({
+    giro: 1, plays: 7, deveGiocare: ALTO, mazziere: ALTO, ultimaPresa: BASSO,
+    tavola: [card(DENARI, 10), card(2, 4)],
+    hands: [[card(1, 3), null, card(3, 1)], [card(2, 10), card(2, 9), card(2, 2)]],
+    prese: [new Array(4).fill(card(1, 8)), new Array(5).fill(card(3, 8))]
+  });
+  const shares = mosse(open, ALTO)
+    .map(m => tempoShare(open, ALTO, m, fuori(open, ALTO), FRANCO));
+  assert.ok(shares.some(v => v > 0),
+    `the term never fires even with a round to play: ${JSON.stringify(shares)}`);
+  assert.ok(shares.some(v => v === 0), "and it does not fire for every play alike");
+});
+
 /* --- the search is the search ------------------------------------------------ */
 
 test("every profile plays the sixth round alike", () => {
@@ -271,8 +400,11 @@ test("every profile plays the sixth round alike", () => {
   // the denominator when the roster is measured for difference. Stated here so
   // that a weight leaking into the search would fail rather than quietly
   // shrink iteration 5's numbers.
+  // Built from the key list rather than a fixed array, so adding or removing a
+  // weight cannot silently leave one undefined — which it did the first time
+  // a weight came back.
   const wild = {};
-  WEIGHT_KEYS.forEach((k, i) => { wild[k] = [99, -40, 17, 0, 250][i]; });
+  WEIGHT_KEYS.forEach((k, i) => { wild[k] = [99, -40, 17, 0, 250, -7, 31][i % 7]; });
   let searched = 0;
   for (let seed = 1; seed <= 60; seed++){
     const s = newDeal({}, rngSeed(seed));
