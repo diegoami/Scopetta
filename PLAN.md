@@ -273,6 +273,20 @@ once per trick, because there are no tricks.
 the last taker and sets `over`, so the search in §3.4 reaches a real end of
 deal and scores it with the real `scoreDeal`, not a proxy.
 
+**And it deals the next round itself**, decided in iteration 1 and recorded
+here because §3.5's flow draws `distribuisci` as the caller's step and §3.2 is
+what iteration 3 reads. When a play empties both hands and the deal is not
+over, `gioca` calls `distribuisci` and returns `nuovoGiro: true`. The reason is
+the state that would otherwise exist: a deal sitting with two empty hands and
+nobody dealing is reachable and nothing detects it. `distribuisci` stays
+callable on its own and throws on an empty deck.
+
+The page needs the flag rather than `plays % 6`, and not only for tidiness:
+both hands are empty **for a beat** between rounds, §4 iteration 3 names that
+as one of the states the check must put the page in, and after `gioca` returns
+the state no longer shows it. `nuovoGiro` is how the page knows to draw the
+beat before the new hand.
+
 ### 3.3 State
 
 One mutable object, as in Discola. `render()` reads it and writes the DOM.
@@ -944,7 +958,7 @@ can slip.
 |---|---|
 | Scopone, scientifico or otherwise | A different game: ten cards each, four players, partners, a whole theory of *spariglio*. Nothing here precludes it — `prese`, `gioca` and `scoreDeal` are the same rules — but the table is not. |
 | A match to 11 across deals | The traditional form, left out on the owner's standing call for one deal per partita. `scoreDeal` returns per-deal points, so a running total, a second dialog and a saved match are additions, not a redesign. The case for it is stronger here than in Tressette, because a single deal draws more often; §0 says so. |
-| Napola, asso piglia tutto, re bello, scopa d'assi, scopa a quindici | Variants. Each is a named constant or a branch away, and the about screen says which Scopa this is. Iteration 1 made three of them constants read by a real branch — `NAPOLA`, `ASSO_PIGLIA_TUTTO`, `RE_BELLO` — each with a test that flips it and watches the branch fire, because a constant nothing consults would not make a change one line, it would only look as though it had. **Scopa d'assi is the exception and is a gap, not a constant**: this plan names it without saying what it does, and the house rule differs — in some it is another name for asso piglia tutto, in others a scopa scored for an asso played to an empty table. A constant guessing between the two would be worse than none. If the owner wants it, decide which it is first. |
+| Napola, asso piglia tutto, re bello, scopa d'assi, scopa a quindici | Variants. Each is a named constant or a branch away, and the about screen says which Scopa this is. Iteration 1 made three of them constants read by a real branch — `NAPOLA`, `ASSO_PIGLIA_TUTTO`, `RE_BELLO` — each with a test that flips it and watches the branch fire, because a constant nothing consults would not make a change one line, it would only look as though it had. Scopa d'assi is the exception and is a gap rather than a constant, for the reason §0 decision 8 gives; the question lives there, not here, because a second copy of an open question goes stale. |
 | Multiplayer, accounts, a server | Same reason as Discola: any server is an operational liability that outlives interest. |
 | A framework or build step | Same reason as Discola. |
 | Localisation | The terms of art are Italian. |
@@ -1107,10 +1121,12 @@ the fork is the one the table names. Iterations 2 and 3 check again.
 
 **Tressette moved again during iteration 1**, from `ed445bd` to `dec1c74` —
 the hand sort of §2.2, which landed the other way round from this game's. What
-that means for anything forked from it is in §2.2; what it means here is that
-the ancestor has now moved during two of the first two iterations, so the
-paragraph above is not a formality. Iterations 2 and 3 fork from `dec1c74` or
-later and record which.
+that means for anything forked from it is in §2.2. What it means here is the
+tally: three moves so far, twice between this plan being written and confirmed
+and once **in the middle of an iteration**, while its work was being written.
+Iteration 0 checked and found it unmoved, so a check is not a formality in
+either direction. Iterations 2 and 3 fork from `dec1c74` or later and record
+which.
 
 **Check movement against the remote, not against the clone beside this repo.**
 At iteration 0 that clone's own `main` was stale at `caaef0f` — iteration 5,
@@ -1124,7 +1140,11 @@ Discola's last recorded commit, for whatever Tressette did not change, is
 
 ### 7.6 The owner's part
 
-The seven defaults in §0 are confirmed. Revisit decision 6 after playing
+The first seven defaults in §0 are confirmed. **Decision 8 is open and is one
+question**, raised by iteration 1: if you ever want *scopa d'assi*, say which
+rule you mean — another name for *asso piglia tutto*, or a scopa scored for an
+asso played to an empty table. Nothing waits on it; the default is the game as
+specified, and the answer costs one constant. Revisit decision 6 after playing
 iteration 3 if the one-tap rhythm hides the capture rule rather than teaching
 it. Start each iteration. Play the game after iterations 3 and
 5 — the harness measures strength, and only a player can measure whether it

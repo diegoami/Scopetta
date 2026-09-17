@@ -8,8 +8,10 @@ step, the 1997 card art, one opponent formula with a weight vector per name.
 `PLAN.md` is the architecture and the plan, and it is the reference for
 anything this file does not state. Section 7 says how the work is organised:
 one iteration per session, a fresh-context review per pull request, CI on every
-pull request. Section 0 lists the seven decisions that were the owner's to
-make, each with a default; all seven are confirmed. Tressette is the reference
+pull request. Section 0 lists the decisions that were the owner's to make, each
+with a default. The first seven are confirmed; the eighth — what *scopa
+d'assi* would mean, if it is ever wanted — was raised by iteration 1 and is
+open, and blocks nothing. Tressette is the reference
 for everything the plan does not state, and Discola for everything Tressette
 does not; clone both beside this repo if they are not already there.
 

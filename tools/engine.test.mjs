@@ -243,6 +243,11 @@ test("a new deal on a finished one starts from nothing", () => {
   assert.equal(s.plays, 36);
   assert.ok(s.prese[BASSO].length + s.prese[ALTO].length === 40 && s.over);
 
+  // Dirtied on purpose: the deal above never raises a card, so asserting
+  // `selected` against a state that was already null asserts nothing.
+  s.selected = 1;
+  s.scelta = 2;
+
   newDeal(s, rng);
   assert.equal(s.plays, 0, "the play count starts again");
   assert.deepEqual(s.prese, [[], []], "the piles are empty");
@@ -253,7 +258,8 @@ test("a new deal on a finished one starts from nothing", () => {
   assert.equal(s.giro, 0);
   assert.equal(s.next, 10);
   assert.equal(s.tavola.length, 4);
-  assert.equal(s.selected, null);
+  assert.equal(s.selected, null, "a raised card does not survive the new deal");
+  assert.equal(s.scelta, 0, "nor does the capture it had proposed");
 
   // And it really plays to the end a second time, which is the thing the
   // reset is for.
@@ -295,6 +301,24 @@ test("three re on the table is a redeal, and the rule is what redeals it", () =>
     }
   }
   assert.ok(found >= 3, `only ${found} three-re deals in ${checked} seeds — the case never came up`);
+});
+
+test("a table of exactly two re is kept, not redealt", () => {
+  // The other two redeal tests both use REDEAL_RE as their own threshold, so
+  // they say nothing about where it sits: mutate the rule to redeal on two
+  // while leaving the constant at 3 and all of them still pass. This one
+  // states the boundary in cards rather than in the constant, which is the
+  // only way the wrong side of it is visible.
+  let found = 0;
+  for (let seed = 1; seed <= 4000 && found < 5; seed++){
+    const raw = mescola(buildDeck(), rngSeed(seed));
+    if (raw.slice(6, 10).filter(c => c.n === 10).length !== 2) continue;
+    found++;
+    const s = newDeal({}, rngSeed(seed));
+    assert.deepEqual(s.tavola, raw.slice(6, 10),
+      `seed ${seed}: a table of two re was redealt — §2.2 redeals on three`);
+  }
+  assert.ok(found >= 5, `only ${found} two-re deals in 4,000 seeds — the case never came up`);
 });
 
 test("no deal ever keeps three re on the table", () => {
@@ -404,6 +428,28 @@ test("six rounds of three, thirty-six plays, and the deck dealt out", () => {
   assert.equal(s.giro, 5);
   assert.equal(s.next, 40, "every card left the deck");
   assert.equal(s.deveGiocare, null);
+});
+
+test("the turn alternates, play by play, all the way through", () => {
+  // Nothing named this before: making gioca leave the turn where it was broke
+  // seven tests and was reported as caught by whichever finished first. The
+  // rule is its own, so it gets its own assertion.
+  const s = newDeal({}, rngSeed(41));
+  let previous = null;
+  while (!s.over){
+    const who = s.deveGiocare;
+    if (previous !== null && s.plays % 6 !== 0)
+      assert.equal(who, altro(previous),
+        `play ${s.plays + 1}: the same player moved twice inside a round`);
+    if (previous !== null && s.plays % 6 === 0)
+      assert.equal(who, altro(s.mazziere),
+        `play ${s.plays + 1}: a round did not open with the non-dealer`);
+    const slot = s.hands[who].findIndex(c => c);
+    const opts = prese(s.tavola, s.hands[who][slot]);
+    gioca(s, who, slot, opts.length ? opts[0] : []);
+    previous = who;
+  }
+  assert.equal(s.plays, 36);
 });
 
 test("the dealer plays the last card of every round", () => {
@@ -543,6 +589,42 @@ test("a capture that empties the table is a scopa", () => {
   assert.equal(r.scopa, true);
   assert.deepEqual(s.scope, [1, 0]);
   assert.equal(s.tavola.length, 0);
+});
+
+test("an asso that sweeps the table scores a scopa like any other card", () => {
+  // In the game as played there is nothing special about an asso, and this
+  // says so. It exists because the ASSO_PIGLIA_TUTTO guard beside the scopa
+  // rule made the scopa card-dependent for the first time: drop the
+  // `ASSO_PIGLIA_TUTTO &&` from `perAsso` and plain Scopa silently stops
+  // scoring every asso sweep — 161 of 5,316 scope over 10,000 random-legal
+  // deals, 3.0%, with every other test in this file still green.
+  //
+  // The 10,000-deal pass cannot see it: it asserts that a scopa implies an
+  // empty table, never that an emptied table implies a scopa.
+  const s = rigged({
+    tavola: [card(1, 1)],
+    hands: [[card(0, 1), null, null], avanzo()]
+  });
+  const r = gioca(s, BASSO, 0, [0]);
+  assert.equal(r.scopa, true, "an asso sweeping the table is a scopa");
+  assert.deepEqual(s.scope, [1, 0]);
+});
+
+test("under asso piglia tutto, a sweep by any other card is still a scopa", () => {
+  // The pair to the test above and to the asso one below it. Without this,
+  // suppressing *every* sweep under the variant — `perAsso = ASSO_PIGLIA_TUTTO`
+  // — passes, and the variant would score no scope at all.
+  const r = withVariant("ASSO_PIGLIA_TUTTO", ctx => runInContext(`
+    const s = { cards: [], next: 40, plays: 10, giro: 1, over: false,
+                hands: [[{s:0,n:7}, null, null], [null, null, {s:3,n:10}]],
+                tavola: [{s:1,n:4},{s:2,n:3}],
+                prese: [[], []], scope: [0, 0], ultimaPresa: null,
+                mazziere: ALTO, deveGiocare: BASSO };
+    const out = gioca(s, BASSO, 0, [0, 1]);
+    ({ scopa: out.scopa, scope: s.scope });
+  `, ctx));
+  assert.equal(r.scopa, true, "a seven taking 4 and 3 is a scopa, variant or not");
+  assert.deepEqual(r.scope, [1, 0]);
 });
 
 test("emptying the table without capturing is not a scopa", () => {

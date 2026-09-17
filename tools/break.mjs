@@ -55,9 +55,9 @@ const EXPECT = {
   "leftovers to nobody": "the leftovers go to whoever captured last, and are not a scopa",
   "laying a card counts as capturing last": "a card that takes nothing is laid on the table",
   "single before sum ignored": "a single of equal value is taken before any sum",
-  "a sum may use the same card twice": "every sum is found, and none is invented",
+  "a sum may use the same card twice": "a sum never uses a card twice, and never exceeds the table",
   "a one-card sum is offered as a sum": "single before sum is one constant away too",
-  "captures come back in the wrong order": "every sum is found, and none is invented",
+  "captures come back in the wrong order": "a sum can be three cards, and the order is the table's own",
   "a card that can take need not take": "a card that can take must take",
   "any set that adds up is accepted, offer or not": "a capture that is not one of prese()'s is refused",
   "a capture is accepted for a card that takes nothing": "claiming a capture for a card that takes nothing is refused",
@@ -70,9 +70,12 @@ const EXPECT = {
   "the dealer plays first in later rounds": "the dealer plays the last card of every round",
   "the deal does not alternate": "the deal alternates",
   "you deal the first deal": "the deal is three each and four up, and you play first on a cold start",
-  "the turn does not alternate": "the dealer plays the last card of every round",
+  "the turn does not alternate": "the turn alternates, play by play, all the way through",
   "the redeal rule never fires": "three re on the table is a redeal, and the rule is what redeals it",
   "the redeal rule fires on two re": "plain Scopa is what is played: the variants are all off",
+  "the redeal boundary moves to two re without touching the constant": "a table of exactly two re is kept, not redealt",
+  "an asso sweep stops scoring in the game as played": "an asso that sweeps the table scores a scopa like any other card",
+  "every sweep stops scoring under asso piglia tutto": "under asso piglia tutto, a sweep by any other card is still a scopa",
   "a round deals four to the table again": "six rounds of three, thirty-six plays, and the deck dealt out",
   "the hand is not sorted": "a hand is sorted when it is dealt, at the deal and at every round",
   "the hand is sorted lowest first inside a suit": "a hand is sorted when it is dealt, at the deal and at every round",
@@ -154,6 +157,15 @@ const BREAKS = [
   ["a scopa is counted on the last card of the deal",
    "if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima) && !perAsso){",
    "if (state.tavola.length === 0 && !perAsso){"],
+  ["an asso sweep stops scoring in the game as played",
+   "    const perAsso = ASSO_PIGLIA_TUTTO && card.n === 1;",
+   "    const perAsso = card.n === 1;"],
+  ["every sweep stops scoring under asso piglia tutto",
+   "    const perAsso = ASSO_PIGLIA_TUTTO && card.n === 1;",
+   "    const perAsso = ASSO_PIGLIA_TUTTO;"],
+  ["the redeal boundary moves to two re without touching the constant",
+   "    if (state.tavola.filter(c => c.n === 10).length < REDEAL_RE) break;",
+   "    if (state.tavola.filter(c => c.n === 10).length < 2) break;"],
   ["asso piglia tutto scores a scopa for its sweep",
    "    const perAsso = ASSO_PIGLIA_TUTTO && card.n === 1;",
    "    const perAsso = false;"],
@@ -283,8 +295,12 @@ let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [],
 
 // The suite has to pass on the real engine first, or every "caught" below
 // means nothing.
+let BASELINE = 0;
 try {
-  execFileSync(process.execPath, ["--test", TESTS], { stdio: "pipe" });
+  const out = String(execFileSync(process.execPath, ["--test", TESTS], { stdio: "pipe" }));
+  // How many tests the suite really has, so the "did it run at all?" check
+  // below is a fact rather than a magic number.
+  BASELINE = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
 } catch {
   console.error("the tests do not pass on the unbroken engine — fix that first");
   rmSync(dir, { recursive: true, force: true });
@@ -304,10 +320,13 @@ for (const [name, find, replace, why] of chosen){
 
   let failed = false, failures = [], ran = 0;
   try {
-    // A break can stop the deal from ending — "newDeal does not reset plays"
-    // leaves a second deal that never reaches 36 — and a harness that hangs
-    // reports nothing at all. The suite takes under a second; a minute is a
-    // hang, and a hang is a catch.
+    // A break can stop the deal from ending — "a new deal keeps the old plays
+    // count" leaves a second deal that never reaches 36 — and a harness that
+    // hangs reports nothing at all. The suite takes under a second, so a
+    // minute is a hang.
+    //
+    // A hang lands in INVALID, not in caught, and that is deliberate: nothing
+    // ran, so nothing noticed anything. It still exits red.
     execFileSync(process.execPath, ["--test", TESTS],
       { stdio: "pipe", timeout: 60000,
         env: { ...process.env, SCOPETTA_ENGINE: file } });
@@ -337,7 +356,7 @@ for (const [name, find, replace, why] of chosen){
   // the test file's own path, or the suite reporting far fewer tests than it
   // has. Checked, because the obvious guard — no failures at all — does not
   // fire on this case: a syntax-error probe reached UNDECLARED instead.
-  if (failed && (failures.length === 0 || failures.includes(TESTS) || ran < 10)){
+  if (failed && (failures.length === 0 || failures.includes(TESTS) || ran < BASELINE / 2)){
     invalid.push([name, `the suite did not run — ${ran} test(s) reported`]);
     console.log(`INVALID  ${name} — the suite did not run, so nothing caught anything`);
     continue;
