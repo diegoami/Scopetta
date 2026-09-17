@@ -16,7 +16,8 @@
    Naming follows Discola's Pascal-flavoured Italian so the three games read
    alike. Where this game differs the difference is the comment.
 
-   The opponent is iteration 2's and is not in this file yet.
+   The rules are §2's; the opponent below them is §3.4's, one formula over five
+   weights for five rounds and an exact search in the sixth.
    =========================================================================== */
 
 /* --- cards ------------------------------------------------------------------ */
@@ -421,6 +422,275 @@ function vincitore(state){
   return punti[BASSO] > punti[ALTO] ? BASSO : ALTO;
 }
 
+/* --- what the player to move knows ------------------------------------------ */
+
+// §3.4. Every card not in my hand, not on the table and in neither pile: the
+// deck and their hand together. There is no `seen` list in this game because
+// there is nothing to remember — everything but the deck and the other hand is
+// face up, so what the opponent has not seen is derived rather than tracked,
+// and the engine gives it nothing a human could not count.
+function fuori(state, me){
+  const known = new Set();
+  const mark = c => known.add(c.s * 16 + c.n);
+  for (const c of state.hands[me]) if (c) mark(c);
+  for (const c of state.tavola) mark(c);
+  for (const c of state.prese[BASSO]) mark(c);
+  for (const c of state.prese[ALTO]) mark(c);
+
+  const out = [];
+  for (let s = 0; s < 4; s++)
+    for (let n = 1; n <= 10; n++)
+      if (!known.has(s * 16 + n)) out.push({ s, n });
+  return out;
+}
+
+// §3.4. The chance they hold at least one card of value `v`, hypergeometric and
+// exact: 1 − C(U − k, h) / C(U, h), where U is how many cards are unseen, k how
+// many of them have that value, and h how many they hold.
+//
+// As a running product rather than three factorials: the ratio is
+// (U−k)(U−k−1)…/(U)(U−1)…, h terms, which never leaves the range of a double.
+//
+// This sharpens on its own as the deal goes — in the first round U is 33, in
+// the sixth it is h and the answer is 0 or 1 — which is why §3.4 has no `late`
+// factor. Tressette needed one because a control card's certainty grew as the
+// tallone emptied; here this term already is that certainty.
+function pHold(U, k, h){
+  if (k <= 0 || h <= 0) return 0;
+  if (U - k < h) return 1;
+  let ratio = 1;
+  for (let i = 0; i < h; i++) ratio *= (U - k - i) / (U - i);
+  return 1 - ratio;
+}
+
+/* --- the opponent ----------------------------------------------------------- */
+
+// §3.4. **Five.** The plan proposed seven and said the ladder would decide, and
+// it did: iteration 2 measured every one of the seven across its range over
+// 6,000 deals, counting only the decisions the weights actually make, and two
+// of them could not move a play at any magnitude anyone would tune them to.
+//
+//   SCOPA_BONUS       at 1000: 0.01% of decisions, 5 of 40,133
+//   SETTEBELLO_BONUS  at 1000: 0.13% of decisions, 53 of 40,132
+//
+// Both are structurally redundant rather than merely small, which is why no
+// range would have saved them. A scopa takes the whole table, so it already
+// maximises the captured term and already leaves nothing for the gift term to
+// subtract — it wins the argmax without a bonus, and a bonus cannot promote a
+// play that is already top. The settebello is a denaro with the highest
+// primiera value of any card, so `worth` ranks it first on the two terms it
+// already has.
+//
+// They move plays only when set negative — a bonus turned into a penalty,
+// which no profile would do and which costs seven to nine points of score rate.
+// Removing both changed the play in 0.41% of decisions and the result not at
+// all: 60.0% ± 1.8 against greedy-take, where all seven scored 59.7% ± 1.8.
+//
+// Discola had twelve weights and Tressette eleven because their formulas had
+// that many live terms. Five is what this one has. §4: a weight that moves
+// under 1% of plays is removed, not tuned around, and the settings sheet
+// discloses what is left.
+const WEIGHT_KEYS = [
+  "CARTE_WEIGHT",        // a card is a card, toward the carte point
+  "DENARI_WEIGHT",       // a denaro is worth more, toward the denari point
+  "PRIMIERA_WEIGHT",     // a high card in a suit I am weak in, toward primiera
+  "SCOPA_RISK_PENALTY",  // leaving a table they can sweep, by the chance of it
+  "GIFT_FACTOR",         // leaving cards they can pair, by worth and by chance
+];
+
+function weights(values){
+  const P = {};
+  WEIGHT_KEYS.forEach((k, i) => { P[k] = values[i]; });
+  return P;
+}
+
+// Iteration 2 tunes one profile. The roster — how many names, and which corners
+// they sit in — is iteration 5's measurement, per §0 decision 5, and this
+// returns whatever that turns out to be. Franco is the house standard either
+// way.
+function rollProfiles(rng){
+  return { Franco: weights([1, 2, 0.4, 6, 0.5]) };
+}
+
+// §3.4, the one quantity every term is built from. `mine` is my captured pile:
+// primiera is scored from what has been taken, so a card's primiera worth is
+// only what it adds to the best I already hold in its suit — and a card of a
+// suit I hold none of is worth its whole primiera value, because without one I
+// cannot take the point at all.
+function worth(c, bestMine, P){
+  let w = P.CARTE_WEIGHT;
+  if (c.s === DENARI) w += P.DENARI_WEIGHT;
+  // No settebello term: it is a denaro with the highest primiera value there
+  // is, so the two terms above already rank it first. Measured, not assumed —
+  // see WEIGHT_KEYS.
+  const gain = primiera(c.n) - bestMine[c.s];
+  if (gain > 0) w += gain * P.PRIMIERA_WEIGHT;
+  return w;
+}
+
+function bestPrimieraHeld(pile){
+  const best = [0, 0, 0, 0];
+  for (const c of pile) if (primiera(c.n) > best[c.s]) best[c.s] = primiera(c.n);
+  return best;
+}
+
+// Every legal play in this position, as {slot, presa} — each card in hand times
+// each of its captures, or the card laid down. The order is the order ties are
+// broken in: lowest slot first, and within a slot the captures in prese()'s
+// own order. §3.4.
+function mosse(state, who){
+  const out = [];
+  const hand = state.hands[who];
+  for (let slot = 0; slot < hand.length; slot++){
+    if (!hand[slot]) continue;
+    const opts = prese(state.tavola, hand[slot]);
+    if (opts.length) for (const presa of opts) out.push({ slot, presa });
+    else out.push({ slot, presa: [] });
+  }
+  return out;
+}
+
+// §3.4. Score one play: what it takes, then what it leaves.
+function valutaMossa(state, who, mossa, P, ctx){
+  const card = state.hands[who][mossa.slot];
+  let score = 0;
+
+  const taking = new Set(mossa.presa);
+  if (mossa.presa.length){
+    score += worth(card, ctx.bestMine, P);
+    for (const i of mossa.presa) score += worth(state.tavola[i], ctx.bestMine, P);
+    // No scopa bonus: a sweep takes every card on the table, so it already
+    // scores the most this term can give and leaves nothing for the gift term
+    // below to take away. It wins on its own. Measured — see WEIGHT_KEYS.
+  }
+
+  // The table this play leaves behind. A card laid down is part of it, which is
+  // why laying the settebello costs its whole gift without a rule saying "do
+  // not lay the settebello"; a capture removes its cards from it, which is why
+  // taking the settebello is worth both the capture and the gift it stops being.
+  const resta = [];
+  for (let i = 0; i < state.tavola.length; i++)
+    if (!taking.has(i)) resta.push(state.tavola[i]);
+  if (!mossa.presa.length) resta.push(card);
+
+  // Their hand after this play: they hold `h`, drawn from the `U` I cannot see.
+  // My own played card leaves my hand, so it is no longer hidden from me — but
+  // it was never in `fuori` to begin with.
+  const U = ctx.fuoriCount, h = ctx.theirCards;
+
+  const somma = resta.reduce((a, c) => a + valore(c.n), 0);
+  if (somma > 0 && somma <= 10)
+    score -= P.SCOPA_RISK_PENALTY * pHold(U, ctx.outstanding[somma], h);
+
+  // The gift term approximates their capture by a pair, not by a sum: a sum
+  // needs two or more of their three cards to be exactly the right ones, and
+  // that is the search's business rather than the formula's.
+  for (const c of resta)
+    score -= P.GIFT_FACTOR * worth(c, ctx.bestMine, P) * pHold(U, ctx.outstanding[valore(c.n)], h);
+
+  return score;
+}
+
+/* --- the sixth round, played out exactly ------------------------------------ */
+
+// §3.4. From this round on the deck is empty and `fuori` is their hand exactly,
+// so there is nothing left to guess: the position is enumerated and played to
+// the end of the deal with the real `gioca`, and the leaf is scored with the
+// real `scoreDeal`. That is what lets it know that taking one worthless card on
+// the 35th play is worth the whole table on the 36th.
+//
+// All four opponents play these six cards alike, which is also why those
+// decisions are not in the denominator when the roster is measured for
+// difference: there is nothing there for a weight to change.
+const CODA_FROM = 5;
+
+function cloneState(state){
+  return {
+    cards: state.cards, next: state.next,
+    hands: [state.hands[BASSO].slice(), state.hands[ALTO].slice()],
+    tavola: state.tavola.slice(),
+    prese: [state.prese[BASSO].slice(), state.prese[ALTO].slice()],
+    scope: state.scope.slice(),
+    ultimaPresa: state.ultimaPresa, mazziere: state.mazziere,
+    deveGiocare: state.deveGiocare, giro: state.giro, plays: state.plays,
+    over: state.over
+  };
+}
+
+// My points minus theirs at the end of the deal, playing both sides perfectly.
+function codaValore(state, me){
+  if (state.over){
+    const { punti } = scoreDeal(state);
+    return punti[me] - punti[altro(me)];
+  }
+  const who = state.deveGiocare;
+  let best = null;
+  for (const m of mosse(state, who)){
+    const next = cloneState(state);
+    gioca(next, who, m.slot, m.presa);
+    const v = codaValore(next, me);
+    if (best === null || (who === me ? v > best : v < best)) best = v;
+  }
+  // Unreachable while a player to move has a card, and a deal that is not over
+  // always has one. It returns rather than throwing because the search is not
+  // the place to discover it.
+  return best === null ? 0 : best;
+}
+
+function coda(state, me){
+  let best = null, bestValue = -Infinity;
+  for (const m of mosse(state, me)){
+    const next = cloneState(state);
+    gioca(next, me, m.slot, m.presa);
+    const v = codaValore(next, me);
+    // Ties to the lowest slot and then to the first capture, which is the order
+    // mosse() returns them in. Do not "optimise" this by taking >= : the golden
+    // fixture freezes which card gets played.
+    if (v > bestValue){ bestValue = v; best = m; }
+  }
+  return best;
+}
+
+/* --- the play ---------------------------------------------------------------- */
+
+// §3.4. Two branches. For five rounds, score every legal play with the
+// profile's weights and make the highest. In the sixth, where nothing is
+// hidden, play it out exactly.
+function compGioca(state, P){
+  const me = state.deveGiocare;
+  const hidden = fuori(state, me);
+  const theirCards = state.hands[altro(me)].filter(c => c).length;
+
+  // The search, when the position really is deducible. It refuses what it
+  // cannot deduce: if `fuori` is not the size of their hand there is still a
+  // deck, and the formula answers instead. As in Tressette.
+  if (state.giro >= CODA_FROM && hidden.length === theirCards && theirCards > 0){
+    const known = cloneState(state);
+    // Their hand, deduced. Slots do not matter to the search — it enumerates
+    // every card — but the array has to be the shape gioca expects.
+    known.hands[altro(me)] = ordina(hidden.slice());
+    const m = coda(known, me);
+    if (m) return { slot: m.slot, presa: m.presa };
+  }
+
+  const outstanding = new Array(11).fill(0);
+  for (const c of hidden) outstanding[valore(c.n)]++;
+
+  const ctx = {
+    bestMine: bestPrimieraHeld(state.prese[me]),
+    fuoriCount: hidden.length,
+    theirCards,
+    outstanding
+  };
+
+  let best = null, bestScore = -Infinity;
+  for (const m of mosse(state, me)){
+    const score = valutaMossa(state, me, m, P, ctx);
+    if (score > bestScore){ bestScore = score; best = m; }
+  }
+  return best ? { slot: best.slot, presa: best.presa } : null;
+}
+
 /* --- the surface ------------------------------------------------------------ */
 
 // The page gets these from the classic script; Node's vm.runInThisContext does
@@ -431,5 +701,7 @@ Object.assign(globalThis, {
   PRESA_OBBLIGATORIA, SINGLE_BEFORE_SUM, SCOPA_ULTIMA, REDEAL_RE,
   ASSO_PIGLIA_TUTTO, NAPOLA, RE_BELLO,
   ordina, newDeal, distribuisci, prese, gioca,
-  scoreDeal, vincitore, primieraTotale
+  scoreDeal, vincitore, primieraTotale,
+  WEIGHT_KEYS, weights, rollProfiles, compGioca,
+  fuori, pHold, worth, bestPrimieraHeld, mosse, valutaMossa, CODA_FROM, coda
 });

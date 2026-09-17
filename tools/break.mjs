@@ -25,7 +25,12 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const ENGINE = fileURLToPath(new URL("../public/engine.js", import.meta.url));
-const TESTS = fileURLToPath(new URL("./engine.test.mjs", import.meta.url));
+// Both suites: the rules and the opponent. A trap that cannot fail is the same
+// defect as a rule test that cannot fail, and §4 iteration 2 records that four
+// of Tressette's traps were written against positions where the bug they named
+// could not appear.
+const TESTS = [fileURLToPath(new URL("./engine.test.mjs", import.meta.url)),
+               fileURLToPath(new URL("./opponent.test.mjs", import.meta.url))];
 const TEXT = readFileSync(ENGINE, "utf8");
 
 // Each break is [name, find, replace] and optionally a fourth entry: the
@@ -99,6 +104,19 @@ const EXPECT = {
   "a new deal does not say it is dealt": "a new deal on a finished one starts from nothing",
   "the cards are dealt to the opponent first": "the cards are dealt in order: three to you, three to them, four up",
   "the score hands out a live reference to the scope": "the score reports a copy of the scope, not the state's own array",
+  "worth ignores the suit, so a denaro is just a card": "with two sevens on the table, it takes the settebello",
+  "worth ignores primiera entirely": "the golden fixture still plays out exactly as recorded",
+  "worth counts a card I already beat in that suit": "the golden fixture still plays out exactly as recorded",
+  "the scopa risk term is dropped": "it lays the card that leaves the table hardest to sweep",
+  "the gift term is dropped": "the golden fixture still plays out exactly as recorded",
+  "the card laid down is left out of the table it leaves": "the golden fixture still plays out exactly as recorded",
+  "ties go to the highest slot": "the golden fixture still plays out exactly as recorded",
+  "the search never runs": "the search declines a capture the formula takes, and wins four more cards",
+  "the search maximises the opponent's points": "the search plays for its own points, not theirs",
+  "the search lets the opponent help me": "the search expects the opponent to play against it, not to help",
+  "the search ties to the highest slot": "the golden fixture still plays out exactly as recorded",
+  "fuori counts my own hand as unseen": "the golden fixture still plays out exactly as recorded",
+  "pHold always says they hold it": "the golden fixture still plays out exactly as recorded",
 };
 
 const BREAKS = [
@@ -244,6 +262,47 @@ const BREAKS = [
    "  if (punti[BASSO] === punti[ALTO]) return null;",
    "  if (false) return null;"],
 
+  // --- the opponent --------------------------------------------------------
+  ["worth ignores the suit, so a denaro is just a card",
+   "  if (c.s === DENARI) w += P.DENARI_WEIGHT;",
+   "  if (false) w += P.DENARI_WEIGHT;"],
+  ["worth ignores primiera entirely",
+   "  if (gain > 0) w += gain * P.PRIMIERA_WEIGHT;",
+   "  if (false) w += gain * P.PRIMIERA_WEIGHT;"],
+  ["worth counts a card I already beat in that suit",
+   "  const gain = primiera(c.n) - bestMine[c.s];",
+   "  const gain = primiera(c.n);"],
+  ["the scopa risk term is dropped",
+   "    score -= P.SCOPA_RISK_PENALTY * pHold(U, ctx.outstanding[somma], h);",
+   "    score -= 0;"],
+  ["the gift term is dropped",
+   "    score -= P.GIFT_FACTOR * worth(c, ctx.bestMine, P) * pHold(U, ctx.outstanding[valore(c.n)], h);",
+   "    score -= 0;"],
+  ["the card laid down is left out of the table it leaves",
+   "  if (!mossa.presa.length) resta.push(card);",
+   "  if (false) resta.push(card);"],
+  ["ties go to the highest slot",
+   "    if (score > bestScore){ bestScore = score; best = m; }",
+   "    if (score >= bestScore){ bestScore = score; best = m; }"],
+  ["the search never runs",
+   "const CODA_FROM = 5;",
+   "const CODA_FROM = 6;"],
+  ["the search maximises the opponent's points",
+   "    return punti[me] - punti[altro(me)];",
+   "    return punti[altro(me)] - punti[me];"],
+  ["the search lets the opponent help me",
+   "    if (best === null || (who === me ? v > best : v < best)) best = v;",
+   "    if (best === null || v > best) best = v;"],
+  ["the search ties to the highest slot",
+   "    if (v > bestValue){ bestValue = v; best = m; }",
+   "    if (v >= bestValue){ bestValue = v; best = m; }"],
+  ["fuori counts my own hand as unseen",
+   "  for (const c of state.hands[me]) if (c) mark(c);",
+   "  for (const c of []) if (c) mark(c);"],
+  ["pHold always says they hold it",
+   "  if (k <= 0 || h <= 0) return 0;",
+   "  if (k <= 0 || h <= 0) return 0;\n  return 1;"],
+
   // --- the generator -------------------------------------------------------
   ["the rng warm-up is dropped",
    "  for (let i = 0; i < 8; i++) next();",
@@ -297,7 +356,7 @@ let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [],
 // means nothing.
 let BASELINE = 0;
 try {
-  const out = String(execFileSync(process.execPath, ["--test", TESTS], { stdio: "pipe" }));
+  const out = String(execFileSync(process.execPath, ["--test", ...TESTS], { stdio: "pipe" }));
   // How many tests the suite really has, so the "did it run at all?" check
   // below is a fact rather than a magic number.
   BASELINE = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
@@ -327,7 +386,7 @@ for (const [name, find, replace, why] of chosen){
     //
     // A hang lands in INVALID, not in caught, and that is deliberate: nothing
     // ran, so nothing noticed anything. It still exits red.
-    execFileSync(process.execPath, ["--test", TESTS],
+    execFileSync(process.execPath, ["--test", ...TESTS],
       { stdio: "pipe", timeout: 60000,
         env: { ...process.env, SCOPETTA_ENGINE: file } });
   } catch (e) {
@@ -356,7 +415,7 @@ for (const [name, find, replace, why] of chosen){
   // the test file's own path, or the suite reporting far fewer tests than it
   // has. Checked, because the obvious guard — no failures at all — does not
   // fire on this case: a syntax-error probe reached UNDECLARED instead.
-  if (failed && (failures.length === 0 || failures.includes(TESTS) || ran < BASELINE / 2)){
+  if (failed && (failures.length === 0 || TESTS.some(t => failures.includes(t)) || ran < BASELINE / 2)){
     invalid.push([name, `the suite did not run — ${ran} test(s) reported`]);
     console.log(`INVALID  ${name} — the suite did not run, so nothing caught anything`);
     continue;

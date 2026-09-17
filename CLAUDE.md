@@ -123,8 +123,10 @@ unreachable, and a misplay costs the deal.
 
 ## The engine is ours, and then it is frozen
 
-`engine.js` holds the rules and the opponent as pure functions over a plain
-state object. Nothing in it touches `document`, `window`, timers or
+`engine.js` holds the rules and the opponent as functions over a plain state
+object — `newDeal`, `distribuisci` and `gioca` mutate it, so "pure" is the
+plan's loose word for what is actually true: nothing in the file reaches
+outside that object. Nothing in it touches `document`, `window`, timers or
 `Math.random` — that is what lets Node run the same file as the browser, which
 is what makes the self-play harness and the golden fixture possible. Randomness
 arrives as an injectable `rng`, `rollProfiles(rng)` included, and `rngSeed`
@@ -136,12 +138,14 @@ a seed is re-run with it.
 Discola's engine was a transcription of a 1997 original, so its rule was
 *change a weight, not the formula*. Here the formula is ours until v1.0 — and
 from v1.0 the same rule applies for a different reason: the golden fixture
-freezes the plays, and a formula change invalidates it. There are **seven**
-weights, and the settings sheet discloses seven; an eighth is not invented to
-match Discola's twelve or Tressette's eleven. The test of whether a weight
-belongs is iteration 2's ladder, not the count: a weight that moves under 1% of
-plays is removed, not tuned around, and the denominator is the decisions the
-weights actually make.
+freezes the plays, and a formula change invalidates it. There are **five**
+weights, and the settings sheet discloses five. The plan drafted seven;
+iteration 2 laddered all of them and two could not move a play at any magnitude
+anyone would tune them to — a scopa already wins the argmax on its own, and the
+settebello is already the highest card `worth` knows — so they went. A sixth is
+not invented to match Discola's twelve or Tressette's eleven, and the test of
+whether a weight belongs is the ladder, not the count: under 1% of the
+decisions the weights actually make and it is removed, not tuned around.
 
 One exception to "score every legal play and make the highest" is deliberate
 and belongs in the source with its reason: from `CODA_FROM` on — the sixth
