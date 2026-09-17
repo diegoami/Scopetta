@@ -191,6 +191,7 @@ public/engine.js    rules + opponent. Pure functions over a plain state object. 
 public/decks/*.png  the five sprite sheets, byte-identical copies from Tressette
 tools/check_ui.mjs  the UI check, forked from Tressette and extended for the table (§3.7)
 tools/engine.test.mjs   unit tests on node --test, no dependencies
+tools/break.mjs     every rule broken on purpose, and whether a test caught it (§4 iteration 1)
 tools/opponent.test.mjs the trap suite and the golden test
 tools/selfplay.mjs  headless matches: profile vs profile, vs baselines; the tuning loop
 tools/golden.json   the frozen plays, re-recorded by `selfplay.mjs --golden`
@@ -573,6 +574,13 @@ random deal happened to produce; the engine test reports the largest it saw
 in 10,000 deals so that the two numbers can be compared, and if a deal ever
 produced fourteen the proof above is wrong and the bound moves.
 
+Iteration 1 measured it: **twelve**, on seed 7755, over 10,000 random-legal
+deals — the figure `node --test 'tools/**/*.test.mjs'` prints. The bound holds
+and is not tight, which is the case this paragraph was written for. A
+random-legal player is not an adversary trying to fill the table, so twelve is
+a floor under what is reachable rather than the maximum; the check still
+renders thirteen, and the test still fails at fourteen.
+
 Thirteen cards do not sit side by side on a phone. Two rules, in this order:
 
 1. **The middle row wraps in portrait.** `--rows` is 3 in landscape and 4 in
@@ -915,7 +923,7 @@ can slip.
 |---|---|
 | Scopone, scientifico or otherwise | A different game: ten cards each, four players, partners, a whole theory of *spariglio*. Nothing here precludes it — `prese`, `gioca` and `scoreDeal` are the same rules — but the table is not. |
 | A match to 11 across deals | The traditional form, left out on the owner's standing call for one deal per partita. `scoreDeal` returns per-deal points, so a running total, a second dialog and a saved match are additions, not a redesign. The case for it is stronger here than in Tressette, because a single deal draws more often; §0 says so. |
-| Napola, asso piglia tutto, re bello, scopa d'assi, scopa a quindici | Variants. Each is a named constant or a branch away, and the about screen says which Scopa this is. |
+| Napola, asso piglia tutto, re bello, scopa d'assi, scopa a quindici | Variants. Each is a named constant or a branch away, and the about screen says which Scopa this is. Iteration 1 made three of them constants read by a real branch — `NAPOLA`, `ASSO_PIGLIA_TUTTO`, `RE_BELLO` — each with a test that flips it and watches the branch fire, because a constant nothing consults would not make a change one line, it would only look as though it had. **Scopa d'assi is the exception and is a gap, not a constant**: this plan names it without saying what it does, and the house rule differs — in some it is another name for asso piglia tutto, in others a scopa scored for an asso played to an empty table. A constant guessing between the two would be worse than none. If the owner wants it, decide which it is first. |
 | Multiplayer, accounts, a server | Same reason as Discola: any server is an operational liability that outlives interest. |
 | A framework or build step | Same reason as Discola. |
 | Localisation | The terms of art are Italian. |

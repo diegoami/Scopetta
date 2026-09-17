@@ -1,0 +1,247 @@
+// Break the engine on purpose, one rule at a time, and check the tests notice.
+//
+//   node tools/break.mjs            every break
+//   node tools/break.mjs scopa      only the breaks whose name matches
+//
+// §4 iteration 1: "every rule test is broken deliberately after it is written
+// — the wrong player credited, the sum rule skipped, the scopa counted on the
+// last card — and watched to fail. A test that still passes is decoration."
+//
+// Doing that by hand produces a number in a pull request that nobody can
+// re-derive, and PLAN.md §7.5 is explicit that a measured number and a
+// remembered one look the same on the page. So it is a script: each break is a
+// single edit to engine.js, applied to a copy, with the suite run against it.
+// A break the suite does not catch is printed as SURVIVED and is a hole in the
+// tests, not a curiosity.
+//
+// This is not part of CI. It edits nothing in the repository — the mutants go
+// to a temporary directory and the suite is pointed at them through
+// SCOPETTA_ENGINE.
+
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+const ENGINE = fileURLToPath(new URL("../public/engine.js", import.meta.url));
+const TESTS = fileURLToPath(new URL("./engine.test.mjs", import.meta.url));
+const TEXT = readFileSync(ENGINE, "utf8");
+
+// Each break is [name, find, replace] and optionally a fourth entry: the
+// reason it is EQUIVALENT — a rewrite that cannot change what the engine
+// does, so no test can catch it and its surviving is not a hole. Marking one
+// equivalent is a claim, so each says how it was measured; an equivalent that
+// starts failing is telling you the rewrite was not equivalent after all.
+//
+// `find` must appear exactly once, or the break is reported INVALID rather
+// than quietly doing nothing somewhere else — a mutation that did not mutate
+// would otherwise be counted as a hole.
+const BREAKS = [
+  // --- who gets what -------------------------------------------------------
+  ["capture credited to the wrong player",
+   "state.prese[who].push(card, ...taken);",
+   "state.prese[altro(who)].push(card, ...taken);"],
+  ["the played card is not put in the pile",
+   "state.prese[who].push(card, ...taken);",
+   "state.prese[who].push(...taken);"],
+  ["leftovers to the wrong player",
+   "state.prese[state.ultimaPresa].push(...resto);",
+   "state.prese[altro(state.ultimaPresa)].push(...resto);"],
+  ["leftovers to nobody",
+   "state.prese[state.ultimaPresa].push(...resto);",
+   "void resto;"],
+  ["laying a card counts as capturing last",
+   "  } else {\n    state.tavola.push(card);",
+   "  } else {\n    state.ultimaPresa = who;\n    state.tavola.push(card);"],
+
+  // --- what a card can take ------------------------------------------------
+  ["single before sum ignored",
+   "if (SINGLE_BEFORE_SUM && singles.length) return singles;",
+   "if (false && singles.length) return singles;"],
+  ["a sum may use the same card twice",
+   "take(i + 1, chosen, left - w);",
+   "take(i, chosen, left - w);"],
+  ["a one-card sum is offered as a sum",
+   "if (chosen.length >= 2) sums.push(chosen.slice());",
+   "if (chosen.length >= 1) sums.push(chosen.slice());"],
+  ["captures come back in the wrong order",
+   "  take(0, [], v);",
+   "  take(0, [], v); sums.reverse();"],
+  ["a capture is offered that does not add up",
+   "      if (w > left) continue;",
+   "      if (w > left + 1) continue;",
+   "the prune is an optimisation: a branch that overshoots reaches left < 0, " +
+   "where every remaining card is still too big and the recursion dies without " +
+   "pushing. Identical output over 200,000 random tables."],
+
+  // --- the compulsion and the offer ----------------------------------------
+  ["a card that can take need not take",
+   "    if (PRESA_OBBLIGATORIA) throw new Error(\"this card must take\");",
+   "    if (false) throw new Error(\"this card must take\");"],
+  ["any set that adds up is accepted, offer or not",
+   "  } else if (!options.some(set => sameSet(set, chosen))){",
+   "  } else if (chosen.reduce((a, i) => a + valore(state.tavola[i].n), 0) !== valore(card.n)){"],
+  ["a capture is accepted for a card that takes nothing",
+   "    if (chosen.length) throw new Error(\"this card takes nothing\");",
+   "    if (false) throw new Error(\"this card takes nothing\");"],
+  ["playing out of turn is allowed",
+   "  if (who !== state.deveGiocare) throw new Error(\"not this player's turn\");",
+   "  if (false) throw new Error(\"not this player's turn\");"],
+
+  // --- the scopa -----------------------------------------------------------
+  ["a scopa is counted on the last card of the deal",
+   "if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima)){",
+   "if (state.tavola.length === 0){"],
+  ["no scopa is ever counted",
+   "      state.scope[who]++;",
+   "      state.scope[who] += 0;"],
+  ["the scopa goes to the other player",
+   "      state.scope[who]++;",
+   "      state.scope[altro(who)]++;"],
+
+  // --- the deal ------------------------------------------------------------
+  ["the dealer plays first",
+   "  state.deveGiocare = altro(state.mazziere);\n  return state;\n}\n\n// §2.2. The next round",
+   "  state.deveGiocare = state.mazziere;\n  return state;\n}\n\n// §2.2. The next round"],
+  ["the dealer plays first in later rounds",
+   "  state.deveGiocare = altro(state.mazziere);\n  return state;\n}\n\n/* --- what a card can take",
+   "  state.deveGiocare = state.mazziere;\n  return state;\n}\n\n/* --- what a card can take"],
+  ["the deal does not alternate",
+   "    ? ALTO : altro(state.mazziere);",
+   "    ? ALTO : state.mazziere;"],
+  ["you deal the first deal",
+   "    ? ALTO : altro(state.mazziere);",
+   "    ? BASSO : altro(state.mazziere);"],
+  ["the turn does not alternate",
+   "    state.deveGiocare = altro(who);",
+   "    state.deveGiocare = who;"],
+  ["the redeal rule never fires",
+   "const REDEAL_RE = 3;",
+   "const REDEAL_RE = 9;"],
+  ["the redeal rule fires on two re",
+   "const REDEAL_RE = 3;",
+   "const REDEAL_RE = 2;"],
+  ["a round deals four to the table again",
+   "  daiCarte(state, 3, 0);",
+   "  daiCarte(state, 3, 4);"],
+
+  // --- the sort ------------------------------------------------------------
+  ["the hand is not sorted",
+   "  hand.sort((a, b) => (a.s - b.s) || (b.n - a.n));",
+   "  void hand;"],
+  ["the hand is sorted lowest first inside a suit",
+   "  hand.sort((a, b) => (a.s - b.s) || (b.n - a.n));",
+   "  hand.sort((a, b) => (a.s - b.s) || (a.n - b.n));"],
+  ["the hand is sorted by value before suit",
+   "  hand.sort((a, b) => (a.s - b.s) || (b.n - a.n));",
+   "  hand.sort((a, b) => (b.n - a.n) || (a.s - b.s));"],
+  ["a played card's hole is closed up",
+   "  state.hands[who][slot] = null;",
+   "  state.hands[who][slot] = null;\n  state.hands[who] = state.hands[who].filter(c => c);"],
+
+  // --- the score -----------------------------------------------------------
+  ["a tied point goes to you",
+   "  if (a === b) return null;",
+   "  if (a === b) return BASSO;"],
+  ["a point needs only as many, not more",
+   "  return a > b ? BASSO : ALTO;",
+   "  return a >= b ? BASSO : ALTO;",
+   "unreachable: piuDi returns null on a === b one line above, so >= and > " +
+   "agree on every input. Identical over every 0..40 pair."],
+  ["primiera ignores a missing suit",
+   "  if (best.some(v => v === 0)) return null;      // a suit missing: no point",
+   "  ;"],
+  ["primiera uses the capture value",
+   "    if (primiera(c.n) > best[c.s]) best[c.s] = primiera(c.n);",
+   "    if (c.n > best[c.s]) best[c.s] = c.n;"],
+  ["the primiera scale is off by one card",
+   "const PRIMIERA = { 1: 16, 2: 12, 3: 13, 4: 14, 5: 15, 6: 18, 7: 21, 8: 10, 9: 10, 10: 10 };",
+   "const PRIMIERA = { 1: 16, 2: 12, 3: 13, 4: 14, 5: 15, 6: 21, 7: 18, 8: 10, 9: 10, 10: 10 };"],
+  ["any seven is the settebello",
+   "const isSettebello = c => c.s === DENARI && c.n === 7;",
+   "const isSettebello = c => c.n === 7;"],
+  ["the scope are left out of the totals",
+   "  punti[BASSO] += state.scope[BASSO];",
+   "  punti[BASSO] += 0;"],
+  ["a draw is called a win",
+   "  if (punti[BASSO] === punti[ALTO]) return null;",
+   "  if (false) return null;"],
+
+  // --- the generator -------------------------------------------------------
+  ["the rng warm-up is dropped",
+   "  for (let i = 0; i < 8; i++) next();",
+   "  for (let i = 0; i < 0; i++) next();"],
+  ["the shuffle leaves the first card alone",
+   "  for (let i = cards.length - 1; i > 0; i--){",
+   "  for (let i = cards.length - 1; i > 1; i--){"],
+];
+
+const filter = process.argv[2];
+const chosen = filter ? BREAKS.filter(b => b[0].includes(filter)) : BREAKS;
+if (!chosen.length){
+  console.error(`no break matches ${JSON.stringify(filter)}`);
+  process.exit(2);
+}
+
+const dir = mkdtempSync(join(tmpdir(), "scopetta-break-"));
+let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [];
+
+// The suite has to pass on the real engine first, or every "caught" below
+// means nothing.
+try {
+  execFileSync(process.execPath, ["--test", TESTS], { stdio: "pipe" });
+} catch {
+  console.error("the tests do not pass on the unbroken engine — fix that first");
+  rmSync(dir, { recursive: true, force: true });
+  process.exit(2);
+}
+
+let n = 0;
+for (const [name, find, replace, why] of chosen){
+  const hits = TEXT.split(find).length - 1;
+  if (hits !== 1){
+    invalid.push([name, `matched ${hits} times, want exactly 1`]);
+    console.log(`INVALID  ${name} — matched ${hits} times`);
+    continue;
+  }
+  const file = join(dir, `engine-${n++}.js`);
+  writeFileSync(file, TEXT.replace(find, replace));
+
+  let failed = false, firstFailure = "";
+  try {
+    execFileSync(process.execPath, ["--test", TESTS],
+      { stdio: "pipe", env: { ...process.env, SCOPETTA_ENGINE: file } });
+  } catch (e) {
+    failed = true;
+    const out = String(e.stdout || "") + String(e.stderr || "");
+    firstFailure = (out.match(/^not ok \d+ - (.*)$/m) || [, "?"])[1];
+  }
+  if (why){
+    // An equivalent mutant is expected to survive. If it was caught, the
+    // claim that it changes nothing is wrong, and that is worth a red exit
+    // just as much as a hole is.
+    if (failed){
+      wrongly.push([name, firstFailure]);
+      console.log(`NOT EQUIV ${name}  →  caught by: ${firstFailure}`);
+    } else {
+      equivalent.push([name, why]);
+      console.log(`equivalent ${name}`);
+    }
+    continue;
+  }
+  if (failed){ caught++; console.log(`caught   ${name}  →  ${firstFailure}`); }
+  else { survived.push(name); console.log(`SURVIVED ${name}`); }
+}
+
+rmSync(dir, { recursive: true, force: true });
+
+const real = chosen.length - equivalent.length - wrongly.length - invalid.length;
+console.log(`\n${chosen.length} breaks: ${caught} of ${real} caught, ` +
+            `${survived.length} survived, ${equivalent.length} equivalent, ` +
+            `${invalid.length} invalid`);
+for (const s of survived) console.log(`  SURVIVED — a hole in the tests: ${s}`);
+for (const [s, w] of wrongly) console.log(`  NOT EQUIVALENT — the claim is wrong: ${s} (${w})`);
+for (const [s, w] of equivalent) console.log(`  equivalent: ${s}\n              ${w}`);
+for (const [s, w] of invalid) console.log(`  invalid: ${s} (${w})`);
+process.exit(survived.length || invalid.length || wrongly.length ? 1 : 0);
