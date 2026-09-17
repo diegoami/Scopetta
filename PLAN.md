@@ -4,8 +4,9 @@ A two-player Scopa game for the browser, the third of the series after
 [Discola](https://github.com/diegoami/discola-web) (Briscola, 1997, ported)
 and [Tressette](https://github.com/diegoami/Tressette) (Tressette a due,
 designed): one static page, no build step, the 1997 card art, a table lit from
-above, three named opponents who share one formula and differ only in their
-weights, and a UI check calibrated against the defects that actually ship.
+above, the house's named opponents, who share one formula and differ only in
+their weights, and a UI check calibrated against the defects that actually
+ship.
 
 **Status: nothing is built.** This document is the plan. It becomes `SPEC.md`
 once the game exists, the way Discola's did and Tressette's will.
@@ -29,14 +30,17 @@ and the sections below say what moves.
 | 2 | Which Scopa? | **Scopa a due**: two players, three cards each, four on the table, the game the owner asked for. | Scopone (ten cards each, four players, partners) is a different game and a different table. See §5. |
 | 3 | What is a *partita*? | **One deal, as in Discola and Tressette.** Four points plus scope, the higher total wins. Chosen twice already by the owner; kept for the house's rhythm. | The traditional match to 11 across deals would add a running score, a second result dialog and a match saved between deals. `scoreDeal` is per-deal already, so it plugs in; see §5. A draw is more common here than in Tressette — two points each and no scope is a draw — and a match to 11 is the traditional answer to that. |
 | 4 | House rules | **Plain Scopa.** Capture is compulsory; a single card of equal value must be taken before any sum; a scopa with the last card of the deal does not count; three or four *re* among the first four cards is a redeal. **No** napola, no *asso piglia tutto*, no *re bello*, no *scopa d'assi*. | Napola is one scoring branch and one line in the result; each of the others is a rule branch. Every one is a named constant in the engine so a change is one line, and the about screen states what is played. |
-| 5 | The opponents | **Three: Franco, Graziano and Piero**, the roster Tressette settled on after measuring that eleven weights could not carry four. Franco the house standard, Graziano loose, Piero rolled once per session. | A fourth name needs a fourth character the formula can express, and §3.4 says why that is measured before it is promised. |
+| 5 | The opponents | **The house's four names — Franco, Valerio, Graziano and Piero — with as many of them at the table as the formula has corners for.** Tressette's iteration 5 ended with four, one to each corner of the two weights that turned out to decide the game a profile plays, after a first pass had cut the roster to three by pricing one lever and missing the other. So the count here is what iteration 2's ladder finds: two levers make four corners and four names; one lever makes two, and the roster says so. Franco is the house standard whatever the count, and Piero is rolled once per session. | Nothing in the code moves either way — `rollProfiles` returns whatever the roster is — but a name that is not a different player by measurement does not go on the start sheet. |
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
 
 All seven were confirmed by the owner before iteration 0, on the day the
-plan was written. Decision 6 is the one the owner is most likely to feel at
-the table, and it is the one to revisit after playing iteration 3 if it
-turns out to hide the rule rather than teach it.
+plan was written. Decision 5 was confirmed as a roster of three, and
+Tressette's roster went back to four the same day — the review of its
+iteration 5 found a second lever — so that row was rewritten to what it says
+now, and it is the owner's to confirm again. Decision 6 is the one the owner
+is most likely to feel at the table, and it is the one to revisit after
+playing iteration 3 if it turns out to hide the rule rather than teach it.
 
 ## 1. What "in the spirit of Discola" means here
 
@@ -53,12 +57,13 @@ The contract, in one list. Everything else is detail.
   plates in the corners, the sheets for start, settings, history and about.
   The CSS is forked from Tressette and changed where Scopa needs it, not
   restyled.
-- **One formula, three weight vectors, and one exception.** For five rounds of
-  three cards the opponent scores every legal play and makes the highest, and
-  the three opponents differ only in their weights, which the settings sheet
-  discloses. In the sixth round, where the deck is empty and the other hand
-  can be deduced rather than guessed at, all three play the last six cards out
-  exactly and identically, as Tressette's do from trick fourteen. §3.4.
+- **One formula, one weight vector per name, and one exception.** For five
+  rounds of three cards the opponent scores every legal play and makes the
+  highest, and the opponents differ only in their weights, which the settings
+  sheet discloses. In the sixth round, where the deck is empty and the other
+  hand can be deduced rather than guessed at, every one of them plays the last
+  six cards out exactly and identically, as Tressette's do from trick
+  fourteen. §3.4.
 - **Player-facing text is Italian.** Comments, commits and documents are
   English.
 - **The UI check runs after every UI change**, and every threshold in it names
@@ -194,7 +199,7 @@ alike.
 // cards
 SUITS, valore(n), primiera(n)      // capture value and primiera value of card number n
 buildDeck(), mescola(cards, rng)   // rng: () => [0,1)
-rngSeed(seed)                      // a seeded rng, versioned with the engine
+rngSeed(seed)                      // a seeded rng, versioned with the engine, warmed up
 
 // a deal
 newDeal(state, rng)                // shuffle, redeal on three re, three each and four up, set who plays
@@ -207,7 +212,7 @@ vincitore(state)                   // BASSO, ALTO or null for a draw
 
 // the opponent
 WEIGHT_KEYS                        // the names, in table order
-rollProfiles(rng)                  // {Franco, Graziano, Piero}; Piero drawn from rng
+rollProfiles(rng)                  // the roster (§0, decision 5); Piero drawn from rng
 compGioca(state, P)                // {slot, presa} to play, given one profile's weights
 ```
 
@@ -215,7 +220,12 @@ Nothing in this file touches `document`, `window`, timers or `Math.random`.
 Tressette's §3.2 says why `rngSeed` and the profiles live here rather than in
 the harness, and both reasons hold: a fixture is only reproducible if the
 generator that recorded it ships with the engine, and three callers need the
-profiles.
+profiles. Fork `rngSeed` with the warm-up Tressette gave it: the first
+outputs of mulberry32 are correlated with a small seed, Piero's stance
+inherited that for six consecutive seeds, and the fix — eight draws thrown
+away — changed every deal the seeds produce. Which is the other thing to
+know about it: **a change to the rng is a change to the code that produced
+every measurement**, and every figure that cites a seed is re-run after it.
 
 Two things `compGioca` returns here that it did not before: a capture as well
 as a slot, because a play is both; and it is called once per play rather than
@@ -326,13 +336,21 @@ invented to reach a count.
 | GIFT_FACTOR | leaving cards they can pair, by their worth and the chance they hold the value |
 
 **What Tressette learned about weights, applied before tuning rather than
-after.** Six of Tressette's eleven weights could not move a play at any
-magnitude, and character turned out to be bought with a single weight at a
-point of win rate per percent of plays changed. So here iteration 2 measures,
-for each of the seven, how many plays it moves across its range *before*
-anyone writes a dossier. A weight that moves under 1% of plays over 6,000
-deals is removed, not tuned around, and the settings sheet discloses what is
-left. There is one structural reason to expect better than Tressette: both
+after.** Seven of Tressette's eleven weights could not move a play at any
+magnitude, and its first tuning pass concluded that character was bought with
+a single weight at a point of win rate per percent of plays changed. The
+review of that iteration overturned the conclusion: the ladder had never
+priced the one weight iteration 2 had set to zero, and that weight bought
+half again the difference for no win rate at all. Two levers, not one, and a
+player in each of the four corners they make. So here iteration 2 measures,
+for each of the seven — including any a tuning pass has set to zero — how
+many plays it moves across its range *before* anyone writes a dossier, and
+the difference metric counts only the decisions the weights actually make:
+positions with more than one legal play, before the search takes over.
+Tressette's first metric counted the searched tricks in its denominator and
+printed every difference 1.45 times too small. A weight that moves under 1%
+of plays over 6,000 deals is removed, not tuned around, and the settings
+sheet discloses what is left. There is one structural reason to expect better than Tressette: both
 risk terms are multiplied by a probability that varies continuously through
 the deal, so a change to `SCOPA_RISK_PENALTY` changes an argmax somewhere in
 most deals, where Tressette's control penalties changed an argmax almost
@@ -379,12 +397,18 @@ so the formula plays the lower slot; only playing it out finds the 5. Over
 gave away six or more cards in about one ending in sixteen, which is what the
 sixth round's search is worth before anyone tunes a weight.
 
-**The temperaments.** Franco balanced and the default, Tressette's house
-standard under the same name; Graziano loose, taking every scopa it can and
-leaving the table low to bait one; Piero rolled once per session by
-`rollProfiles`, the house tradition since `SetProfiles` ran from `FormCreate`.
-Whether these are three characters or one is §4 iteration 5's measurement, as
-it was in Tressette, and the dossier says what was measured.
+**The temperaments.** Franco balanced and the default, the house standard
+under the same name as Tressette's. The others are the corners of the levers
+the ladder finds. In Tressette the two levers were "opens the long suit" and
+"keeps its lisci"; here the candidates are the two risk terms, so that
+Graziano goes for scope and risks them, Valerio takes what is there and leaves
+the table low, and Piero is rolled once per session by `rollProfiles` into
+the corner the fixed names leave empty — from bands narrow enough that he
+cannot roll into somebody else's game, because Tressette found that a corner
+of weight space is not a promise about plays, and measured what the bands
+cost him. How many corners exist, and so how many names, is §4 iteration 5's
+measurement, as it was in Tressette twice, and the dossier says what was
+measured.
 
 **The contract, from v1.0 on.** Tressette's rule: the formula is ours until it
 ships; after that, *change a weight, not the formula*, because the golden
@@ -398,13 +422,19 @@ make a scopa if it can, else the capture with the most cards, ties to the
 most denari, else lay the card of least worth. It never looks at what it
 leaves, which is the habit a real opponent has to beat.
 
-**The bars are measured, not written.** Tressette's plan set 95% and 70% from
-intuition and both were wrong, one unreachable by a cheating oracle and one
-cleared by so much it stopped being a bar. So this plan names the method and
-not the numbers: iteration 2 measures the tuned Franco on seeds no tuner saw,
-against both baselines, and sets each bar two points under what it measured.
-Those become §3.4's acceptance numbers, and iteration 5 holds the roster to
-them. One number the plan does commit to: no profile beats another by more
+**The bars are measured, not written, and the table is the claim.**
+Tressette's plan set 95% and 70% from intuition and both were wrong; its
+iteration 2 measured 85% and 80%, and its iteration 5 review found half the
+roster straddling those on half the seed ranges, because they had been set
+two points under one profile on a thousand deals. So this plan names the
+method and not the numbers. Iteration 2 measures the tuned Franco against
+both baselines on seeds no tuner saw and on a second range nothing was
+reported on, with error bars, and writes the table into this section: that
+table is the claim about how strong the players are. The floors are a
+regression guard and nothing else, set one and a half to two and a half
+points under the weakest figure of the whole roster on both ranges, a rolled
+Piero's worst roll included, and iteration 5 holds every roll to them. One
+number the plan does commit to: no profile beats another head to head by more
 than 65% — characters, not tiers.
 
 **Trap positions**, because a win rate hides a stupid habit, and every one
@@ -581,7 +611,9 @@ deliberately broken page before the good one, per the `ui-check` skill:
 
 The remaining assertions — one screen visible, text floors, tap targets,
 hand above the fold, rows drift, inflated spacing, the head tags, the raised
-card, the say line, the abandon paths, the result over a sheet — carry over
+card, the say line, the abandon paths, the result over a sheet, the start
+sheet with each opponent selected and a deck row that must not move under
+the thumb, the rolled opponent's weights on the settings sheet — carry over
 unchanged from Tressette, because the defects they name are just as possible
 here.
 
@@ -621,10 +653,10 @@ this project to learn again.
 
 ### 0 — Scaffold (½ day)
 
-Fork from **Tressette at `caaef0f`** ("Iteration 5 — the opponents"), and
-write the commit into the pull request. Before forking, check whether
-Tressette has moved: its iteration 6 is open, and a `SPEC.md` or a README
-rewrite may land.
+Fork from **Tressette at `c8253d9`** ("The lever the ladder missed, and a
+player in every corner"), and write the commit into the pull request. Before
+forking, check whether Tressette has moved: it moved once between this plan
+being written and being confirmed, and its iteration 6 is still open.
 
 Copy from Tressette: `public/decks/`, `tools/pack_cards.py`,
 `tools/check_ui.mjs` and the `ui-check` skill (both **dormant** until
@@ -683,12 +715,15 @@ Tressette's with Scopa's two baselines; the trap suite; the sixth-round
 search. Then the questions, each answered by a number in the pull request:
 
 - **Which weights move plays.** `--ladder` each of the seven across its range
-  and count the plays that change over 6,000 deals. Under 1% at any value:
-  the weight goes, before the settings sheet ever shows it. This is
-  Tressette's iteration 5 measurement done first rather than last.
+  — any the tuning has set to zero included, which is the hole Tressette's
+  ladder had — and count the plays that change over 6,000 deals, over the
+  decisions the weights make. Under 1% at any value: the weight goes, before
+  the settings sheet ever shows it. The levers that remain are the corners
+  iteration 5 will put names in.
 - **The bars.** Tune Franco against greedy-take, then measure on seeds
-  5001+ against both baselines, and write the two numbers into §3.4 two
-  points under what was measured.
+  5001+ and on a range nothing was tuned or reported on, against both
+  baselines, with error bars. The table goes into §3.4 as the claim; the
+  floors go under its weakest figure per §3.4, and they are a guard.
 - **The fifth round.** Time the first decision of the round under the full
   determinisation and under a sample of fifty, worst case over 200 deals. Set
   `CODA_FROM` by the 70ms budget, and if it moves, re-ladder the weights,
@@ -700,6 +735,12 @@ search. Then the questions, each answered by a number in the pull request:
 Then the golden test: seed 1..20, both seats `compGioca`, the sequence of
 plays and captures frozen in `tools/golden.json`, re-recorded only by
 `node tools/selfplay.mjs --golden > tools/golden.json`.
+
+Every figure in the pull request is followed by the command that produced
+it, because Tressette's iteration 5 found that a measured number and a
+remembered one look exactly alike in a comment — and a change to `rngSeed`
+re-runs every one of them, because the same review found a table orphaned by
+a warm-up in the same commit.
 
 **The rule from Tressette's iteration 2:** a position built by hand to be
 convenient is built to be wrong in the way that matters. Four of its trap
@@ -774,23 +815,25 @@ path Tressette's iteration 4 found has its row here.
 Three weight vectors, tuned to the acceptance numbers and measured for
 difference. Dossier text. The weights disclosure. The README table.
 
-**Read Tressette's iteration 5 before starting.** Character there was bought
-almost entirely with one weight, at about a point of win rate per percent of
-plays changed, and the owner chose a point on that curve: a Graziano who
-differs on one play in ten and wins a little less. Iteration 2 has already
-measured which of Scopa's weights move plays, so this iteration starts with
-the ladder rather than ending with it: move `SCOPA_RISK_PENALTY` and
-`SCOPA_BONUS` off Franco's values, measure plays differing and win rate at
-each step, and put the table in the pull request for the owner to choose
-from. Piero's ranges keep every weight above whatever cliff the ladder finds,
-because below it a rolled player stops playing Scopa.
+**Read Tressette's iteration 5 and its review before starting.** Its first
+pass concluded that character was bought with one weight at a point of win
+rate per percent of plays changed, and cut the roster to three; its review
+found the lever the ladder had missed, and the roster went back to four, one
+to each corner of two levers, the second of them free. Iteration 2 has
+already priced every weight here, so this iteration starts from the corners
+the ladder found rather than from a curve: a name per corner, Franco the
+house standard in his, Piero rolled into the empty one from bands that hold
+it, and in the pull request the pairwise difference table — counting only
+the decisions the weights make — the head-to-head win rates, and what
+Piero's bands cost him against the same rolls without them. `--differ`,
+`--piero` and `--try` come with the harness.
 
-**Done when** the three beat the baselines, none dominates another, each has
-a one-line character you can recognise across a few deals — or, if the
-ladder says that is not reachable with these weights, when the decision
-taken instead is written into §0 and the dossier tells the truth. The fixture
-grows with the roster: twenty deals per tuned player and every weight of all
-three, Piero's rolled seven included.
+**Done when** every fixed player and every roll of Piero clears the floors
+on both seed ranges, no pair is further apart than 65% head to head, each
+name is a measured distance from every other, and the count of names is the
+count of corners, written into §0 with the dossier telling the truth about
+each. The fixture grows with the roster: twenty deals per fixed player and
+every weight of the whole roster, Piero's rolled seven included.
 
 ### 6 — Ship (½ day)
 
@@ -814,7 +857,7 @@ can slip.
 | Multiplayer, accounts, a server | Same reason as Discola: any server is an operational liability that outlives interest. |
 | A framework or build step | Same reason as Discola. |
 | Localisation | The terms of art are Italian. |
-| A difficulty slider | The three opponents are the difficulty. |
+| A difficulty slider | The opponents are the difficulty. |
 | Looking through the piles | Tradition forbids it, and show-points already tells you more than the piles would. |
 
 ## 6. Risks, in order
@@ -928,6 +971,12 @@ the same rate and budget for it.
   broken commit first.
 - **No project board, no milestones, no issue per iteration.** This document
   holds the plan; a second copy goes stale.
+- **A pull request does not merge while its review is still running.**
+  Tressette's iteration 5 merged with its review in flight, and the review
+  then found the iteration's central conclusion wrong, which the next pull
+  request had to undo and redo. If the owner asks to merge while a review is
+  out, say so and what the last reviews found, and let them decide with that
+  in hand.
 - **Commit messages** as in the house's history: one line saying what changed
   and why, in English, imperative mood, no ticket numbers.
 
@@ -939,15 +988,21 @@ into `CLAUDE.md`, and, at iteration 6, everything a stranger needs into
 `SPEC.md`. If a session ends with something only it knows, that is a defect
 in the handoff.
 
+**A measured number and a remembered one look the same on the page.** Every
+figure in this document that is not followed by how it was obtained is a
+claim, not a measurement; the estimates in §3.7 say they are estimates, and
+the one measurement in §3.4 says what it counted.
+
 **The ancestors move.** Tressette is a live repository with its iteration 6
-open and defects being filed against it; Discola moved twice during
-Tressette's iteration 0 alone. Anything forked is a snapshot with a commit.
+open and defects being filed against it; it moved once between this plan
+being written and being confirmed, and that move rewrote decision 5. Discola
+moved twice during Tressette's iteration 0 alone. Anything forked is a snapshot with a commit.
 When an iteration forks, it records the commit here and in its pull request,
 and the next iteration that forks checks for movement first.
 
 | Forked | From | At | By |
 |---|---|---|---|
-| decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `caaef0f` | iteration 0 |
+| decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `c8253d9` | iteration 0 |
 | CSS and table markup | Tressette | to be recorded | iteration 3 |
 | selfplay harness | Tressette | to be recorded | iteration 2 |
 

@@ -3,7 +3,7 @@
 A two-player Scopa game for the browser, the third of a series after
 [Discola](https://github.com/diegoami/discola-web) and
 [Tressette](https://github.com/diegoami/Tressette): one static page, no build
-step, the 1997 card art, one opponent formula with three weight vectors.
+step, the 1997 card art, one opponent formula with a weight vector per name.
 
 `PLAN.md` is the architecture and the plan, and it is the reference for
 anything this file does not state. Section 7 says how the work is organised:
@@ -37,7 +37,7 @@ state object. Nothing in it touches `document`, `window`, timers or
 `Math.random`. Randomness arrives as an injectable `rng`. The weights are
 disclosed on the settings sheet, and there are exactly as many as move a play;
 none is invented to match another game's count. The sixth round is played
-exactly, by search, and all three opponents play it alike.
+exactly, by search, and every opponent plays it alike.
 
 ## Conventions
 
