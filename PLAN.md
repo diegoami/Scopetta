@@ -891,11 +891,14 @@ URL, and the preview refuses it too (`CONNECT tunnel failed, response 403`).
 `netlify.toml` sets `publish = "public"` and its own comment records that
 Discola once published `.` and served a private repo's documents from the live
 site. The file should win over any directory set in the Netlify UI, but should
-is not a measurement, and this repo's root is `PLAN.md` and `CLAUDE.md`. So it
-is one line for the owner, worth spending now that the site is live three
-iterations early rather than at iteration 6: **confirm that
-`scopetta.netlify.app/PLAN.md` returns 404.** If it does not, the project is
-set to publish the root and the setting needs changing, not the file.
+is not a measurement, and this repo's root is `PLAN.md` and `CLAUDE.md`.
+
+**The owner's call at iteration 0 was not to verify it, and to ship.** So it
+stays unverified on purpose rather than by oversight, and this paragraph is
+where that is written down. The place it stops being free is iteration 6, whose
+"Done when" already turns on the owner playing the live URL and saying so —
+`scopetta.netlify.app/PLAN.md` returning 404 is one line of that same pass, and
+the setting rather than the file is what changes if it does not.
 
 **Done when** the live URL plays and the handover document would let a
 stranger take the project over. The first half of that cannot be asserted
