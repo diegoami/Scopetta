@@ -34,13 +34,16 @@ and the sections below say what moves.
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
 
-All seven were confirmed by the owner before iteration 0, on the day the
-plan was written. Decision 5 was confirmed as a roster of three, and
-Tressette's roster went back to four the same day — the review of its
-iteration 5 found a second lever — so that row was rewritten to what it says
-now, and it is the owner's to confirm again. Decision 6 is the one the owner
-is most likely to feel at the table, and it is the one to revisit after
-playing iteration 3 if it turns out to hide the rule rather than teach it.
+All seven were confirmed by the owner before iteration 0. Decision 5 was
+confirmed twice: first as a roster of three, on the day the plan was written;
+then, after Tressette's roster went back to four the same day — the review of
+its iteration 5 found a second lever — in the form the row has now, in the
+owner's words: *four, if the players are different enough*. What "different
+enough" means is §3.4's pairwise difference table, and a name that does not
+earn a measured distance from every other does not go on the start sheet.
+Decision 6 is the one the owner is most likely to feel at the table, and it
+is the one to revisit after playing iteration 3 if it turns out to hide the
+rule rather than teach it.
 
 ## 1. What "in the spirit of Discola" means here
 
