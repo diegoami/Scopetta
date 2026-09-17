@@ -34,8 +34,11 @@ and the sections below say what moves.
 | 5 | The opponents | **The house's four names — Franco, Valerio, Graziano and Piero — with as many of them at the table as the formula has corners for.** Tressette's iteration 5 ended with four, one to each corner of the two weights that turned out to decide the game a profile plays, after a first pass had cut the roster to three by pricing one lever and missing the other. So the count here is what iteration 2's ladder finds: two levers make four corners and four names; one lever makes two, and the roster says so. Franco is the house standard whatever the count, and Piero is rolled once per session. | Nothing in the code moves either way — `rollProfiles` returns whatever the roster is — but a name that is not a different player by measurement does not go on the start sheet. |
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
+| 8 | What *scopa d'assi* means, if it is ever wanted | **Not built, and not guessed at.** Raised by iteration 1: §5 lists it among the variants left out, but this plan never says what it does, and the house rule genuinely differs — in some it is another name for *asso piglia tutto*, in others a scopa scored for an asso played to an empty table. The other three variants are live branches behind constants that are off; this one is a documented gap instead, because a constant guessing between two rules would be worse than none. | Nothing, unless the owner wants it. If so, say which of the two it is and it becomes a fourth constant like the others. |
 
-All seven were confirmed by the owner before iteration 0. Decision 5 was
+The first seven were confirmed by the owner before iteration 0. The eighth was
+raised by iteration 1 and is open, but it blocks nothing: its default is the
+game as specified, and answering it later costs one constant. Decision 5 was
 confirmed twice: first as a roster of three, on the day the plan was written;
 then, after Tressette's roster went back to four the same day — the review of
 its iteration 5 found a second lever — in the form the row has now, in the
@@ -131,9 +134,27 @@ The sette di denari is the *settebello*.
   Tressette is adding the same sort as this plan is confirmed; iteration 1
   takes its function's name and its order so the three games read alike. As of
   iteration 0's fork it had not landed — `ed445bd` has no sort in its
-  `engine.js`, checked rather than assumed — so iteration 1 looks again, and
-  if there is still no name to take it uses `ordina` per §3.2 and records here
-  that this game went first.
+  `engine.js`, checked rather than assumed.
+
+  **Iteration 1 looked again, and the two games have gone different ways on
+  purpose.** Tressette's sort landed at `dec1c74` while this iteration was
+  being written, and it is not the same thing: `ordinaMano(hand)` returns
+  **slot indices**, a display order, and deliberately does *not* reorder
+  `state.hands`. Its reason is worth reading before anyone here is tempted to
+  copy it — a slot is a card's identity, `mosseLegali` returns slot indices,
+  `gioca` takes one and `compGioca` breaks ties on the lowest, so a hand that
+  sorted itself would move every one of those under its callers and change
+  which card the opponent plays.
+
+  That reason does not reach this game, and the difference is the deal. Here
+  the sort happens **only when a hand is dealt**, before any play of the round,
+  so a slot is stable for as long as a card is held — which is the property
+  Tressette's objection is actually about. Scopetta therefore sorts
+  `state.hands` in `ordina`, as §2.2 above specifies, and iteration 2's fixture
+  freezes that order from the start rather than inheriting one. So: this game
+  went first, and it kept its own name and its own meaning. `ordina` sorts
+  cards; `ordinaMano` sorts slots; they are not the same function and should
+  not be made to look like one.
 - The non-dealer plays first, in every round. The deal alternates. On a cold
   start you play first, so the opponent deals, matching Discola and Tressette,
   where you lead the first deal.
@@ -1083,6 +1104,13 @@ and the next iteration that forks checks for movement first.
 Iteration 0 checked for movement before forking, as the paragraph above says
 to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
 the fork is the one the table names. Iterations 2 and 3 check again.
+
+**Tressette moved again during iteration 1**, from `ed445bd` to `dec1c74` —
+the hand sort of §2.2, which landed the other way round from this game's. What
+that means for anything forked from it is in §2.2; what it means here is that
+the ancestor has now moved during two of the first two iterations, so the
+paragraph above is not a formality. Iterations 2 and 3 fork from `dec1c74` or
+later and record which.
 
 **Check movement against the remote, not against the clone beside this repo.**
 At iteration 0 that clone's own `main` was stale at `caaef0f` — iteration 5,

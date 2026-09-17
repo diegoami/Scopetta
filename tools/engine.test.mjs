@@ -226,6 +226,55 @@ test("the deal alternates", () => {
   assert.equal(s.mazziere, ALTO);
 });
 
+test("a new deal on a finished one starts from nothing", () => {
+  // This is the page's Ancora path (§3.6), and it is the call shape the rest
+  // of this file never makes: every other test deals into a fresh {}. A
+  // newDeal that kept the old `plays` would leave a second deal that never
+  // reaches thirty-six — an endless deal on the table, and nothing here would
+  // have said so.
+  const rng = rngSeed(23);
+  const s = newDeal({}, rng);
+  while (!s.over){
+    const who = s.deveGiocare;
+    const slot = s.hands[who].findIndex(c => c);
+    const opts = prese(s.tavola, s.hands[who][slot]);
+    gioca(s, who, slot, opts.length ? opts[0] : []);
+  }
+  assert.equal(s.plays, 36);
+  assert.ok(s.prese[BASSO].length + s.prese[ALTO].length === 40 && s.over);
+
+  newDeal(s, rng);
+  assert.equal(s.plays, 0, "the play count starts again");
+  assert.deepEqual(s.prese, [[], []], "the piles are empty");
+  assert.deepEqual(s.scope, [0, 0], "the scope are zero");
+  assert.equal(s.ultimaPresa, null);
+  assert.equal(s.over, false);
+  assert.equal(s.dealt, true);
+  assert.equal(s.giro, 0);
+  assert.equal(s.next, 10);
+  assert.equal(s.tavola.length, 4);
+  assert.equal(s.selected, null);
+
+  // And it really plays to the end a second time, which is the thing the
+  // reset is for.
+  while (!s.over){
+    const who = s.deveGiocare;
+    const slot = s.hands[who].findIndex(c => c);
+    const opts = prese(s.tavola, s.hands[who][slot]);
+    gioca(s, who, slot, opts.length ? opts[0] : []);
+  }
+  assert.equal(s.plays, 36, "the second deal ends too");
+});
+
+test("the score reports a copy of the scope, not the state's own array", () => {
+  // §3.2's return shape. A live reference lets the page's next scopa change a
+  // result dialog that is already on screen.
+  const s = { prese: [[], []], scope: [1, 2] };
+  const r = scoreDeal(s);
+  s.scope[0] = 99;
+  assert.deepEqual(r.scope, [1, 2], "the reported scope moved with the state");
+});
+
 test("three re on the table is a redeal, and the rule is what redeals it", () => {
   // Searching seeds for the case rather than asserting it never happens: a
   // test that waits for a 1-in-many deal is a test that asserts nothing on
@@ -266,6 +315,64 @@ test("a hand is sorted when it is dealt, at the deal and at every round", () => 
   // descending inside a suit.
   const h = ordina(hand(card(3, 1), card(0, 5), card(3, 9), card(0, 10)));
   assert.deepEqual(h, [card(0, 10), card(0, 5), card(3, 9), card(3, 1)]);
+});
+
+test("a hand is sorted at every round, not only at the deal", () => {
+  // The test above deals 200 times with newDeal and never plays a round, so
+  // its title claimed five rounds it never rendered. §4 iteration 1 asks for
+  // "every hand sorted as §2.2 says at the deal AND after each round", and
+  // §4 puts the sort in this iteration because iteration 2's fixture freezes
+  // it — so an unsorted round 3 would be frozen and paid for later.
+  let rounds = 0;
+  for (let seed = 1; seed <= 50; seed++){
+    const s = newDeal({}, rngSeed(seed));
+    let giro = -1;
+    while (!s.over){
+      if (s.giro !== giro){
+        giro = s.giro;
+        rounds++;
+        for (const who of [BASSO, ALTO])
+          assert.ok(sorted(s.hands[who]),
+            `seed ${seed}, round ${giro}: ${who === BASSO ? "your" : "their"} hand is not in §2.2's order`);
+      }
+      const who = s.deveGiocare;
+      const slot = s.hands[who].findIndex(c => c);
+      const opts = prese(s.tavola, s.hands[who][slot]);
+      gioca(s, who, slot, opts.length ? opts[0] : []);
+    }
+  }
+  assert.equal(rounds, 50 * 6, "every round of every deal was looked at");
+});
+
+test("a new round is dealt, and says so, when both hands empty", () => {
+  // The page needs the beat between rounds — §4 iteration 3 lists "a hand
+  // empty for a beat between rounds" among the states the check must render —
+  // and after gioca returns, the state no longer shows it.
+  const s = newDeal({}, rngSeed(14));
+  const announced = [];
+  while (!s.over){
+    const who = s.deveGiocare;
+    const slot = s.hands[who].findIndex(c => c);
+    const opts = prese(s.tavola, s.hands[who][slot]);
+    const r = gioca(s, who, slot, opts.length ? opts[0] : []);
+    if (r.nuovoGiro) announced.push(s.plays);
+    assert.equal(r.nuovoGiro === true, s.plays % 6 === 0 && s.plays < 36,
+      `play ${s.plays}: nuovoGiro disagrees with where the round boundary is`);
+  }
+  assert.deepEqual(announced, [6, 12, 18, 24, 30],
+    "five new rounds after the deal, and none after the last play");
+});
+
+test("the cards are dealt in order: three to you, three to them, four up", () => {
+  // Unspecified in §2.2 and frozen by iteration 2's fixture either way, so it
+  // is pinned here rather than left to whichever way the loop happened to run.
+  const s = newDeal({}, rngSeed(19));
+  const key = c => `${c.s}-${c.n}`;
+  const off = (a, b) => s.cards.slice(a, b).map(key).sort();
+  assert.deepEqual(s.hands[BASSO].map(key).sort(), off(0, 3), "the first three are yours");
+  assert.deepEqual(s.hands[ALTO].map(key).sort(), off(3, 6), "the next three are theirs");
+  assert.deepEqual(s.tavola.map(key), s.cards.slice(6, 10).map(key),
+    "and the next four go up, in the order they come off the deck");
 });
 
 test("a played card leaves a hole, and nothing closes it", () => {
@@ -544,6 +651,38 @@ test("primiera is the best card of each suit, summed", () => {
   assert.equal(scored(sixes, sevens).primiera, ALTO);
 });
 
+test("primiera takes the best of each suit, not the first or the last", () => {
+  // The piles above hold one card per suit, where "best", "worst" and "last
+  // seen" are the same number — so they pin the sum and not the rule §2.4
+  // spends its longest sentence on. Two cards in every suit is what tells the
+  // three apart: best gives 84, lowest or last-seen gives 48.
+  const both = [];
+  for (const s of [0, 1, 2, 3]){ both.push(card(s, 2)); both.push(card(s, 7)); }
+  assert.equal(primieraTotale(both), 84, "21 x 4, the sevens");
+  // And with the order reversed, so "last seen" cannot pass by luck either.
+  const reversed = [];
+  for (const s of [0, 1, 2, 3]){ reversed.push(card(s, 7)); reversed.push(card(s, 2)); }
+  assert.equal(primieraTotale(reversed), 84);
+
+  // The rule decides a real deal: BASSO holds every seven and every two,
+  // ALTO holds every six. Best-of-suit gives BASSO the point at 84 to 72;
+  // lowest-of-suit would give it to ALTO at 48 to 72.
+  const sixes = [0,1,2,3].map(s => card(s, 6));
+  assert.equal(scored(both, sixes).primiera, BASSO);
+});
+
+test("the primiera the score reports is the one primieraTotale computes", () => {
+  // scoreDeal could read the right totals and award the wrong player. Stated
+  // separately, both ways round, against totals asserted above.
+  const strong = [];
+  for (const s of [0, 1, 2, 3]){ strong.push(card(s, 3)); strong.push(card(s, 7)); }
+  const weak = [0,1,2,3].map(s => card(s, 8));            // 10 x 4 = 40
+  assert.equal(primieraTotale(strong), 84);
+  assert.equal(primieraTotale(weak), 40);
+  assert.equal(scored(strong, weak).primiera, BASSO);
+  assert.equal(scored(weak, strong).primiera, ALTO);
+});
+
 test("an equal primiera goes to nobody", () => {
   const a = [0,1,2,3].map(s => card(s, 7));
   const b = [0,1,2,3].map(s => card(s, 7));
@@ -687,6 +826,27 @@ test("asso piglia tutto is one constant away", () => {
   const got = withVariant("ASSO_PIGLIA_TUTTO", ctx =>
     runInContext("prese([{s:1,n:4},{s:2,n:3},{s:3,n:9}], {s:0,n:1})", ctx));
   assert.deepEqual(got, [[0, 1, 2]], "on: the asso takes the table");
+});
+
+test("asso piglia tutto sweeps the table without scoring a scopa for it", () => {
+  // The variant's sweep is the rule, not an achievement: scoring it would hand
+  // out about four free points a deal, which is not a Scopa anybody plays. The
+  // engine reads `perAsso` for exactly this, and it is only reachable with the
+  // constant on — so the assertion has to turn it on to see it.
+  const r = withVariant("ASSO_PIGLIA_TUTTO", ctx => runInContext(`
+    const s = { cards: [], next: 40, plays: 10, giro: 1, over: false,
+                hands: [[{s:0,n:1}, null, null], [null, null, {s:3,n:10}]],
+                tavola: [{s:1,n:4},{s:2,n:3},{s:3,n:9}],
+                prese: [[], []], scope: [0, 0], ultimaPresa: null,
+                mazziere: ALTO, deveGiocare: BASSO };
+    const out = gioca(s, BASSO, 0, [0, 1, 2]);
+    ({ scopa: out.scopa, scope: s.scope, taken: s.prese[BASSO].length,
+       tavola: s.tavola.length });
+  `, ctx));
+  assert.equal(r.taken, 4, "the asso and the whole table");
+  assert.equal(r.tavola, 0, "which does empty it");
+  assert.equal(r.scopa, false, "and that is not a scopa");
+  assert.deepEqual(r.scope, [0, 0]);
 });
 
 test("napola is one constant away", () => {

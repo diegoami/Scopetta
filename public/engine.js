@@ -1,8 +1,12 @@
 /* ===========================================================================
    Scopetta — the rules, as §2 of PLAN.md states them.
 
-   Pure functions over a plain state object. Nothing here touches `document`,
-   `window`, timers or `Math.random`: the page loads this file with
+   Functions over a plain state object — not pure ones, and the plan's phrase
+   for it is loose: `newDeal`, `distribuisci` and `gioca` all mutate `state`,
+   as Discola's did and as their own comments say. What is true, and is what
+   the phrase is reaching for, is that nothing here reaches outside that
+   object. Nothing touches `document`, `window`, timers or `Math.random`: the
+   page loads this file with
    <script src="engine.js"> and Node runs the same text with
    vm.runInThisContext, which is what lets the tests, the self-play harness and
    the golden fixture run the code the page runs.
@@ -297,8 +301,13 @@ function gioca(state, who, slot, presa){
       taken.unshift(state.tavola.splice(i, 1)[0]);
     state.prese[who].push(card, ...taken);
     state.ultimaPresa = who;
-    // §2.3. A sweep is a point, except with the last card of the deal.
-    if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima)){
+    // §2.3. A sweep is a point, except with the last card of the deal — and
+    // except when it was an asso under ASSO_PIGLIA_TUTTO, where the sweep is
+    // the variant's whole point rather than an achievement. Scoring it would
+    // hand out about four free points a deal, which is not the rule anybody
+    // plays. Off by default, so this reads as `true` in the game as played.
+    const perAsso = ASSO_PIGLIA_TUTTO && card.n === 1;
+    if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima) && !perAsso){
       state.scope[who]++;
       scopa = true;
     }
@@ -306,7 +315,7 @@ function gioca(state, who, slot, presa){
     state.tavola.push(card);
   }
 
-  let resto = [];
+  let resto = [], nuovoGiro = false;
   if (ultima){
     // §2.3. Whatever is left goes to whoever captured last. That is not a
     // scopa, and if nobody ever captured it stays on the table — which the
@@ -322,12 +331,19 @@ function gioca(state, who, slot, presa){
     // The next round is dealt here rather than left to the caller. A deal
     // sitting with two empty hands and nobody dealing is a state this engine
     // can reach and nothing detects, and §3.5's flow has the same step in it.
+    //
+    // It is reported, because the page needs to know. Both hands are empty for
+    // a beat between rounds — §4 iteration 3 names that as one of the states
+    // the check has to put the page in — and after this call the state no
+    // longer shows it. `nuovoGiro` is how the page knows to draw the beat
+    // before the new hand, without inferring it from `plays % 6`.
     distribuisci(state);
+    nuovoGiro = true;
   } else {
     state.deveGiocare = altro(who);
   }
 
-  return { card, presa: taken, scopa, ultima, resto };
+  return { card, presa: taken, scopa, ultima, resto, nuovoGiro };
 }
 
 /* --- the score -------------------------------------------------------------- */

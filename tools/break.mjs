@@ -37,6 +37,67 @@ const TEXT = readFileSync(ENGINE, "utf8");
 // `find` must appear exactly once, or the break is reported INVALID rather
 // than quietly doing nothing somewhere else — a mutation that did not mutate
 // would otherwise be counted as a hole.
+// The test that is supposed to name each defect. Without this, "caught" means
+// only that the suite went red — which a break that merely stops the file
+// parsing would also achieve, and which a break caught by some unrelated test
+// would too. The point of the exercise is that the assertion written for a
+// defect is the one that sees it, so each break says which test that is, and
+// a break caught only by other tests is reported MISMATCH.
+//
+// It checks membership in the whole set of failures, not the first one: Node
+// reports tests in completion order, so the first `not ok` is whichever
+// finished first, not whichever names the defect. Attributing to the first
+// failure had three breaks pointing at a test that had nothing to do with them.
+const EXPECT = {
+  "capture credited to the wrong player": "a capture takes the card and its catch into the player's own pile",
+  "the played card is not put in the pile": "a capture takes the card and its catch into the player's own pile",
+  "leftovers to the wrong player": "the leftovers go to whoever captured last, and are not a scopa",
+  "leftovers to nobody": "the leftovers go to whoever captured last, and are not a scopa",
+  "laying a card counts as capturing last": "a card that takes nothing is laid on the table",
+  "single before sum ignored": "a single of equal value is taken before any sum",
+  "a sum may use the same card twice": "every sum is found, and none is invented",
+  "a one-card sum is offered as a sum": "single before sum is one constant away too",
+  "captures come back in the wrong order": "every sum is found, and none is invented",
+  "a card that can take need not take": "a card that can take must take",
+  "any set that adds up is accepted, offer or not": "a capture that is not one of prese()'s is refused",
+  "a capture is accepted for a card that takes nothing": "claiming a capture for a card that takes nothing is refused",
+  "playing out of turn is allowed": "playing out of turn, into a finished deal, or from an empty slot is refused",
+  "a scopa is counted on the last card of the deal": "a sweep with the last card of the deal is not a scopa",
+  "asso piglia tutto scores a scopa for its sweep": "asso piglia tutto sweeps the table without scoring a scopa for it",
+  "no scopa is ever counted": "a capture that empties the table is a scopa",
+  "the scopa goes to the other player": "a capture that empties the table is a scopa",
+  "the dealer plays first": "the deal is three each and four up, and you play first on a cold start",
+  "the dealer plays first in later rounds": "the dealer plays the last card of every round",
+  "the deal does not alternate": "the deal alternates",
+  "you deal the first deal": "the deal is three each and four up, and you play first on a cold start",
+  "the turn does not alternate": "the dealer plays the last card of every round",
+  "the redeal rule never fires": "three re on the table is a redeal, and the rule is what redeals it",
+  "the redeal rule fires on two re": "plain Scopa is what is played: the variants are all off",
+  "a round deals four to the table again": "six rounds of three, thirty-six plays, and the deck dealt out",
+  "the hand is not sorted": "a hand is sorted when it is dealt, at the deal and at every round",
+  "the hand is sorted lowest first inside a suit": "a hand is sorted when it is dealt, at the deal and at every round",
+  "the hand is sorted by value before suit": "a hand is sorted when it is dealt, at the deal and at every round",
+  "a played card's hole is closed up": "a played card leaves a hole, and nothing closes it",
+  "a tied point goes to you": "carte goes to more than twenty cards, and twenty-all to nobody",
+  "primiera ignores a missing suit": "a player missing a suit cannot take the primiera",
+  "primiera uses the capture value": "primiera is the best card of each suit, summed",
+  "the primiera scale is off by one card": "the primiera scale is §2.1's, which is not the capture scale",
+  "any seven is the settebello": "the settebello is the sette di denari and nothing else",
+  "the scope are left out of the totals": "the totals are the four points plus the scope",
+  "a draw is called a win": "vincitore reads the totals, and a draw is a draw",
+  "the rng warm-up is dropped": "a seed names one stream, and the warm-up is in it",
+  "the shuffle leaves the first card alone": "the shuffle is uniform, not merely disordered",
+  "primiera takes the lowest of each suit": "primiera takes the best of each suit, not the first or the last",
+  "primiera takes the last card of each suit seen": "primiera takes the best of each suit, not the first or the last",
+  "later rounds are dealt unsorted": "a hand is sorted at every round, not only at the deal",
+  "a new deal keeps the old plays count": "a new deal on a finished one starts from nothing",
+  "a new deal keeps the old piles and scope": "a new deal on a finished one starts from nothing",
+  "a new deal keeps the old ultimaPresa": "a new deal on a finished one starts from nothing",
+  "a new deal does not say it is dealt": "a new deal on a finished one starts from nothing",
+  "the cards are dealt to the opponent first": "the cards are dealt in order: three to you, three to them, four up",
+  "the score hands out a live reference to the scope": "the score reports a copy of the scope, not the state's own array",
+};
+
 const BREAKS = [
   // --- who gets what -------------------------------------------------------
   ["capture credited to the wrong player",
@@ -91,8 +152,11 @@ const BREAKS = [
 
   // --- the scopa -----------------------------------------------------------
   ["a scopa is counted on the last card of the deal",
-   "if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima)){",
-   "if (state.tavola.length === 0){"],
+   "if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima) && !perAsso){",
+   "if (state.tavola.length === 0 && !perAsso){"],
+  ["asso piglia tutto scores a scopa for its sweep",
+   "    const perAsso = ASSO_PIGLIA_TUTTO && card.n === 1;",
+   "    const perAsso = false;"],
   ["no scopa is ever counted",
    "      state.scope[who]++;",
    "      state.scope[who] += 0;"],
@@ -175,6 +239,35 @@ const BREAKS = [
   ["the shuffle leaves the first card alone",
    "  for (let i = cards.length - 1; i > 0; i--){",
    "  for (let i = cards.length - 1; i > 1; i--){"],
+
+  // --- the review's mutants: coverage this suite did not have --------------
+  ["primiera takes the lowest of each suit",
+   "    if (primiera(c.n) > best[c.s]) best[c.s] = primiera(c.n);",
+   "    if (best[c.s] === 0 || primiera(c.n) < best[c.s]) best[c.s] = primiera(c.n);"],
+  ["primiera takes the last card of each suit seen",
+   "    if (primiera(c.n) > best[c.s]) best[c.s] = primiera(c.n);",
+   "    best[c.s] = primiera(c.n);"],
+  ["later rounds are dealt unsorted",
+   "  daiCarte(state, 3, 0);",
+   "  for (const w of [BASSO, ALTO]){ const h = []; for (let i = 0; i < 3; i++) h.push(state.cards[state.next++]); state.hands[w] = h; }"],
+  ["a new deal keeps the old plays count",
+   "  state.plays = 0;",
+   "  state.plays = state.plays || 0;"],
+  ["a new deal keeps the old piles and scope",
+   "  state.prese = [[], []];\n  state.scope = [0, 0];",
+   "  state.prese = state.prese || [[], []];\n  state.scope = state.scope || [0, 0];"],
+  ["a new deal keeps the old ultimaPresa",
+   "  state.ultimaPresa = null;",
+   "  state.ultimaPresa = state.ultimaPresa ?? null;"],
+  ["a new deal does not say it is dealt",
+   "  state.dealt = true;",
+   "  state.dealt = false;"],
+  ["the cards are dealt to the opponent first",
+   "  for (const who of [BASSO, ALTO]){\n    const hand = [];",
+   "  for (const who of [ALTO, BASSO]){\n    const hand = [];"],
+  ["the score hands out a live reference to the scope",
+   "                scope: state.scope.slice(), punti };",
+   "                scope: state.scope, punti };"],
 ];
 
 const filter = process.argv[2];
@@ -185,7 +278,8 @@ if (!chosen.length){
 }
 
 const dir = mkdtempSync(join(tmpdir(), "scopetta-break-"));
-let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [];
+let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [],
+    mismatched = [], undeclared = [];
 
 // The suite has to pass on the real engine first, or every "caught" below
 // means nothing.
@@ -208,40 +302,75 @@ for (const [name, find, replace, why] of chosen){
   const file = join(dir, `engine-${n++}.js`);
   writeFileSync(file, TEXT.replace(find, replace));
 
-  let failed = false, firstFailure = "";
+  let failed = false, failures = [], ran = 0;
   try {
+    // A break can stop the deal from ending — "newDeal does not reset plays"
+    // leaves a second deal that never reaches 36 — and a harness that hangs
+    // reports nothing at all. The suite takes under a second; a minute is a
+    // hang, and a hang is a catch.
     execFileSync(process.execPath, ["--test", TESTS],
-      { stdio: "pipe", env: { ...process.env, SCOPETTA_ENGINE: file } });
+      { stdio: "pipe", timeout: 60000,
+        env: { ...process.env, SCOPETTA_ENGINE: file } });
   } catch (e) {
     failed = true;
     const out = String(e.stdout || "") + String(e.stderr || "");
-    firstFailure = (out.match(/^not ok \d+ - (.*)$/m) || [, "?"])[1];
+    failures = [...out.matchAll(/^not ok \d+ - (.*)$/gm)].map(m => m[1].trim());
+    ran = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
   }
   if (why){
     // An equivalent mutant is expected to survive. If it was caught, the
     // claim that it changes nothing is wrong, and that is worth a red exit
     // just as much as a hole is.
     if (failed){
-      wrongly.push([name, firstFailure]);
-      console.log(`NOT EQUIV ${name}  →  caught by: ${firstFailure}`);
+      wrongly.push([name, failures.join(", ")]);
+      console.log(`NOT EQUIV ${name}  →  caught by: ${failures.join(", ")}`);
     } else {
       equivalent.push([name, why]);
       console.log(`equivalent ${name}`);
     }
     continue;
   }
-  if (failed){ caught++; console.log(`caught   ${name}  →  ${firstFailure}`); }
-  else { survived.push(name); console.log(`SURVIVED ${name}`); }
+
+  // A break that stops the file parsing is not the tests noticing anything —
+  // it breaks the tests rather than the rules. Node reports that as a single
+  // failing "test" named after the file, so the tell is the failure carrying
+  // the test file's own path, or the suite reporting far fewer tests than it
+  // has. Checked, because the obvious guard — no failures at all — does not
+  // fire on this case: a syntax-error probe reached UNDECLARED instead.
+  if (failed && (failures.length === 0 || failures.includes(TESTS) || ran < 10)){
+    invalid.push([name, `the suite did not run — ${ran} test(s) reported`]);
+    console.log(`INVALID  ${name} — the suite did not run, so nothing caught anything`);
+    continue;
+  }
+
+  if (!failed){ survived.push(name); console.log(`SURVIVED ${name}`); continue; }
+
+  const want = EXPECT[name];
+  if (!want){
+    undeclared.push(name);
+    console.log(`caught   ${name}  →  ${failures[0]}  (no expected test declared)`);
+  } else if (!failures.includes(want)){
+    mismatched.push([name, want, failures.join(", ")]);
+    console.log(`MISMATCH ${name}\n         expected: ${want}\n         but failed: ${failures.join(", ")}`);
+  } else {
+    caught++;
+    console.log(`caught   ${name}  →  ${want}`);
+  }
 }
 
 rmSync(dir, { recursive: true, force: true });
 
 const real = chosen.length - equivalent.length - wrongly.length - invalid.length;
-console.log(`\n${chosen.length} breaks: ${caught} of ${real} caught, ` +
-            `${survived.length} survived, ${equivalent.length} equivalent, ` +
+console.log(`\n${chosen.length} breaks: ${caught} of ${real} caught by the test that names them, ` +
+            `${mismatched.length} caught by another test, ${survived.length} survived, ` +
+            `${equivalent.length} equivalent, ${undeclared.length} undeclared, ` +
             `${invalid.length} invalid`);
 for (const s of survived) console.log(`  SURVIVED — a hole in the tests: ${s}`);
+for (const [s, want, got] of mismatched)
+  console.log(`  MISMATCH — no test names this defect: ${s}\n             wanted: ${want}\n             failed: ${got}`);
+for (const s of undeclared) console.log(`  UNDECLARED — add it to EXPECT: ${s}`);
 for (const [s, w] of wrongly) console.log(`  NOT EQUIVALENT — the claim is wrong: ${s} (${w})`);
 for (const [s, w] of equivalent) console.log(`  equivalent: ${s}\n              ${w}`);
 for (const [s, w] of invalid) console.log(`  invalid: ${s} (${w})`);
-process.exit(survived.length || invalid.length || wrongly.length ? 1 : 0);
+process.exit(survived.length || invalid.length || wrongly.length
+             || mismatched.length || undeclared.length ? 1 : 0);
