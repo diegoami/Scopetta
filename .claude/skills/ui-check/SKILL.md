@@ -102,8 +102,8 @@ played by tapping: the strip of a legal card to raise it, the raised card to
 play it, twenty times over. The two passes above measure a table that has just
 been dealt, so this is the only one that fails when the page and the engine come
 apart — or when anything throws in the middle of a deal. It reads the table as well as driving it — that
-distinction is the whole of issue #7, where a pass that played twenty cards
-never looked at the hand between them — and asserts the things that only exist
+distinction is the whole of Tressette's issue #7, where a pass that played twenty
+cards never looked at the hand between them — and asserts the things that only exist
 mid-deal or at the end of one: **both cards of a trick are on the table at
 once** before it is swept; **every card you still hold can be tapped where it
 looks free**, which stops being true the moment the hand has holes in it; a
@@ -112,8 +112,10 @@ is written to the history under the same score and opponent; and a second deal
 abandoned through the confirm asks first, lands on the start sheet, and is *not*
 written down.
 
-**The fan** — the assertions this game needs and Briscola did not, because a
-hand of ten cards overlaps. The step of the fan matches the page's own
+**The fan** — the assertions Tressette needed and Briscola did not, because a
+hand of ten cards overlaps. This game's hand is three whole cards and never
+fans; iteration 3 moves every assertion in this section to the table row, which
+is where up to thirteen cards overlap here. The step of the fan matches the page's own
 `--strip`, which catches margins that have drifted from the token at any
 `--overlap`; and the strip is either 24px wide or at least `.45` of a card,
 which is the share the design gives its tightest orientation. Both terms are
@@ -138,29 +140,37 @@ blind to the geometry they exist to catch. And the fold is measured from
 `.seat--you`, not from `.hand--you`: in portrait your name plate is below your
 hand, and it hung 15px off the bottom of the screen at 770x1475 while this pass
 printed `pass`. Cards are already excluded from the 32px tap-target rule, and were
-before this game existed: `check_ui.mjs:163-168` excludes them because a card's
-size is the table's budget, asserted by the table pass rather than by a
+before this game existed: `tools/check_ui.mjs:381-389` excludes them because a
+card's size is the table's budget, asserted by the table pass rather than by a
 thumb-sized floor. The fan gives that exclusion a second reason rather than its
-first — a strip is narrower than 32px by design, which is why a card is raised
-by one tap and played by a second.
+first — a strip is narrower than 32px by design, which is why Tressette raises a
+card with one tap and plays it with a second. **That is not this game's rhythm**:
+§0 decision 6 is one tap plays the card, and a card is raised only when the rule
+leaves a choice of capture to make.
 
 ## The thing this check cannot do for you
 
-**An assertion only sees the states the check renders.** Iteration 3 shipped a
-table where a finished trick was never drawn, a declaration was cut in half at
-every phone width, and the player's own name plate hung below the fold — with
-every assertion green, because no pass rendered a finished trick, no pass showed
-an announcement, and nothing measured below the cards. None of those was a weak
-threshold; the page was simply never in the state that shows them.
+**An assertion only sees the states the check renders.** *Tressette's* iteration
+3 — not this repo's, which has not happened — shipped a table where a finished
+trick was never drawn, a declaration was cut in half at every phone width, and
+the player's own name plate hung below the fold, with every assertion green,
+because no pass rendered a finished trick, no pass showed an announcement, and
+nothing measured below the cards. None of those was a weak threshold; the page
+was simply never in the state that shows them.
 
 So when the page gains a state, the check gains the row that puts it there. That
 is the harder half of adding an assertion, and it is the half that gets skipped.
+The states this game has that exist only mid-deal, and so only if a pass puts
+the page in them, are listed in `CLAUDE.md` and in PLAN.md §4 iteration 3: a
+table of thirteen cards, a choice of captures, a scopa, a hand empty for a beat
+between rounds, the 36th play and the leftovers, a pile with three scope showing.
 
 ## Reading a failure
 
 Each line names the screen, the viewport and the element. Fix the page, not the
 threshold. Every threshold is calibrated against a defect that actually
-shipped — in Discola, which is the same table and the same budget:
+shipped — most of them in Discola, which is the same table and the same budget,
+and the rest in Tressette, which forked that table and found more:
 
 | assertion | the bug it was written for |
 |---|---|

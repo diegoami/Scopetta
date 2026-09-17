@@ -876,6 +876,15 @@ URL after the merge. So the site is connected by the owner as soon as
 iteration 3 has a table to look at, publishing `public/` and nothing else,
 and iteration 6 inherits it.
 
+**It was in fact connected at iteration 0**, earlier than the paragraph above
+expected and further in the direction its lesson points: the site `scopetta`
+built iteration 0's head commit and put three checks and a deploy preview on
+its pull request. So every pull request carries a preview from the first one,
+and iteration 3 gets one for the table while it is being reviewed rather than
+after it merges. What the preview shows until then is a blank page, which is
+correct. Netlify parsing `netlify.toml` and accepting its header blocks is
+also, from here on, a real check on that file rather than a claim about it.
+
 **Done when** the live URL plays and the handover document would let a
 stranger take the project over. The first half of that cannot be asserted
 from inside the project: the container the work is done in cannot reach the
@@ -1051,6 +1060,13 @@ and the next iteration that forks checks for movement first.
 Iteration 0 checked for movement before forking, as the paragraph above says
 to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
 the fork is the one the table names. Iterations 2 and 3 check again.
+
+**Check movement against the remote, not against the clone beside this repo.**
+At iteration 0 that clone's own `main` was stale at `caaef0f` — iteration 5,
+two merges behind — while its working tree was checked out at `ed445bd`. A
+`git log main` there would have reported the ancestor as *older* than the
+pinned commit and invited a fork from the wrong place; `git ls-remote --heads
+origin` reports `ed445bd` and is the check to run.
 
 Discola's last recorded commit, for whatever Tressette did not change, is
 `22c4b9c`.

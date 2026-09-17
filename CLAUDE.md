@@ -51,6 +51,14 @@ play and the leftovers, a pile with three scope showing. When the page gains a
 state, the check gains the row that puts it there, and that is the harder half
 of the work.
 
+**And a new assertion is made to fail before it is made to pass.** Write it
+against a deliberately broken page first and watch it go red, because an
+assertion written against already-correct code encodes what the code happens to
+do rather than what it should do — Discola's gap metric was written that way
+once and passed the broken layout while failing every good one. The same rule
+covers the engine from iteration 1: every rule test is broken on purpose after
+it is written, and one that still passes is decoration.
+
 The `ui-check` skill explains what it covers and how to read a failure.
 
 ## The card size is a budget, and it has two terms
