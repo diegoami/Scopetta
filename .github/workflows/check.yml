@@ -1,0 +1,35 @@
+# The engine tests, on every push to main and every pull request. There is
+# nothing to install: the engine and its tests have no dependencies, which is
+# the point.
+#
+# Only the engine job exists yet. The UI check is added here by iteration 3,
+# when public/index.html first has a table to check; PLAN.md §4 iteration 3
+# says so, and the job it adds is the one Tressette runs — playwright-core and
+# a Chromium, the only thing in either repo that is not dependency-free.
+name: check
+
+# push is filtered to main: without the filter every commit on a pull request
+# branch runs the suite twice, once for the push and once for the pull request,
+# and one of those runs will download a Chromium once the ui job lands.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      # Not `--test tools/`: Node 22 reads a bare directory as a module path and
+      # fails with MODULE_NOT_FOUND. A glob is what the current LTS discovers.
+      #
+      # Until iteration 1 writes the first test the glob matches nothing, and
+      # Node reports "1..0" and exits 0 — so this job is green without having
+      # asserted anything. That is the scaffold's honest state, not a pass:
+      # the job starts meaning something the moment tools/engine.test.mjs
+      # exists, and nothing here needs changing when it does.
+      - run: node --test 'tools/**/*.test.mjs'

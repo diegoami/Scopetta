@@ -129,7 +129,11 @@ The sette di denari is the *settebello*.
   deal and at every round; a card played leaves a hole, and nothing re-sorts
   a hand mid-round, because a card that moves under the thumb is a misplay.
   Tressette is adding the same sort as this plan is confirmed; iteration 1
-  takes its function's name and its order so the three games read alike.
+  takes its function's name and its order so the three games read alike. As of
+  iteration 0's fork it had not landed — `ed445bd` has no sort in its
+  `engine.js`, checked rather than assumed — so iteration 1 looks again, and
+  if there is still no name to take it uses `ordina` per §3.2 and records here
+  that this game went first.
 - The non-dealer plays first, in every round. The deal alternates. On a cold
   start you play first, so the opponent deals, matching Discola and Tressette,
   where you lead the first deal.
@@ -1043,6 +1047,10 @@ and the next iteration that forks checks for movement first.
 | decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `ed445bd` | iteration 0 |
 | CSS and table markup | Tressette | to be recorded | iteration 3 |
 | selfplay harness | Tressette | to be recorded | iteration 2 |
+
+Iteration 0 checked for movement before forking, as the paragraph above says
+to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
+the fork is the one the table names. Iterations 2 and 3 check again.
 
 Discola's last recorded commit, for whatever Tressette did not change, is
 `22c4b9c`.
