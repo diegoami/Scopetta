@@ -786,10 +786,13 @@ box, because overflowing content leaves a box that stays where it was.
 **And then the seat row is as tall as the taller of its card and its plate**,
 which `--plates: 0px` in landscape quietly denied. The plate's type is in rem
 and the card's height is not, so on a short landscape window the plate wins:
-81px against a 73px card at 1100x330. What that cost was almost entirely
-hidden — the seat stayed 7px above the fold, `--slack` paid for the rest, and
-the only thing that showed anywhere was 2px of scrolling at 1100x320, where
-there was no slack left to pay with. The height
+**75.8px against a 73.5px card at 1100x330**. What that costs is small and
+almost entirely hidden — the seat stays 8px above the fold and `--slack` pays
+for the rest — and the only place it shows is 1100x320, where the card is
+70.1px and the table hands back 3px of scrolling because there is no slack left
+to pay with. (81px was the figure while `--plate-h` came from one row of type;
+deriving it from three made the plate shorter, and the sentence was not
+re-measured for two rounds.) The height
 term is therefore two terms and the smaller wins, with no conditional needed
 because they cross exactly where the card and the plate are the same height:
 

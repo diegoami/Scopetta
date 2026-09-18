@@ -118,10 +118,13 @@
 
      Without this, --plates: 0px in landscape was a constant that said "a plate
      is never taller than a card", and it was already false: at 1100x330 the
-     plate is 81px against a 73px card. What that cost was small and entirely
-     hidden — the seat stayed 7px above the fold and --slack paid for the rest,
-     and the only thing that showed was 2px of scrolling at 1100x320, where
-     there was no slack left to pay with. */
+     plate is 75.8px against a 73.5px card. What that costs is small and almost
+     entirely hidden — the seat stays 8px above the fold and --slack pays for
+     the rest — and the only place it shows is 1100x320, where the card is
+     70.1px and the table hands back 3px of scrolling because there is no slack
+     left to pay with. (The figure was 81px while --plate-h was derived from one
+     row of type; deriving it from three made the plate shorter and nobody
+     re-measured the sentence.) */
   --seat-overhang: calc(2 * var(--plate-h));
   --cw-height: min(
       calc((100dvh - var(--chrome)) / var(--rows) / var(--ratio)),
@@ -1371,6 +1374,29 @@ document.addEventListener("keydown", e => {
   }
   if (e.key === "Escape"){ state.selected = null; state.scelta = 0; render(); }
 });
+
+/* --- when the page has to draw itself again ---------------------------------- */
+
+// Two things decide the table in script rather than in the sheet: whether the
+// middle row wraps, which is an orientation, and which rung the say line can
+// hold, which is a width. Both were read once, at render time, and never again
+// — so a rotation left thirteen cards in one row with a 22px strip, or in two
+// rows against a budget that had paid for one, and the say line kept a rung
+// that no longer fitted. Rotating a phone is not an exotic thing to do.
+//
+// Coalesced on a frame, because a drag across a desktop window fires this
+// dozens of times a second and render() rebuilds the whole table.
+let redraw = 0;
+window.addEventListener("resize", () => {
+  if (redraw) return;
+  redraw = requestAnimationFrame(() => { redraw = 0; render(); });
+});
+
+// And again when the webfont arrives. The say line picks its rung by measuring
+// the line it has just drawn, and until Bodoni and Barlow load it is measuring
+// the fallback — which is wider, so the first paint can cut a line that would
+// have fitted. Nothing else on the table depends on the metrics.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render());
 
 /* --- go --------------------------------------------------------------------- */
 

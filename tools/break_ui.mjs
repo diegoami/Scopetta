@@ -39,7 +39,13 @@
 //     was chosen by tapping / by accepting`, `the driver never reached the end
 //     of a round`, `the deal could not be driven to the end`, `the posed
 //     position offers only one capture`, `nothing on the crowded table is
-//     marked`, `the say line has no box while a card is raised`.
+//     marked`, `the say line has no box while a card is raised`;
+//   - and `document.fonts.ready` re-rendering the page, which has no assertion
+//     at all: the check blocks the webfont on purpose so that its measurements
+//     are deterministic and are the worst case, which means the state that
+//     listener exists for — the font ARRIVING — is one the check never enters.
+//     It is in the page because a player on a real phone sees it, not because
+//     anything here watches it.
 //
 // And some assertions share a break, which is not a hole either. An EXPECT
 // value names one RULE; a rule phrased in two passes is still one rule:
@@ -57,6 +63,8 @@
 //     floor`, whose EXPECT names the computed one;
 //   - `N scopa mark(s) drawn` in the sweep pass with `the scopa marks stop
 //     counting`, whose EXPECT names the deal pass's phrasing;
+//   - the choice pass's `the toast runs off the screen` with `the toast is
+//     pushed off the right edge`, whose EXPECT names the audit's phrasing;
 //   - `the position meant to say "X" played the card instead of raising it`
 //     with `a capture with a choice plays instead of raising`.
 
@@ -94,9 +102,11 @@ const EXPECT = {
   "the middle's own row gap is a hand-set constant again": "of scrolling",
   "the stacked seat's own gaps are not in the budget": "of scrolling",
   "the say line is sized by its content": "#selName runs off",
-  "the say line is cut by a character count alone": "should name the capture",
+  "the say line is cut by a character count alone": "the say line wraps to",
   "the portrait card has a floor of its own": "below the fold",
   "the hand stays live while the table sweeps": "still tappable during the sweep",
+  "the page never draws itself again when the screen changes": "after turning",
+  "the say line is never measured again once the font lands": "after turning, the say line",
   "the small type drops below the floor": "want 12.5",
   "the say line is given a strip too short for it": "cut off by",
   "the say line is drawn under the raised card": "drawn over while a card is raised",
@@ -324,6 +334,9 @@ const BREAKS = [
   ["the say line is cut by a character count alone",
    "    if (rung.length <= LABEL_CHARS\n        && el.selName.getBoundingClientRect().height <= oneLine) break;",
    "    if (rung.length <= LABEL_CHARS) break;"],
+  ["the page never draws itself again when the screen changes",
+   "window.addEventListener(\"resize\", () => {\n  if (redraw) return;\n  redraw = requestAnimationFrame(() => { redraw = 0; render(); });\n});",
+   ""],
   ["the hand stays live while the table sweeps",
    "    node.disabled = !yourTurn || !card || !!sweeping;",
    "    node.disabled = !yourTurn || !card;"],

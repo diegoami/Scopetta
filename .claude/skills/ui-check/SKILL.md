@@ -18,8 +18,17 @@ calibrated, and in Tressette, which inherited the check and added the rest.
 node tools/check_ui.mjs
 ```
 
-Exit code 0 means clean. It takes about four minutes; let it finish rather than
-interrupting it.
+Exit code 0 means clean. It takes about fifteen minutes; let it finish rather
+than interrupting it.
+
+**And then read the `ui` job on the pull request.** Locally the Google Fonts
+request fails, in CI it succeeds, and the type metrics decide how wide every
+string on the table is — so `All checks pass.` here is a claim about here. The
+check blocks the font on every page for exactly that reason, which makes it
+deterministic and makes it the worst case, but the habit still matters: an
+iteration once reported green while the job was red on the same commit, and
+`break_ui.mjs` refuses to run against a page the check fails, so a red check
+takes the mutation harness with it.
 
 It needs `playwright-core` and a Chromium binary:
 
@@ -147,6 +156,14 @@ thirteen-card table is four of one value plus one of each of the other nine, so
 every value is on it, every hand card has exactly one capture, and thirteen can
 never be a choice at all.
 
+**Turning the phone over** — a change of viewport, which is the one state the
+grid cannot render: every case above loads the page at a size and measures it
+once. Whether the middle row wraps is an orientation and which rung the say line
+holds is a width, both read in script at render time, so a page that does not
+listen for `resize` is a page the whole grid agrees with. It rotates four shapes
+both ways with thirteen cards down, and raises a card at one width to read it at
+another.
+
 **The sweep, and the beat between rounds** — the two states that only playing
 can reach, and the reason for it: a toast over a table that still has cards on
 it is not a scopa, and two empty hands are a position `gioca` deals its way out
@@ -214,6 +231,7 @@ was committed:
 | the table needs N px of scrolling | `overflow: hidden auto` is the fallback for a budget that comes up short, so a missing term costs a scrollbar rather than an error |
 | the say line is drawn over | the raised card rises into the space above the hand, and that space includes the line — 120px of a 309px line at 1440x900, over the suit the line had just been taught to say |
 | the say line should name the capture | a fixture that names a rung and renders another: the position meant to test the longest name offered only one capture, so the card was played and the table rendered empty. It also catches a ladder that cuts the line by counting characters, which is a proxy for a width and a bad one |
+| after turning, … | the wrap rule and the say line's rung are read in script at render time, and nothing re-read them: a rotation left thirteen cards in one row with a 22.6px strip, or in two rows with the seat 75px below the fold |
 | the say line runs off the screen | the plaque is sized to its content, so it made `.say` its own width and the `max-width: 100%` beneath it resolved against the grown box: 39 characters ran from −8px to 328px on a 320px screen |
 | N cards in your hand are still tappable during the sweep | `tapped` refuses while the table is sweeping, so a card that still looks live takes a tap and does nothing |
 | N screens visible at once | counted by computed `display`, not by the `hidden` attribute: the attribute was always right and the rule acting on it was what lost, so an assertion reading the attribute survives the defect it is named for |

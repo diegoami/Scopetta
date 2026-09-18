@@ -81,6 +81,18 @@ past its own box can never fire. A line that only matters when something else
 is wrong is exactly the line a mutation harness is for, and the evidence for
 one is a pair of runs, not one.
 
+**And a CHANGE of viewport is a state too, and the hardest kind to remember:**
+every case in the grid loads the page at a size and measures it once, so a page
+that never draws itself again is a page the whole grid agrees with. Two things
+on this table are decided in script rather than in the sheet — whether the
+middle row wraps, and which rung the say line can hold — and neither was read
+again after the first paint. Measured, with no reload: rotating 980x385 to
+portrait left one row of thirteen cards with a 22.6px strip, under the floor;
+rotating 360x800 to landscape left two rows against a budget that paid for one,
+82px of scrolling and your own seat 75px below the fold; and a say line raised
+at 600x853 and resized to 320 kept its rung and stood 38px tall in a 23px box.
+The page listens for `resize` now, and the check turns the phone over.
+
 **And a viewport is a state.** The same defect a third time: iteration 3's
 nineteen viewports held no landscape window narrower than 980px, and the
 assertions that would have caught the clipped deck were all written and all
@@ -94,6 +106,18 @@ do rather than what it should do — Discola's gap metric was written that way
 once and passed the broken layout while failing every good one. The same rule
 covers the engine from iteration 1: every rule test is broken on purpose after
 it is written, and one that still passes is decoration.
+
+**And the check's own environment is part of the check.** The page asks Google
+Fonts for its type, and whether that request succeeds decides how wide every
+string on the table is. An assertion calibrated against the fallback metrics
+passed here — no network — and failed in CI, where the real font loaded and the
+string was narrower. A check whose answer depends on the network is not a
+check: `check_ui.mjs` blocks the font on every page, which is deterministic and
+is also the worst case, since the page has to be correct while the font is
+still on its way. And **`node tools/check_ui.mjs` passing locally is not the
+same claim as CI being green** — read the job before saying a pull request is
+green, because `break_ui.mjs` refuses to run at all against a page the check
+fails, so a red check takes the mutation harness with it.
 
 The `ui-check` skill explains what it covers and how to read a failure.
 

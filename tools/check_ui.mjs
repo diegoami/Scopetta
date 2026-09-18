@@ -102,10 +102,13 @@ const VIEWPORTS = [
 const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
                           'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
 
-// The inflated pass runs these. Not the short landscape windows — 640x480,
-// 980x340, 1100x330, 1100x320 — where the inflation drives the card onto its
-// clamp floor, which tests the clamp rather than the derivation, exactly as the
-// note on INFLATE says.
+// The inflated pass runs these, and it is a list of what is IN rather than a
+// list of what is out. What is deliberately not here: the short landscape
+// windows (640x480, 980x340, 1100x330, 1100x320) and the narrowest phone
+// (320x568, whose budget wants 32.1px against a 32px floor). At all of them the
+// inflation drives the card onto its clamp floor, which tests the clamp rather
+// than the derivation, exactly as the note on INFLATE says. The rest are
+// simply not the tightest shapes in the grid.
 const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
                'Android small', 'small window', 'tiny window'];
 
@@ -223,15 +226,22 @@ const poseWidestSay = `(() => {
   tapped(0);
 })()`;
 
-// And the rung below that: five cards taken at once, which cannot be named in
-// the space the budget pays for however it is phrased, so the line says how
-// many and the brass marks say which. The quattro and the sei are here to make
-// it a choice — without a second capture the card is simply played and the row
-// renders an empty table, which is what the first version of this did.
-const UNNAMEABLE_SAY = 'Prendi le 5 carte segnate';
+// And the rung below that: a capture that cannot be named in the space the
+// budget pays for however it is phrased, so the line says how many and the
+// brass marks say which.
+//
+// **A position the rules reach**, which the first version of this was not: four
+// due dealt to the table, a tre laid on them — a tre takes nothing from four
+// due, so it may be laid — and a cavallo played. That gives four capture sets
+// of four cards each, so the card raises rather than plays, and the full name
+// runs past the count whichever set is proposed. The earlier fixture put two
+// assi and two tre down together, which no deal can produce: only the four
+// dealt cards escape PRESA_OBBLIGATORIA, and every other card on that table
+// could have captured, so none of them could have been laid.
+const UNNAMEABLE_SAY = 'Prendi le 4 carte segnate';
 const poseUnnameable = `(() => {
-  state.tavola = [{s:1,n:1},{s:2,n:1},{s:0,n:2},{s:3,n:3},{s:1,n:3},{s:0,n:4},{s:2,n:6}];
-  state.hands[0] = [{s:2,n:10}, {s:3,n:9}, {s:1,n:8}];
+  state.tavola = [{s:0,n:2},{s:1,n:2},{s:2,n:2},{s:3,n:2},{s:0,n:3}];
+  state.hands[0] = [{s:1,n:9}, {s:3,n:10}, {s:2,n:8}];
   state.deveGiocare = 0; state.over = false;
   state.selected = null; state.scelta = 0;
   render();
@@ -295,6 +305,26 @@ const playSweep = `(() => {
 // toast outlives it by roughly twice as long, so the settled state is still
 // announcing the scopa when it is measured.
 const SWEEP_MS = 700;
+
+/* ---- opening a page -------------------------------------------------------- */
+
+// Every page in this check is opened here, and the reason is the webfont.
+//
+// The page asks Google Fonts for Bodoni Moda and Barlow. Whether that request
+// succeeds decides how wide every string on the table is — and it succeeds on a
+// CI runner and fails on a developer's machine with no network. Iteration 3
+// shipped an assertion calibrated against the fallback metrics: it passed here
+// and failed in CI, where the real font loaded and the string was narrower.
+// A check whose answer depends on the network is not a check.
+//
+// So the font is blocked, always, and that is the worst case as well as the
+// deterministic one: the page has to be correct while the webfont is still on
+// its way, and every player sees that state first.
+async function openPage(browser, viewport) {
+  const page = await browser.newPage({ viewport });
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  return page;
+}
 
 /* ---- what counts as a defect ---------------------------------------------- */
 
@@ -434,8 +464,15 @@ const audit = () => {
   return out;
 };
 
-// Local runs have no network, so the Google Fonts stylesheet always fails.
-const noise = m => /ERR_CERT_AUTHORITY_INVALID|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|fonts\.googleapis/.test(m);
+// The Google Fonts stylesheet never loads — openPage blocks it on purpose, and
+// a machine with no network fails it anyway — so neither its request nor the
+// console line about it is a defect. Matched on the URL as well as the text,
+// because an aborted subresource says only "Failed to load resource:
+// net::ERR_FAILED" and names itself nowhere but its location.
+const FONTS = /fonts\.(googleapis|gstatic)\.com/;
+const noise = m => /ERR_CERT_AUTHORITY_INVALID|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED/.test(m)
+                || FONTS.test(m);
+const noisy = m => noise(m.text()) || FONTS.test((m.location() || {}).url || '');
 
 /* ---- getting to each screen ----------------------------------------------- */
 
@@ -513,7 +550,7 @@ const SCREENS = [
 
 async function checkDocument(browser) {
   console.log('\ndocument');
-  const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+  const page = await openPage(browser, { width: 393, height: 852 });
   await page.goto(URL_);
   const bad = await page.evaluate(() => {
     const out = [];
@@ -546,10 +583,10 @@ async function checkScreens(browser) {
   for (const vname of (QUICK ? ['narrow phone', 'tiny window'] : SCREEN_VIEWPORTS)) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     for (const screen of SCREENS) {
-      const page = await browser.newPage({ viewport: { width: w, height: h } });
+      const page = await openPage(browser, { width: w, height: h });
       const errs = [];
       page.on('pageerror', e => errs.push(String(e)));
-      page.on('console', m => { if (m.type() === 'error' && !noise(m.text())) errs.push(m.text()); });
+      page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
       await page.goto(URL_);
       await page.addStyleTag({ content: STILL });
       await screen.open(page);
@@ -756,10 +793,10 @@ async function checkTable(browser, only, inflate) {
     // that takes a term out of that budget has nowhere else to show.
     for (const deck of (QUICK ? ['Trevisane', 'Romagnole'] : DECKS)) {
       for (const n of (QUICK ? [4, 13] : TABLE_SIZES)) {
-        const page = await browser.newPage({ viewport: { width: w, height: h } });
+        const page = await openPage(browser, { width: w, height: h });
         const errs = [];
         page.on('pageerror', e => errs.push(String(e)));
-        page.on('console', m => { if (m.type() === 'error' && !noise(m.text())) errs.push(m.text()); });
+        page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
         await page.goto(URL_);
         await page.addStyleTag({ content: STILL });
         if (inflate) await page.addStyleTag({ content: INFLATE });
@@ -879,10 +916,10 @@ async function checkChoice(browser) {
   const list = QUICK ? ['Android small'] : CHOICE_VIEWPORTS;
   for (const [vi, vname] of list.entries()) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
-    const page = await browser.newPage({ viewport: { width: w, height: h } });
+    const page = await openPage(browser, { width: w, height: h });
     const errs = [];
     page.on('pageerror', e => errs.push(String(e)));
-    page.on('console', m => { if (m.type() === 'error' && !noise(m.text())) errs.push(m.text()); });
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
     await page.goto(URL_);
     await page.addStyleTag({ content: STILL });
     await page.click('#play');
@@ -966,6 +1003,7 @@ async function checkChoice(browser) {
     await page.reload();
     await page.addStyleTag({ content: STILL });
     await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
     await page.evaluate(poseChoiceCrowded);
     // And a pointer resting on one of those cards, on purpose. A hover that
     // lifts a card transforms it, a transform paints it as its own stacking
@@ -1070,14 +1108,22 @@ async function checkChoice(browser) {
       }));
     }
 
-    // The two rungs below the whole name, each rendered rather than described —
-    // and the widest line the ladder keeps, which is the one where its two
-    // conditions disagree: 39 characters is inside the count and outside a
-    // 360px phone, so the answer depends on the screen and not on the string.
+    // The rungs below the whole name. Two of them are decided by the character
+    // count alone — 43 characters and 94 — so they are the same string at every
+    // width and are asserted as strings.
+    //
+    // The third is not, and that is the point of it: `Prendi l'asso e il fante
+    // con il cavallo` is 39 characters, inside the count, and 335px, outside a
+    // 360px phone. Which rung wins there depends on the width AND on the font,
+    // so asserting a string against a width is asserting the metrics of
+    // whatever typeface happened to load — which is what shipped a check that
+    // passed here and failed in CI. What is asserted instead is the ladder's
+    // own rule, which is true at every width in every font: the line the player
+    // sees is one of the rungs, it is one line, it is inside its box, and it is
+    // short enough to be a label.
     const rungBad = [];
-    const widest = w >= 375 ? WIDEST_SAY : CUT_SAY;
     for (const [pose, want] of [[poseLongSay, LONG_SAY], [poseUnnameable, UNNAMEABLE_SAY],
-                                [poseWidestSay, widest]]) {
+                                [poseWidestSay, null]]) {
       await page.reload();
       await page.addStyleTag({ content: STILL });
       await page.click('#play');
@@ -1085,14 +1131,31 @@ async function checkChoice(browser) {
       await page.mouse.move(0, 0);
       await page.evaluate(pose);
       await page.waitForTimeout(40);
-      rungBad.push(...await page.evaluate(exp => {
+      rungBad.push(...await page.evaluate(([exp, rungs]) => {
         const out = [];
+        const what = exp || 'the widest line';
         if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
-          out.push(`the position meant to say "${exp}" played the card instead of raising it`);
-        const said = document.querySelector('.sel-name').textContent;
-        if (said !== exp) out.push(`the say line should name the capture "${exp}", it says "${said}"`);
+          out.push(`the position meant to say "${what}" played the card instead of raising it`);
+        const el = document.querySelector('.sel-name');
+        const said = el.textContent;
+        if (exp !== null) {
+          if (said !== exp) out.push(`the say line should name the capture "${exp}", it says "${said}"`);
+          return out;
+        }
+        // The rule, rather than the string.
+        if (!rungs.includes(said))
+          out.push(`the say line says "${said}", which is none of the rungs it may say`);
+        if (said.length > 39)
+          out.push(`the say line is ${said.length} characters, which is prose and not a label: "${said}"`);
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        if (r.height > parseFloat(cs.lineHeight) + 1)
+          out.push(`the say line wraps to ${Math.round(r.height)}px of a ${Math.round(parseFloat(cs.lineHeight))}px line: "${said}"`);
+        const box = document.querySelector('.say').getBoundingClientRect();
+        if (r.left < box.left - 1 || r.right > box.right + 1)
+          out.push(`the say line is ${Math.round(r.width)}px in a ${Math.round(box.width)}px box: "${said}"`);
         return out;
-      }, want));
+      }, [want, [WIDEST_SAY, CUT_SAY, 'Prendi la carta segnata']]));
     }
 
     const all = [...bad, ...toastBad, ...crowdBad, ...sayBad, ...rungBad, ...errs];
@@ -1122,10 +1185,10 @@ async function checkStates(browser) {
   const list = QUICK ? ['Android small'] : SCREEN_VIEWPORTS;
   for (const [vi, vname] of list.entries()) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
-    const page = await browser.newPage({ viewport: { width: w, height: h } });
+    const page = await openPage(browser, { width: w, height: h });
     const errs = [];
     page.on('pageerror', e => errs.push(String(e)));
-    page.on('console', m => { if (m.type() === 'error' && !noise(m.text())) errs.push(m.text()); });
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
     await page.goto(URL_);
     await page.addStyleTag({ content: STILL });
     await page.click('#play');
@@ -1252,6 +1315,102 @@ async function checkStates(browser) {
   return failed;
 }
 
+/* ---- pass 2d: turning the phone over ---------------------------------------- */
+
+// A change of viewport is a state, and it is the one state the whole grid above
+// cannot render: every case here loads the page at a size and measures it once.
+// Two things about this table are decided in script rather than in the sheet —
+// whether the middle row wraps, which is an orientation, and which rung the say
+// line can hold, which is a width — and before iteration 3's fourth round
+// neither was read again after the first paint. Measured then, thirteen cards
+// down and no reload: rotating 980x385 to portrait left one row of thirteen
+// with a 22.6px strip, under the floor; rotating 360x800 to landscape left two
+// rows against a budget that paid for one, 82px of scrolling and your own seat
+// 75px below the fold; and a say line raised at 600x853 and resized to 320 kept
+// its rung and stood 38px tall in a 23px box.
+async function checkRotation(browser) {
+  console.log('\nturning the phone over');
+  let failed = 0;
+  // Both halves of every pair are shapes the game can actually hold. Rotating
+  // 500x425 gives 425x500, which is not one: a portrait table is four card rows
+  // and the chrome around them, and below about 570px of height the card is on
+  // its clamp floor and the table hands back a scrollbar however faithfully the
+  // budget tracks its tokens. That is the designed fallback, not a defect, and
+  // asserting against it here would be asserting the clamp.
+  const TURNS = QUICK ? [[[980, 385], [385, 980]]]
+                      : [[[980, 385], [385, 980]], [[360, 800], [800, 360]],
+                         [[1024, 1366], [1366, 1024]], [[430, 932], [932, 430]]];
+  for (const [from, to] of TURNS) {
+    const page = await openPage(browser, { width: from[0], height: from[1] });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.mouse.move(0, 0);
+    await page.evaluate(setTavola(13));
+    await page.waitForTimeout(40);
+
+    // Over it goes, without reloading. Everything below is measured on a page
+    // that has been running since the other orientation.
+    await page.setViewportSize({ width: to[0], height: to[1] });
+    await page.waitForTimeout(80);
+
+    const m = await page.evaluate(measure);
+    const bad = [];
+    if (m.tableScroll > 1)
+      bad.push(`after turning, the table needs ${m.tableScroll}px of scrolling`);
+    if (m.youSeatBottom > m.viewportH + 1)
+      bad.push(`after turning, your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
+    if (m.overlapsHand)
+      bad.push(`after turning, ${m.overlapsHand} table card(s) land on a hand`);
+    const wantRows = m.portrait ? 2 : 1;
+    if (m.rowCount !== wantRows)
+      bad.push(`after turning, the middle draws ${m.rowCount} row(s) in `
+        + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
+    const floor = Math.min(24, Math.round(m.cw * 0.45));
+    for (const row of m.rowStats) {
+      if (row.n > 1 && row.minStep < floor)
+        bad.push(`after turning, a table row steps ${row.minStep}px between cards, want ${floor}`);
+      const starved = (row.reach || []).findIndex(g => g < floor);
+      if (starved >= 0)
+        bad.push(`after turning, table card ${starved} is ${row.reach[starved]}px wide to a thumb, want ${floor}`);
+    }
+
+    // And the say line, which picks its rung by measuring: raised at one width,
+    // read at another.
+    await page.setViewportSize({ width: from[0], height: from[1] });
+    await page.evaluate(poseWidestSay);
+    await page.waitForTimeout(40);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.waitForTimeout(80);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const el = document.querySelector('.sel-name');
+      if (el.hidden) return out;
+      const r = el.getBoundingClientRect();
+      const box = document.querySelector('.say').getBoundingClientRect();
+      if (r.height > parseFloat(getComputedStyle(el).lineHeight) + 1)
+        out.push(`after turning, the say line wraps to ${Math.round(r.height)}px `
+          + `in a ${Math.round(box.height)}px box: "${el.textContent}"`);
+      if (r.left < box.left - 1 || r.right > box.right + 1)
+        out.push(`after turning, the say line is ${Math.round(r.width)}px in a ${Math.round(box.width)}px box`);
+      return out;
+    }));
+
+    const all = [...bad, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${from.join('x')} turned to ${to.join('x')}`);
+      all.slice(0, 6).forEach(b => console.log(`        ${b}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${TURNS.length} rotations, both ways`);
+  return failed;
+}
+
 /* ---- pass 3: a whole deal, through the table ------------------------------- */
 
 // The two passes above measure a table that has just been dealt. This is the
@@ -1260,10 +1419,10 @@ async function checkStates(browser) {
 // a pass that played twenty cards and never looked at the hand between them.
 async function checkDeal(browser) {
   console.log('\na whole deal');
-  const page = await browser.newPage({ viewport: { width: 430, height: 932 } });
+  const page = await openPage(browser, { width: 430, height: 932 });
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error' && !noise(m.text())) errs.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
   await page.goto(URL_);
   await page.addStyleTag({ content: STILL });
   await page.click('#play');
@@ -1429,6 +1588,7 @@ failed += await checkTable(browser, null, false);
 failed += await checkTable(browser, TIGHT, true);
 failed += await checkChoice(browser);
 failed += await checkStates(browser);
+failed += await checkRotation(browser);
 failed += await checkDeal(browser);
 await browser.close();
 
