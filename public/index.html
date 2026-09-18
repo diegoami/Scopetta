@@ -50,12 +50,25 @@
   --step: clamp(.5rem, 1.4vw, 1rem);         /* .table row gaps              */
   --gap: clamp(.4rem, 1.2vw, .9rem);         /* between cards in a seat row  */
   --tavola-pad: var(--step);                 /* .tavola, inside its border   */
-  --extra-gap: 0px;                          /* .middle's gap when it stacks */
-  /* A name plate is its type plus its padding. Derived, because --t-pick is
-     expressed in vw on phone-shaped screens — Tressette's was hard-coded at
-     76px against plates that cost 120px at 770x1475, and the player's own
-     plate hung below the fold while the check said `pass`. */
-  --plate-h: calc(max(var(--t-pick) * 1.45, 1.5rem) + .7rem);
+  /* The gap between the two halves of the middle row, which exist only in
+     portrait. It is the row gap .tavola itself uses, named here so the budget
+     and the layout cannot disagree — as a hand-set .5rem it was 6px short of
+     --step at 1024x1366 and the table scrolled by exactly that. */
+  --extra-gap: 0px;                          /* .tavola's row gap, in portrait */
+  /* A name plate is its type plus its padding, and it is derived because
+     --t-pick is expressed in vw on phone-shaped screens — Tressette's was
+     hard-coded at 76px against plates that cost 120px at 770x1475, and the
+     player's own plate hung below the fold while the check said `pass`.
+
+     Its ROWS are derived too, and that is the half this got wrong first: one
+     line of --t-pick paid for the name and nothing else, so the mazziere tag —
+     a row of its own since the plate became a grid — broke out of a 35px box
+     that measured 51px of content and was drawn behind the cards at every
+     portrait viewport. Three rows is what the plate can hold: the name, the
+     role beneath it where the plate is narrow, and the tag. */
+  --plate-row: calc(var(--t-tiny) * 1.4);    /* the role, and the mazziere tag */
+  --plate-h: calc(max(var(--t-pick) * 1.45, 1.5rem)
+                  + 2 * var(--plate-row) + .2rem + .7rem);
   --plates: 0px;                             /* name plates, when they stack */
   --slack: 8px;                              /* never land exactly on zero   */
   --pad-inline: clamp(16px, 3vw, 2rem);      /* .table, left and right       */
@@ -94,7 +107,22 @@
   --seat-span: 5;
   --plate-w: calc(var(--t-pick) * 7.5);
   --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));
-  --cw-height: calc((100dvh - var(--chrome)) / var(--rows) / var(--ratio));
+  /* The height term, in two shapes, because a seat row is as tall as the taller
+     of its card and its plate. If the card wins, a row costs --ch and the
+     budget divides by --rows as Discola's did. If the PLATE wins — which is
+     what happens on a short landscape window, where the plate's type is in rem
+     and the card is not — the two seats cost their plates and only the middle
+     row costs a card. The two terms cross exactly where the card and the plate
+     are the same height, so `min` picks the right one with no conditional:
+     below the crossing the second is the smaller, above it the first is.
+
+     Without this, --plates: 0px in landscape was a constant that said "a plate
+     is never taller than a card", and it was already false — at 1100x330 the
+     plate is 81px against a 73px card, and your seat ran below the fold. */
+  --seat-overhang: calc(2 * var(--plate-h));
+  --cw-height: min(
+      calc((100dvh - var(--chrome)) / var(--rows) / var(--ratio)),
+      calc((100dvh - var(--chrome) - var(--seat-overhang)) / var(--ratio)));
   --cw-width: calc((100vw - 2 * var(--pad-inline) - 4 * var(--gap)
                     - var(--seat-extra)) / var(--seat-span));
   --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 156px);
@@ -315,8 +343,9 @@ button.card:disabled{ cursor: default; }
    overlapping row is drawn under the card to its right, so marking a card used
    to raise it — and a raised card covers the strip that belongs to its
    neighbour: the neighbour's reachable width drops from `step` to
-   `2*step - cw`, measured at 7px on a 1024x768 window and at 0 on narrower
-   ones. A card nobody can tap is a capture nobody can choose, and a misplay
+   `2*step - cw`: measured at 22px of a 74px step at 1024x768 in the Romagnole
+   deck, under the 24px floor, on the crowded twelve-card table a capture can
+   actually be chosen on. A card nobody can tap is a capture nobody can choose, and a misplay
    costs the deal. An inset ring needs no raise: it is drawn inside the card,
    so it reads on the strip that is visible. */
 .card[data-take="true"]{
@@ -370,8 +399,9 @@ button.card:disabled{ cursor: default; }
      pixel. The measurement was of the wrong page. With the step formula below
      replaced by a fixed gap — the break tools/break_ui.mjs uses for the spill
      assertion — the bounded column reports `a table row spills 74px past its
-     own box` at 360x800 with thirteen cards, and the unbounded one reports
-     nothing at all, because the box grew with the cards. A line whose only effect is on a broken page still
+     own box` at 360x800 with thirteen cards, while the unbounded one reports
+     the row running off the SCREEN and nothing about the row's own box,
+     because the box grew with the cards. A line whose only effect is on a broken page still
      has an effect: it is what makes the assertion reachable. */
   grid-template-columns: minmax(0, 1fr);
   gap: var(--step);
@@ -428,6 +458,14 @@ button.card:disabled{ cursor: default; }
 .tavola-row > button.card:not(:disabled):focus-visible{
   transform: none;
   box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--ivory);
+}
+/* …unless it is one of the cards the proposal is offering to take, in which
+   case the ivory ring would say the opposite of what is true. A pointer moving
+   across the table un-marked whatever it touched. */
+.tavola-row > button.card[data-take="true"]:not(:disabled):hover,
+.tavola-row > button.card[data-take="true"]:not(:disabled):focus-visible{
+  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--brass),
+              inset 0 0 22px rgba(200,162,74,.55);
 }
 
 /* ---- piles and the deck --------------------------------------------------- */
@@ -506,6 +544,7 @@ button.card:disabled{ cursor: default; }
    scrollWidth here rather than the bounding box. */
 .plate{
   width: var(--plate-w);
+  height: var(--plate-h);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
@@ -563,6 +602,14 @@ button.card:disabled{ cursor: default; }
 .seat--you{ row-gap: 0; }
 .say{
   grid-column: 1 / -1;
+  /* Above the raised card. The lift is capped at the space above the hand and
+     that space INCLUDES this line, so the card rises to within a hair of it:
+     measured, it covered 120px of a 309px line at 1440x900 from the middle
+     slot, and the 120px it covered was "TTE DI COPPE C" — the suit, which is
+     the whole reason the line names one. Raising the line rather than
+     shortening the lift keeps the affordance and costs nothing in the budget. */
+  position: relative;
+  z-index: 4;
   height: var(--say);
   display: flex;
   align-items: center;
@@ -571,6 +618,13 @@ button.card:disabled{ cursor: default; }
 }
 .sel-name{
   margin: 0;
+  /* A plaque, because what passes under it now is a card face and not felt.
+     Horizontal padding only: --say pays for one line and no more. */
+  width: max-content;
+  max-width: 100%;
+  padding: 0 .45rem;
+  border-radius: 3px;
+  background: rgba(8, 26, 21, .88);
   text-align: center;
   line-height: 1.5;
   font-family: var(--font-label);
@@ -664,17 +718,20 @@ button.card:disabled{ cursor: default; }
   .seat__cards, .seat--opp .plate, .seat--you .plate{
     grid-column: 1; justify-self: center;
   }
-  /* The height --plates reserves, made explicit, so the budget and the plate
-     cannot drift apart. The plate is on its own row here, so it is no longer
-     competing with the cards for width: it takes what it needs, and the width
-     term below stops paying for it. */
-  .plate{ height: var(--plate-h); width: auto; }
+  /* The plate is on its own row here, so it is no longer competing with the
+     cards for width: it takes what it needs, and the width term below stops
+     paying for it. The height is --plate-h in both orientations, declared with
+     the rest of the plate. */
+  .plate{ width: auto; }
   .seat--you .plate{ margin-top: .25rem; }
 
   :root{
     --rows: 4;
     --seat-extra: 0px;
-    --extra-gap: .5rem;
+    /* The plates have a row of their own here and --plates already pays for
+       them, so the second height term has nothing to say. */
+    --seat-overhang: 0px;
+    --extra-gap: var(--step);
     --plates: calc(2 * var(--plate-h) + .5rem);
     --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);
     /* In portrait the seat row stacks, so the widest row is the hand's three
@@ -969,7 +1026,10 @@ function render(){
   [...el.youHand.children].forEach((node, slot) => {
     const card = mano(BASSO)[slot];
     faceOf(node, card);
-    node.disabled = !yourTurn || !card;
+    // `tapped` refuses while the table is sweeping, so the button has to look
+    // refused too: a card that takes a tap and does nothing is worse than one
+    // that is plainly not ready.
+    node.disabled = !yourTurn || !card || !!sweeping;
     node.setAttribute("aria-pressed", String(state.selected === slot));
     // What the tap will actually do. "Scegli" was on every card, and on all but
     // one in a hand a tap plays the card then and there — a label that promises
@@ -1085,15 +1145,21 @@ function renderSay(){
   // Three ways to say it, shortest that fits wins. The line has one line of
   // --t-tiny and the budget pays for exactly that, so a name that does not fit
   // is not a longer line — it is a line cut in half by .say, which is the
-  // defect Tressette shipped with its declarations. LABEL_CHARS is 39 because
-  // the readability tier the check holds every string to starts at 40: past
-  // that a string is prose, and prose does not belong at label size.
+  // defect Tressette shipped with its declarations.
+  //
+  // LABEL_CHARS is 39, and 39 is not where the line wraps: measured at 360x800
+  // it holds 43 characters on one line and wraps at 44. It is where the line
+  // stops being a label. The check holds any string past 40 characters to the
+  // 14.5px floor it holds body copy to, because past 40 characters a string is
+  // something somebody reads rather than glances at — and --t-tiny is 12.5px
+  // on a phone. Naming the capture in full and setting it at label size are
+  // two things this line cannot both do.
   //
   // What is given up first is "con il sette", which names the card the player
   // is looking at — it is raised, and it is the one they just tapped. What is
   // given up next is the list, and then the brass marks on the table carry it
-  // alone, which is what §3.7 says they are for. A five-card sum named in full
-  // runs to 45 characters and there is no phone where that is one line.
+  // alone, which is what §3.7 says they are for. The five-card sum the check
+  // renders comes to 97 characters named in full.
   const full = `Prendi ${lista} con ${art(breve(card))}`;
   const LABEL_CHARS = 39;
   el.selName.textContent =

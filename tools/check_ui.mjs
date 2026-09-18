@@ -88,11 +88,20 @@ const VIEWPORTS = [
   ['small window',      800,  680],
   ['VGA window',        640,  480],
   ['tiny window',       500,  425],
+  // Shorter than they are wide by a lot, which is where the plate's type — in
+  // rem — grows past the card's height and the seat row stops costing a card.
+  ['short window',      980,  340],
+  ['shorter window',   1100,  330],
+  ['shortest window',  1100,  320],
 ];
 
 const SCREEN_VIEWPORTS = ['Android small', 'iPhone Pro Max', 'tablet portrait',
                           'phone landscape', 'tiny window', 'laptop'];
 
+// The inflated pass runs these. NOT the two shortest landscape windows: the
+// inflation is calibrated to be the largest that leaves the card's clamp floor
+// unbound, and at 340px of height it binds — which tests the clamp rather than
+// the derivation, exactly as the note on INFLATE says.
 const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
                'Android small', 'small window', 'tiny window'];
 
@@ -175,14 +184,15 @@ const poseChoiceCrowded = `(() => {
   tapped(0);
 })()`;
 
-// The longest thing the say line ever has to hold: three cards taken at once,
-// with a repeated value on the table so the suits go in too. The line is one
-// line of --t-tiny by the budget's own arithmetic, and a capture named in full
-// is the position that tests whether that is true — without it the rule that
-// catches text cut off inside .say has nothing on this page to look at.
+// The say line's middle rung: a card named with its suit, which is 43
+// characters with the clause naming the raised card and 28 without it, so the
+// clause goes and the name stays. Two quattro on the table and the third in
+// hand — a real choice, so `tapped` raises rather than plays, which the first
+// version of this fixture did not check and did not get.
+const LONG_SAY = 'Prendi il quattro di bastoni';
 const poseLongSay = `(() => {
-  state.tavola = [{s:1,n:3},{s:2,n:3},{s:0,n:2},{s:3,n:1}];
-  state.hands[0] = [{s:2,n:6}, {s:3,n:10}, {s:1,n:9}];
+  state.tavola = [{s:3,n:4},{s:1,n:4},{s:0,n:3},{s:2,n:1}];
+  state.hands[0] = [{s:2,n:4}, {s:3,n:10}, {s:1,n:9}];
   state.deveGiocare = 0; state.over = false;
   state.selected = null; state.scelta = 0;
   render();
@@ -191,14 +201,28 @@ const poseLongSay = `(() => {
 
 // And the rung below that: five cards taken at once, which cannot be named in
 // the space the budget pays for however it is phrased, so the line says how
-// many and the brass marks say which.
+// many and the brass marks say which. The quattro and the sei are here to make
+// it a choice — without a second capture the card is simply played and the row
+// renders an empty table, which is what the first version of this did.
+const UNNAMEABLE_SAY = 'Prendi le 5 carte segnate';
 const poseUnnameable = `(() => {
-  state.tavola = [{s:1,n:1},{s:2,n:1},{s:0,n:2},{s:3,n:3},{s:1,n:3}];
+  state.tavola = [{s:1,n:1},{s:2,n:1},{s:0,n:2},{s:3,n:3},{s:1,n:3},{s:0,n:4},{s:2,n:6}];
   state.hands[0] = [{s:2,n:10}, {s:3,n:9}, {s:1,n:8}];
   state.deveGiocare = 0; state.over = false;
   state.selected = null; state.scelta = 0;
   render();
   tapped(0);
+})()`;
+
+// A sweep made by the opponent, which goes the other way. §3.7 calls the
+// direction a deliberate departure and nothing was reading it.
+const playSweepOpp = `(() => {
+  state.tavola = [{s:2,n:4}];
+  state.hands[1] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
+  state.deveGiocare = 1; state.over = false; state.speed = 1200;
+  state.selected = null; state.scelta = 0;
+  render();
+  computerPlay();
 })()`;
 
 // Play real cards until the round ends, which is the only way to reach the beat
@@ -235,7 +259,7 @@ const playToBeat = `(() => {
 // the page's own tap. The toast, the empty table and the scopa mark are what
 // gioca() and render() do with it — none of it is posed.
 const playSweep = `(() => {
-  state.tavola = [{s:2,n:4}];
+  state.tavola = [{s:2,n:2},{s:0,n:2}];
   state.hands[0] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
   state.deveGiocare = 0; state.over = false; state.speed = 1200;
   state.selected = null; state.scelta = 0;
@@ -316,10 +340,21 @@ const audit = () => {
   for (const plate of document.querySelectorAll('.plate')) {
     if (plate.scrollWidth > plate.clientWidth + 1)
       out.push(`${name(plate)} spills ${plate.scrollWidth - plate.clientWidth}px past its own width`);
-    const pr = plate.getBoundingClientRect();
+    // And past its own height, which is the same question turned ninety
+    // degrees and the one the first version of this rule did not ask: the
+    // plate has a derived height, the mazziere tag is a row of its own, and a
+    // box of 35px measuring 51px of content drew the tag behind the cards at
+    // every portrait viewport with both assertions green.
+    if (plate.scrollHeight > plate.clientHeight + 1)
+      out.push(`${name(plate)} spills ${plate.scrollHeight - plate.clientHeight}px past its own height`);
+  }
+  // The plate's CHILDREN against the cards, not the plate's box: overflowing
+  // content leaves the box and the box stays where it was.
+  for (const kid of document.querySelectorAll('.plate, .plate *')) {
+    const a = kid.getBoundingClientRect();
+    if (!a.width || !a.height) continue;
     for (const row of document.querySelectorAll('.seat__cards'))
-      if (hit(pr, row.getBoundingClientRect()))
-        out.push(`${name(plate)} lands on the cards`);
+      if (hit(a, row.getBoundingClientRect())) { out.push(`${name(kid)} lands on the cards`); break; }
   }
 
   for (const el of document.querySelectorAll('body *')) {
@@ -399,10 +434,6 @@ const SCREENS = [
       await p.click('#play');
       await p.evaluate(poseChoice);
     } },
-  // A sweep, played rather than posed: the toast is announcing something that
-  // happened, over the empty table it left behind. Posing the toast alone
-  // renders half the state and the empty middle it sits over is the half that
-  // moves the cards.
   { name: 'table, a capture named in full', open: async p => {
       await p.click('#play');
       await p.evaluate(poseLongSay);
@@ -411,6 +442,10 @@ const SCREENS = [
       await p.click('#play');
       await p.evaluate(poseUnnameable);
     } },
+  // A sweep, played rather than posed: the toast is announcing something that
+  // happened, over the empty table it left behind. Posing the toast alone
+  // renders half the state, and the empty middle it sits over is the half that
+  // moves the cards.
   { name: 'table, a scopa announced', open: async p => {
       await p.click('#play');
       await p.evaluate(playSweep);
@@ -594,11 +629,17 @@ const measure = () => {
   for (const plate of document.querySelectorAll('.plate')) {
     if (plate.scrollWidth > plate.clientWidth + 1)
       plateBad.push(`${nameOf(plate)} spills ${plate.scrollWidth - plate.clientWidth}px past its own width`);
-    const a = plate.getBoundingClientRect();
+    if (plate.scrollHeight > plate.clientHeight + 1)
+      plateBad.push(`${nameOf(plate)} spills ${plate.scrollHeight - plate.clientHeight}px past its own height`);
+  }
+  for (const kid of document.querySelectorAll('.plate, .plate *')) {
+    const a = kid.getBoundingClientRect();
+    if (!a.width || !a.height) continue;
     for (const row of document.querySelectorAll('.seat__cards')) {
       const b = row.getBoundingClientRect();
-      if (a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1)
-        plateBad.push(`${nameOf(plate)} lands on the cards`);
+      if (a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1) {
+        plateBad.push(`${nameOf(kid)} lands on the cards`); break;
+      }
     }
   }
 
@@ -628,6 +669,14 @@ const measure = () => {
     // check printed `pass`, because it measured the hand.
     youSeatBottom: youSeat ? Math.round(youSeat.bottom) : 0,
     viewportH: window.innerHeight,
+    // The table has `overflow: hidden auto`, so a budget that comes up short
+    // does not error — it hands the player a scrollbar. Scrolling to reach a
+    // card beats a card hidden under another one, which is why the fallback is
+    // there, but needing it at all means a term of --chrome is missing: it was
+    // --extra-gap, a hand-set .5rem standing in for --step, 6px short at
+    // 1024x1366 and the table scrolled by exactly that.
+    tableScroll: table ? Math.max(0, document.querySelector('.table').scrollHeight
+                                   - document.querySelector('.table').clientHeight) : 0,
     tavolaInsideTable: tavola && table
       ? Math.round(Math.max(0, tavola.right - table.right) + Math.max(0, table.left - tavola.left))
       : 0,
@@ -660,10 +709,12 @@ async function checkTable(browser, only, inflate) {
   let failed = 0;
   let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
   // 'tiny window' is in the quick grid because it is the shape the width term
-  // is about: a break that takes the plates out of the budget has to have
-  // somewhere to show up.
+  // is about, and 'shortest window' because it is where the plate is taller
+  // than the card AND the budget has nothing left over: a break that takes a
+  // term out of the budget has to have somewhere to show up.
   if (QUICK) list = list.filter(v =>
-    ['phone landscape', 'Android small', 'laptop', 'tiny window'].includes(v[0]));
+    ['phone landscape', 'Android small', 'laptop', 'tiny window',
+     'shortest window'].includes(v[0]));
 
   for (const [vname, w, h] of list) {
     // Two decks even in the quick grid: Romagnole's cards are the widest, so it
@@ -708,6 +759,9 @@ async function checkTable(browser, only, inflate) {
         if (m.rowCount !== wantRows)
           bad.push(`the middle draws ${m.rowCount} row(s) in `
             + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
+
+        if (m.tableScroll > 1)
+          bad.push(`the table needs ${m.tableScroll}px of scrolling — a term of --chrome is missing`);
 
         if (m.youSeatBottom > m.viewportH + 1)
           bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold `
@@ -775,8 +829,9 @@ async function checkTable(browser, only, inflate) {
       }
     }
   }
+  const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${list.length} viewports x ${DECKS.length} decks x ${TABLE_SIZES.length} table sizes`);
+    + `${list.length} viewports x ${deckN} decks x ${sizeN} table sizes`);
   return failed;
 }
 
@@ -787,7 +842,8 @@ async function checkTable(browser, only, inflate) {
 async function checkChoice(browser) {
   console.log('\nthe capture choice, and the toast');
   let failed = 0;
-  for (const vname of (QUICK ? ['Android small'] : CHOICE_VIEWPORTS)) {
+  const list = QUICK ? ['Android small'] : CHOICE_VIEWPORTS;
+  for (const [vi, vname] of list.entries()) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     const page = await browser.newPage({ viewport: { width: w, height: h } });
     const errs = [];
@@ -796,6 +852,11 @@ async function checkChoice(browser) {
     await page.goto(URL_);
     await page.addStyleTag({ content: STILL });
     await page.click('#play');
+    // A different deck each time round: the decks differ in card ratio, so the
+    // geometry below differs with them, and running one deck here was a gap
+    // rather than a decision.
+    const deck = DECKS[vi % DECKS.length];
+    await page.evaluate(d => applyDeck(d), deck);
     await page.mouse.move(0, 0);
     await page.evaluate(poseChoice);
 
@@ -861,8 +922,6 @@ async function checkChoice(browser) {
         out.push(`the toast runs off the screen (${Math.round(r.left)}…${Math.round(r.right)})`);
       if (t.scrollHeight > t.clientHeight + 1)
         out.push(`the toast clips its own text (${t.scrollHeight} > ${t.clientHeight})`);
-      if (t.getBoundingClientRect().right > window.innerWidth + 1)
-        out.push('the toast runs off the screen');
       return out;
     });
 
@@ -880,9 +939,13 @@ async function checkChoice(browser) {
     // same defect as marking one, arriving by a different door. Hovering here
     // is what makes the measurement below see it.
     const spot = await page.evaluate(() => {
+      // A card the proposal is offering to take, by preference: a pointer on a
+      // marked card is where two rules meet, and the hover ring used to paint
+      // over the mark and say the opposite of what was true.
       const rows = [...document.querySelectorAll('.tavola-row')];
       const row = rows[rows.length - 1];
-      const c = row.children[Math.min(2, row.children.length - 1)];
+      const c = document.querySelector('.tavola .card[data-take="true"]')
+             || (row && row.children[Math.min(2, row.children.length - 1)]);
       if (!c) return null;
       const r = c.getBoundingClientRect();
       return { x: Math.round(r.left + 4), y: Math.round(r.top + r.height / 2) };
@@ -896,8 +959,11 @@ async function checkChoice(browser) {
       const cw = anyCard ? anyCard.getBoundingClientRect().width : 0;
       const floor = Math.min(24, Math.round(cw * 0.45));
 
-      if (!document.querySelector('.tavola .card[data-take="true"]'))
+      const mark = document.querySelector('.tavola .card[data-take="true"]');
+      if (!mark)
         out.push('nothing on the crowded table is marked — the position is not a choice');
+      else if (!/rgb\(200, 162, 74\)/.test(getComputedStyle(mark).boxShadow))
+        out.push('the marked card under the pointer is not drawn as marked');
 
       for (const row of document.querySelectorAll('.tavola-row')) {
         const cs = [...row.children];
@@ -933,16 +999,71 @@ async function checkChoice(browser) {
       return out;
     });
 
-    const all = [...bad, ...toastBad, ...crowdBad, ...errs];
+    // The say line, hit-tested while a card is raised. That the line says the
+    // right words is asserted above; that anything can READ them is a separate
+    // question, and the raised card was drawn over 120px of a 309px line at
+    // 1440x900 from the middle slot — over the suit, which is the reason the
+    // line names one.
+    const sayBad = [];
+    for (const slot of [0, 1]) {
+      await page.reload();
+      await page.addStyleTag({ content: STILL });
+      await page.click('#play');
+      await page.mouse.move(0, 0);
+      await page.evaluate(`(() => {
+        state.tavola = [{s:1,n:7},{s:0,n:7},{s:2,n:4},{s:3,n:3}];
+        state.hands[0] = [{s:2,n:7},{s:3,n:7},{s:1,n:2}];
+        state.deveGiocare = 0; state.over = false; state.selected = null; state.scelta = 0;
+        render(); tapped(${slot});
+      })()`);
+      await page.waitForTimeout(40);
+      sayBad.push(...await page.evaluate(() => {
+        const out = [];
+        const t = document.querySelector('.sel-name');
+        const r = t.getBoundingClientRect();
+        if (!r.width) { out.push('the say line has no box while a card is raised'); return out; }
+        const y = Math.round(r.top + r.height / 2);
+        let covered = 0;
+        for (let x = Math.ceil(r.left); x <= Math.floor(r.right); x++) {
+          const e = document.elementFromPoint(x, y);
+          if (e !== t && !t.contains(e)) covered++;
+        }
+        if (covered > 1)
+          out.push(`${covered}px of the say line is drawn over while a card is raised `
+            + `(${Math.round(r.width)}px wide)`);
+        return out;
+      }));
+    }
+
+    // The two rungs below the whole name, each rendered rather than described.
+    const rungBad = [];
+    for (const [pose, want] of [[poseLongSay, LONG_SAY], [poseUnnameable, UNNAMEABLE_SAY]]) {
+      await page.reload();
+      await page.addStyleTag({ content: STILL });
+      await page.click('#play');
+      await page.mouse.move(0, 0);
+      await page.evaluate(pose);
+      await page.waitForTimeout(40);
+      rungBad.push(...await page.evaluate(exp => {
+        const out = [];
+        if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
+          out.push(`the position meant to say "${exp}" played the card instead of raising it`);
+        const said = document.querySelector('.sel-name').textContent;
+        if (said !== exp) out.push(`the say line should name the capture "${exp}", it says "${said}"`);
+        return out;
+      }, want));
+    }
+
+    const all = [...bad, ...toastBad, ...crowdBad, ...sayBad, ...rungBad, ...errs];
     if (all.length) {
       failed++;
-      console.log(`  FAIL  ${vname}`);
+      console.log(`  FAIL  ${vname} / ${deck}`);
       all.slice(0, 5).forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${QUICK ? 1 : CHOICE_VIEWPORTS.length} viewports, two positions each`);
+    + `${list.length} viewports, four positions each`);
   return failed;
 }
 
@@ -957,7 +1078,8 @@ async function checkChoice(browser) {
 async function checkStates(browser) {
   console.log('\nthe sweep, and the beat between rounds');
   let failed = 0;
-  for (const vname of (QUICK ? ['Android small'] : SCREEN_VIEWPORTS)) {
+  const list = QUICK ? ['Android small'] : SCREEN_VIEWPORTS;
+  for (const [vi, vname] of list.entries()) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     const page = await browser.newPage({ viewport: { width: w, height: h } });
     const errs = [];
@@ -966,6 +1088,10 @@ async function checkStates(browser) {
     await page.goto(URL_);
     await page.addStyleTag({ content: STILL });
     await page.click('#play');
+    // A different deck each time round, as in checkChoice: one deck here was a
+    // gap rather than a decision.
+    const deck = DECKS[vi % DECKS.length];
+    await page.evaluate(d => applyDeck(d), deck);
     await page.mouse.move(0, 0);
 
     await page.evaluate(playSweep);
@@ -975,11 +1101,13 @@ async function checkStates(browser) {
     // that they are no longer there.
     const flying = await page.evaluate(() => {
       const out = [];
+      // Two cards, not one: a sweep that takes a single card cannot tell a rule
+      // that marks the right cards from one that marks every card it is given.
       const shown = document.querySelectorAll('.tavola .card').length;
-      if (shown !== 1)
+      if (shown !== 2)
         out.push(`the capture was not drawn leaving the table: the middle shows ${shown} card(s)`);
       const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
-      if (going !== 1) out.push(`${going} card(s) marked as leaving, want 1`);
+      if (going !== 2) out.push(`${going} card(s) marked as leaving, want 2`);
       // Down, because you took it. A sweep toward the wrong player is worse
       // than none: it says the other player captured.
       if (!document.querySelector('.tavola .card--won-down'))
@@ -987,17 +1115,43 @@ async function checkStates(browser) {
       return out;
     });
 
+    // The other direction. A sweep toward the wrong player says the other
+    // player captured, and until now only one of the two was ever drawn.
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(playSweepOpp);
+    await page.waitForTimeout(40);
+    const flyingOpp = await page.evaluate(() => {
+      const out = [];
+      const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
+      if (going !== 1) out.push(`${going} card(s) marked as leaving on the opponent's capture, want 1`);
+      if (!document.querySelector('.tavola .card--won-up'))
+        out.push("the opponent's capture is sweeping the wrong way");
+      return out;
+    });
+
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(playSweep);
     await page.waitForTimeout(SWEEP_MS);
     const sweep = await page.evaluate(() => {
       const out = [];
       const t = document.querySelector('.toast');
       if (t.hidden) out.push('a sweep was played and nothing announced it');
       else if (!/scopa/i.test(t.textContent)) out.push(`the toast says "${t.textContent}"`);
-      if (state.tavola.length) out.push(`the sweep left ${state.tavola.length} card(s) on the engine's table`);
+      // Not `state.tavola.length` — that is the engine's business and
+      // tools/engine.test.mjs owns it. And not "nothing still carries the
+      // sweep class": the class is written from `sweeping` on every render, so
+      // it cannot outlive it, and an assertion that cannot fail reads like
+      // cover and is not any. What can fail is the table not catching up.
       const shown = document.querySelectorAll('.tavola .card').length;
       if (shown) out.push(`the middle still draws ${shown} card(s) after the sweep`);
-      const stuck = document.querySelectorAll('.card--won-up, .card--won-down').length;
-      if (stuck) out.push(`${stuck} card(s) still carry the sweep class once it is over`);
       const marks = document.querySelectorAll('#scopeYou .scopa-mark').length;
       if (marks !== state.scope[0]) out.push(`${marks} scopa mark(s) drawn, the engine counted ${state.scope[0]}`);
       // The middle keeps its row while it is empty, or the whole table
@@ -1037,16 +1191,15 @@ async function checkStates(browser) {
     });
     if (!reached) between.push('the driver never reached the end of a round');
 
-    const all = [...flying, ...sweep, ...between, ...errs];
+    const all = [...flying, ...flyingOpp, ...sweep, ...between, ...errs];
     if (all.length) {
       failed++;
-      console.log(`  FAIL  ${vname}`);
+      console.log(`  FAIL  ${vname} / ${deck}`);
       all.slice(0, 6).forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }
-  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${QUICK ? 1 : SCREEN_VIEWPORTS.length} viewports`);
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${list.length} viewports`);
   return failed;
 }
 

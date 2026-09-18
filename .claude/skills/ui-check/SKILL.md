@@ -82,13 +82,25 @@ a check that silently passes. **Two of them are played rather than posed** — t
 sweep and the beat between rounds — because neither is a state the engine will
 sit in; see the pass below.
 
-**Table pass** — the card table at all twenty-two viewports in all five decks,
+**Table pass** — the card table at all twenty-five viewports in all five decks,
 **with the middle row holding 0, 4, 8 and 13 cards**. Asserts that no table card
-lands on either hand, that your whole seat is above the fold, that the middle
-stays inside the table, that the DOM and the engine agree on how many cards are
-on the table, and the fan floors below. Then it repeats the tightest five
-viewports with the spacing tokens inflated, which fails if anyone replaces the
-derived `--chrome` with a hard-coded number.
+lands on a card in either hand, that your whole seat is above the fold, that the
+middle stays inside the table and draws one row in landscape and two in
+portrait, that nothing runs off the screen, that no name plate is wider or
+taller than its own box or lands on the cards, that **the table needs no
+scrolling at all**, that the DOM and the engine agree on how many cards are on
+the table, and the fan floors below. Then it repeats the tightest of them with
+the spacing tokens inflated, which fails if anyone replaces the derived
+`--chrome` with a hard-coded number — but not the two shortest landscape
+windows, where the inflation drives the card onto its clamp floor and tests the
+clamp rather than the derivation.
+
+The table scrolls rather than clips when the budget comes up short, which is the
+designed fallback: reaching a card by scrolling beats a card hidden under
+another one. Needing it at all means a term of `--chrome` is missing, and two
+were — `--plates: 0px` in landscape, where a plate can be taller than a card,
+and `--extra-gap` as a hand-set `.5rem` where the middle's own row gap is
+`--step`.
 
 Four sizes, not "whatever a deal produced": §3.7's bound is thirteen and a real
 deal reaches twelve, so the state that breaks the row has to be rendered on
@@ -111,10 +123,10 @@ the deal.
 while a card is untappable, because which card a tap lands on is decided by
 paint order and paint order moves no box. So the check walks each row a pixel at
 a time with `elementFromPoint` and counts who answers: every card must be
-reachable across its whole step, and never under the floor. Three defects in
-iteration 3 were only this — a marked card, a hovered card and the raised card
-in your hand, each painted over its neighbour, leaving 7px of a 98px card beside
-a marked one.
+reachable across its whole step, and never under the floor. Four defects in
+iteration 3 were only this — a marked card, a hovered card and the raised card,
+each painted over a neighbour, leaving 22px of a 74px step beside a marked one
+at 1024x768; and the raised card again, over the line that names the capture.
 
 **The capture choice, and the toast** — the interaction neither ancestor had.
 Asserts that a card with more than one capture raises instead of playing, that
@@ -195,6 +207,10 @@ was committed:
 | the plate spills past its own width, or lands on the cards | the seat row is plate, five cards, plate, and the budget paid for the cards only: the table grew to fit and clipped the deck off the right edge, with no sideways scroll to show for it |
 | the middle draws N rows | the wrap rule was a line of JavaScript no assertion read |
 | the beat / the sweep | states the engine will not sit in, so a posed version passes whether or not the page can reach the real one |
+| the plate spills past its own height | the mazziere tag became a row of its own when the plate became a grid, and a box derived for one line of type drew it behind the cards at every portrait viewport — with both plate assertions green, because both asked about width |
+| the table needs N px of scrolling | `overflow: hidden auto` is the fallback for a budget that comes up short, so a missing term costs a scrollbar rather than an error |
+| the say line is drawn over | the raised card rises into the space above the hand, and that space includes the line — 120px of a 309px line at 1440x900, over the suit the line had just been taught to say |
+| the say line should name the capture | a fixture that names a rung and renders another: the position meant to test the longest name offered only one capture, so the card was played and the table rendered empty |
 | N screens visible at once | counted by computed `display`, not by the `hidden` attribute: the attribute was always right and the rule acting on it was what lost, so an assertion reading the attribute survives the defect it is named for |
 | the table row spills past its box | the row's grid column sized to its content, so a row that should overlap grew the whole table instead — and the per-row assertion could never fire, which would have made it decoration |
 | the say line takes no space | in Tressette the line was `hidden` until it had something to say, so raising a card added a row and moved every card 31px down, past the fold in landscape |

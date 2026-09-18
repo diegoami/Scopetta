@@ -760,15 +760,39 @@ the row need more width than the screen had, `.table` grew to its content's
 min-content, and `overflow: hidden auto` clipped the deck and the player's own
 name plate off the right edge. The page did not scroll sideways, because a
 table that clips is a table that cannot scroll, so the assertion that watches
-for sideways scroll had nothing to say. Measured, before the fix: **43px past
-the edge at 500x425, 45px at 640x480, 88px at 800x680**, in the Romagnole deck
-whose cards are widest.
+for sideways scroll had nothing to say. Measured, before the fix, in the Romagnole
+deck whose cards are widest: **124px past the edge at 500x425, 45px at 640x480,
+88px at 800x680**. (43px is that first figure in Trevisane; an earlier draft of
+this paragraph gave the Trevisane number and named the Romagnole deck.)
 
 So the plate has a width of its own and the budget subtracts the same token:
 
 ```
 --plate-w:    --t-pick × 7.5          (the plate's own width, landscape)
 --seat-extra: 2 × --plate-w + 2 × --step      (0 in portrait, where it stacks)
+```
+
+**And a height of its own, derived from the rows it can have.** The first
+version of this derived the width and left the height at one line of
+`--t-pick` — but the plate became a grid when it gained a fixed width, and the
+mazziere tag became a row of its own: a 35px box measuring 51px of content, the
+tag drawn behind the cards at every portrait viewport, with both plate
+assertions green because both were width questions. Three rows is what the
+plate can hold — the name, the role beneath it where the plate is narrow, and
+the tag — and the check asks `scrollHeight` against `clientHeight` as well as
+`scrollWidth` against `clientWidth`, on the plate's **children** as well as its
+box, because overflowing content leaves a box that stays where it was.
+
+**And then the seat row is as tall as the taller of its card and its plate**,
+which `--plates: 0px` in landscape quietly denied. The plate's type is in rem
+and the card's height is not, so on a short landscape window the plate wins:
+81px against a 73px card at 1100x330, and the seat below the fold. The height
+term is therefore two terms and the smaller wins, with no conditional needed
+because they cross exactly where the card and the plate are the same height:
+
+```
+card wins:   (100dvh − --chrome) / --rows / --ratio
+plate wins:  (100dvh − --chrome − 2 × --plate-h) / --ratio
 ```
 
 The plate and the sum that pays for it cannot drift apart, which is the rule
@@ -827,9 +851,13 @@ Thirteen cards do not sit side by side on a phone. Two rules, in this order:
    card a tap lands on is decided by paint order, and two rules in the first
    draft of the sheet changed it without moving a box: a marked card and a
    hovered card were each raised above their neighbours, which takes
-   `cw − step` off the strip of the card after them. Measured: a neighbour's
-   reachable width of **7px at 1024x768** beside a marked card, and **40px of
-   a 50px strip** beside a hovered one at 360x800 with twelve cards down.
+   `cw − step` off the strip of the card after them. Measured on the crowded
+   twelve-card table a capture can actually be chosen on: a neighbour's
+   reachable width of **22px of a 74px step at 1024x768** in Romagnole, under
+   the 24px floor, beside a marked card; and **40px of a 50px strip** at
+   360x800 beside a hovered one. (An earlier draft quoted 7px, which is the
+   figure for a thirteen-card table — a state that cannot offer a choice, so
+   no marked card can ever appear on it.)
    Nothing errors, no box moves, and the diff is two lines of `z-index`. The
    check therefore measures the strip by hit-testing the row a pixel at a time
    — `elementFromPoint` across the row, counting who answers — rather than by
@@ -852,12 +880,40 @@ a second tap on the raised card or `Enter` plays it. The card named is named
 with its suit **when, and only when, the table holds another of that value** —
 which is exactly the position the line exists for, two sevens down and a seven
 in hand, where "Prendi il sette con il sette" reads the same for both
-proposals and tells the player nothing. Only when, because a three-card
-capture named in full does not fit the one line of `--say` the budget pays
-for. The lift is capped at `--say + --step + --tavola-pad`, the space that
-actually exists above the hand: Tressette's `-40%` is more than that gap, and
-the raised card then stands on two to four of the cards it is proposing to
-take. The proposal is the first
+proposals and tells the player nothing.
+
+**And the line is a label, so it says the shortest thing that is still true.**
+"Prendi il 4 e il 3 con il 7" is the first of three rungs rather than the only
+one. Naming one card with its suit runs to 43 characters, and the five-card sum
+the check renders to 97; a line that does not fit is not a longer line, it is a
+line cut in half by `.say`, which is what Tressette shipped with its
+declarations. So the clause naming the raised card goes first — the player is
+looking at it, and it is the card they just tapped — then the list, and then
+the brass marks carry it alone, which is what this section says they are for:
+"Prendi le 3 carte segnate".
+
+The cap is 39 characters, and 39 is not where the line wraps: measured at
+360x800 it holds 43 on one line and wraps at 44. It is where the line stops
+being a label. The check holds any string past 40 characters to the 14.5px
+floor it holds body copy to, and `--t-tiny` is 12.5px on a phone — so naming
+the capture in full and setting it at label size are two things this line
+cannot both do. Measured in the state the check gained for it: at 360x800 a
+two-card capture named with suits was cut off by 15px inside `.say` and flagged
+as 12.5px text wanting 14.5.
+
+One more thing the line has to get right: "il asso" is not Italian. Only one of
+the ten names begins with a vowel and it is the one the table names most often,
+so the article is written rather than assumed.
+
+**The raised card passes behind the line, not over it.** The lift is 40% of a
+card capped at the space above the hand, and that space includes the say row —
+so the card rises to within a hair of the line and was measured covering 120px
+of a 309px line at 1440x900 from the middle slot. The 120px it covered was
+"TTE DI COPPE C": the suit, which is the entire reason the line names one. The
+line is raised above the card and given a dark plaque to sit on, which costs
+nothing in the budget; shortening the lift would have cost the affordance.
+
+The proposal is the first
 set in `prese()`'s order, which is the table's own order: neutral, not the
 opponent's opinion of the best one. That line costs `--say` whether or not it
 has something to say, in flow, in `--chrome`, because Tressette found what a
@@ -934,6 +990,17 @@ hand-set 76px against plates that cost 120px, and the check said pass while
 the player's own plate hung below the fold. The plate's height is set from its
 own type here as it is there, and a number in that block is a defect waiting
 for the screen that disagrees with it.
+
+Iteration 3 shipped two more of them and the review found the first: `--plates:
+0px` in landscape, which is the paragraph above, and `--extra-gap: .5rem` in
+portrait, which stands in for the row gap `.tavola` uses between the two halves
+of the middle — `--step`, and 6px more than `.5rem` at 1024x1366, where the
+table scrolled by exactly that. Both are named tokens now. The check gained the
+assertion that would have found either without being told: **the table needs no
+scrolling.** `overflow: hidden auto` is the designed fallback for a budget that
+comes up short — reaching a card by scrolling beats a card hidden under another
+one — but needing it at all means a term is missing, and nothing was reading
+it.
 
 ### 3.8 Persistence
 

@@ -24,6 +24,24 @@
 // MISMATCH and red. That distinction is the whole point: "the check went red"
 // and "the rule I wrote saw the defect it was written for" are different
 // claims, and only the second is worth anything.
+//
+// WHAT IS NOT IN HERE, and why, because a list of breaks reads like a list of
+// what is covered and this one has holes in it:
+//
+//   - the audit's `clips its text` has no subject on this page: it needs an
+//     element whose own overflow-x clips its own text, and the table has none.
+//     It is carried for the sheets iteration 4 brings;
+//   - `the next round was not dealt` and `the sweep left N on the engine's
+//     table` are the engine's business, and tools/engine.test.mjs owns them;
+//   - the deal pass's tail — `the deal did not finish`, `N plays, want 36`,
+//     `N cards in the piles, want 40`, `no capture was chosen by tapping /
+//     by accepting` — are the driver's own rails rather than assertions about
+//     the page: they say the pass did what it claims to do, and breaking the
+//     page is not how they fail.
+//
+// Some assertions share a break, which is not a hole: `a sweep was played and
+// nothing announced it` goes red with `the toast never shows`, and the table
+// pass and the deal pass phrase the same rule twice.
 
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -53,19 +71,25 @@ const EXPECT = {
   "the plates are left out of the card budget": "runs off the screen",
   "the plates are squeezed instead of budgeted": "lands on the cards",
   "the plate is laid out as a flex row again": "past its own width",
+  "the plate pays for one row again": "lands on the cards",
+  "the plate's rows are under-measured": "past its own height",
+  "a plate taller than a card costs nothing": "needs",
+  "the middle's own row gap is a hand-set constant again": "needs",
   "the small type drops below the floor": "want 12.5",
   "the say line is given a strip too short for it": "cut off by",
+  "the say line is drawn under the raised card": "drawn over while a card is raised",
+  "the say line gives up before it has to": "should name the capture",
   "the icon buttons shrink under the thumb": "tap target",
 
   // --- the budget -----------------------------------------------------------
   "--chrome is hard-coded instead of derived": "below the fold",
-  "the say line collapses when it is empty": "say line",
+  "the say line collapses when it is empty": "tall — it must cost",
   "the rows of the table drift apart": "drift apart",
 
   // --- the middle row, §3.7 -------------------------------------------------
   "the table row loses its step floor": "px between cards, want",
   "the table row's steps go uneven": "steps are uneven",
-  "the table row spills past its own box": "spills",
+  "the table row spills past its own box": "past its own box",
   "the table grows wider than the table": "outside the table",
   "the middle row lands on the hands": "land on a hand",
   // Wrapping in landscape costs a fourth card row against a budget that paid
@@ -76,6 +100,7 @@ const EXPECT = {
   "the table row wraps in landscape too": "row(s) in",
   "a marked card is raised above its neighbour": "of its strip",
   "a hovered card is raised above its neighbour": "of its strip",
+  "a pointer takes the mark off a marked card": "not drawn as marked",
 
   // --- the raised card ------------------------------------------------------
   "the raised card is lifted by 40% again": "overlap a hand card",
@@ -90,7 +115,7 @@ const EXPECT = {
   "a capture with a choice plays instead of raising": "did not raise",
   "the proposal marks every card on the table": "the table marks",
   "the proposal marks nothing at all": "nothing on the table is marked",
-  "the say line goes quiet while a card is raised": "say line is hidden",
+  "the say line goes quiet while a card is raised": "is hidden while a card is raised",
   "the say line says the whole capture however long it is": "want 14.5",
   "the say line names the card instead of the capture": "does not say what the tap does",
   "the say line drops the suit that tells two sevens apart": "reads the same for both",
@@ -100,6 +125,8 @@ const EXPECT = {
   "the capture is not drawn leaving the table": "not drawn leaving the table",
   "the sweep never ends": "still draws",
   "the capture sweeps toward the wrong player": "sweeping the wrong way",
+  "half the capture is drawn leaving": "marked as leaving",
+  "the toast announces the wrong thing": "the toast says",
   "the empty middle is allowed to collapse": "empty middle collapsed",
   "the empty hand is allowed to collapse": "card-sized slot",
   "the page stops listening for the new round": "never entered the beat",
@@ -109,7 +136,7 @@ const EXPECT = {
   "the pile badge stops counting": "badges say",
   "the deck badge stops counting": "the deck badge says",
   "the scopa marks stop counting": "scopa marks",
-  "the middle draws a card the engine does not hold": "the middle shows",
+  "the middle draws a card the engine does not hold": "cards, the engine holds",
   "the leftovers are left on the table": "still shows",
   "a played card keeps its face": "shows a card",
   "a slot you hold is drawn empty": "holds a card and shows none",
@@ -127,9 +154,10 @@ const EQUIVALENT = {
     "on a BROKEN page — it is what makes the spill assertion reachable, since " +
     "an auto column grows with its row and .tavola-row's `width: 100%` follows " +
     "it. Measured that way too: with the step formula replaced by a fixed gap, " +
-    "bounded the check reports `a table row spills 74px past its own box`, " +
-    "unbounded it reports nothing about the row at all. So no single break can " +
-    "catch this line, and the pair of them is the evidence instead.",
+    "bounded the check reports `a table row spills 74px past its own box`; " +
+    "unbounded it reports the row running off the SCREEN and nothing about the " +
+    "row\'s own box, which is the assertion this line exists to make reachable. " +
+    "So no single break can catch it, and the pair of them is the evidence.",
 };
 
 const BREAKS = [
@@ -160,6 +188,17 @@ const BREAKS = [
     "  grid-template-columns: 1fr auto 1fr;"],
    ["  --seat-extra: 0px;",
     "  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);"]],
+  ["the plate pays for one row again",
+   "  --plate-h: calc(max(var(--t-pick) * 1.45, 1.5rem)\n                  + 2 * var(--plate-row) + .2rem + .7rem);",
+   "  --plate-h: calc(max(var(--t-pick) * 1.45, 1.5rem) + .7rem);"],
+  ["the plate's rows are under-measured",
+   "  --plate-row: calc(var(--t-tiny) * 1.4);    /* the role, and the mazziere tag */",
+   "  --plate-row: calc(var(--t-tiny) * 0.6);    /* the role, and the mazziere tag */"],
+  ["a plate taller than a card costs nothing",
+   "  --seat-overhang: calc(2 * var(--plate-h));",
+   "  --seat-overhang: 0px;"],
+  ["the middle's own row gap is a hand-set constant again",
+   "    --extra-gap: var(--step);", "    --extra-gap: .5rem;"],
   ["the plate is laid out as a flex row again",
    "  display: grid;\n  grid-template-columns: auto minmax(0, 1fr);\n  align-items: center;\n  column-gap: .5rem;\n  row-gap: .1rem;\n  padding: .35rem .8rem;",
    "  display: flex;\n  align-items: center;\n  gap: .7rem;\n  padding: .35rem .8rem;"],
@@ -210,6 +249,9 @@ const BREAKS = [
   ["a marked card is raised above its neighbour",
    ".tavola-row > *{ z-index: auto; }",
    ".tavola-row > *{ z-index: 1; }\n.tavola-row > *[data-take=\"true\"]{ z-index: 2; }"],
+  ["a pointer takes the mark off a marked card",
+   ".tavola-row > button.card[data-take=\"true\"]:not(:disabled):hover,\n.tavola-row > button.card[data-take=\"true\"]:not(:disabled):focus-visible{\n  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--brass),\n              inset 0 0 22px rgba(200,162,74,.55);\n}",
+   ""],
   ["a hovered card is raised above its neighbour",
    ".tavola-row > button.card:not(:disabled):hover,\n.tavola-row > button.card:not(:disabled):focus-visible{\n  transform: none;\n  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--ivory);\n}",
    ""],
@@ -248,6 +290,11 @@ const BREAKS = [
   ["the say line says the whole capture however long it is",
    "  el.selName.textContent =\n      full.length <= LABEL_CHARS ? full\n    : `Prendi ${lista}`.length <= LABEL_CHARS ? `Prendi ${lista}`\n    : presa.length === 1 ? \"Prendi la carta segnata\"\n    : `Prendi le ${presa.length} carte segnate`;",
    "  el.selName.textContent = full;"],
+  ["the say line is drawn under the raised card",
+   "  position: relative;\n  z-index: 4;\n  height: var(--say);",
+   "  height: var(--say);"],
+  ["the say line gives up before it has to",
+   "  const LABEL_CHARS = 39;", "  const LABEL_CHARS = 0;"],
   ["the say line names the card instead of the capture",
    "  const full = `Prendi ${lista} con ${art(breve(card))}`;",
    "  const full = `Il ${breve(card)}`;"],
@@ -279,6 +326,11 @@ const BREAKS = [
   ["the sweep never ends",
    "  if (swept) later(then, state.speed * 0.45); else then();",
    "  if (swept) { /* nothing takes the table off hold */ } else then();"],
+  ["half the capture is drawn leaving",
+   "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;",
+   "  for (const i of (r.presa.length ? (presa || []).slice(0, 1) : [])) dir[i] = who;"],
+  ["the toast announces the wrong thing",
+   "  if (r.scopa) toast(\"Scopa!\");", "  if (r.scopa) toast(\"Presa!\");"],
   ["the capture sweeps toward the wrong player",
    "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;",
    "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = 1 - who;"],

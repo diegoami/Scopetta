@@ -31,6 +31,14 @@ screen, the table at every viewport in every deck, the table again with the
 spacing inflated, the capture choice and the toast, the two states only playing
 can reach — a sweep and the beat between rounds — and one whole deal.
 
+**Which card a tap lands on, and which words a player can read, are decided by
+paint order, and nothing about paint order moves a box.** Four of iteration 3's
+defects were only that, and every geometric assertion was green through all of
+them. So the check hit-tests: the table row a pixel at a time with
+`elementFromPoint`, and the say line while a card is raised. When a rule is
+about what reaches the player rather than about where a box is, measure what
+the page answers, not what it contains.
+
 **`node tools/break_ui.mjs` is the other half.** It breaks the page on purpose,
 one defect at a time, and checks that the assertion *written for that defect*
 goes red — not merely that something did. Run it after adding an assertion, the
@@ -168,20 +176,30 @@ tap lands on is decided by paint order, and nothing about paint order moves a
 box. Iteration 3 shipped three of these: a marked card, a hovered card and the
 raised card in your hand were each painted above their neighbours — by
 `z-index`, by a `transform`, by a lift of 40% of a card — and each took a strip
-of another card away from the thumb, leaving 7px of a neighbour beside a marked
-card at 1024x768. The steps were even, the cards were whole, the assertions
+of another card away from the thumb, leaving 22px of a 74px step beside a
+marked card at 1024x768 — under the floor — on the crowded twelve-card table a
+capture can actually be chosen on. The steps were even, the cards were whole, the assertions
 were green. So nothing in the table row may change its paint order, the lift is
 capped at the space that exists above the hand, and the check measures the
 strip by hit-testing the row a pixel at a time rather than by computing it.
 
-**The say line is a label, and a label is short.** Naming a two-card capture
-with suits runs to 50 characters and a five-card sum to 45; the budget pays for
-one line of `--t-tiny`, and anything longer is not a longer line but a line cut
-in half by `.say`. Three rungs, shortest that fits: the whole thing, then
-without the clause naming the raised card, then "Prendi le N carte segnate"
-with the brass marks carrying which. The cap is 39 characters because the
-check's readability tier starts at 40, where a string stops being a label and
-starts being prose.
+**The say line is a label, and a label is short.** Naming one card with its
+suit runs to 43 characters and the five-card sum the check renders to 97; the
+budget pays for one line of `--t-tiny`, and anything longer is not a longer
+line but a line cut in half by `.say`. Three rungs, shortest that fits: the
+whole thing, then without the clause naming the raised card, then "Prendi le N
+carte segnate" with the brass marks carrying which. The cap is 39 characters,
+and 39 is not where the line wraps — at 360x800 it holds 43 and wraps at 44. It
+is where the line stops being a label: the check holds anything past 40
+characters to the floor it holds body copy to, and `--t-tiny` is 12.5px on a
+phone.
+
+**And nothing may be drawn over it.** The raised card is lifted into the space
+above the hand, and that space includes the say row — measured, it covered
+120px of a 309px line at 1440x900, and the 120px was the suit the line had just
+been taught to say. The line is painted above the card, on a plaque, because
+shortening the lift would cost the affordance and the budget has nothing to
+spare.
 
 **A table of thirteen can never offer a capture to choose.** Thirteen is four
 of one value plus one of each of the other nine, so every value is on the
