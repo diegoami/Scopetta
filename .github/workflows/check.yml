@@ -47,6 +47,12 @@ jobs:
       #
       # No CHROME here: check_ui.mjs falls back to the browser this install
       # puts in playwright's own cache, which is the only one CI has.
-      - run: npm i --no-save playwright-core
+      # Pinned, because the check's environment is part of the check. An
+      # unpinned playwright-core installs whatever Chromium is current, and
+      # text metrics and layout do move across Chromium majors — so "green on
+      # my machine" and "green here" would be two claims again, which is how
+      # iteration 3 shipped a red job while reporting a green one. This is the
+      # version the development container carries.
+      - run: npm i --no-save playwright-core@1.63.0
       - run: npx playwright-core install --with-deps chromium
       - run: node tools/check_ui.mjs

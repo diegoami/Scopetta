@@ -26,10 +26,11 @@ pull request as well, and a red check does not merge.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
-and `check.yml` has the job that runs it. Seven passes: the document, every
+and `check.yml` has the job that runs it. Eight passes: the document, every
 screen, the table at every viewport in every deck, the table again with the
-spacing inflated, the capture choice and the toast, the two states only playing
-can reach — a sweep and the beat between rounds — and one whole deal.
+spacing inflated and no slack, the capture choice and the toast, the states
+only playing can reach — a card landing, a sweep, a lay and the beat between
+rounds — turning the phone over, and one whole deal.
 
 **Which card a tap lands on, and which words a player can read, are decided by
 paint order, and nothing about paint order moves a box.** Four of iteration 3's
@@ -63,6 +64,16 @@ choice of captures, a scopa, a hand empty for a beat between rounds, the 36th
 play and the leftovers, a pile with three scope showing. When the page gains a
 state, the check gains the row that puts it there, and that is the harder half
 of the work.
+
+**A card the player never sees is a card that was never played.** `gioca` moves
+a capturing card from a hand straight to a pile, so a table that draws only
+what `state.tavola` holds never draws it at all: the opponent's card appears
+nowhere, and the player watches cards leave and has to work out what took them.
+The owner found that by playing the preview, after five reviews had not. So the
+card lands on the table first, among the cards it is about to gather, and the
+capture runs a beat later — which is what a hand does at a real table. A card
+that takes nothing is ringed for the same beat, because it arrives among as
+many as twelve others and nothing else says which one is new.
 
 **A state the engine refuses to sit in has to be played, not posed.** Two of
 those rows cannot be set up by assigning to `state`: a toast over a table that
@@ -216,7 +227,7 @@ capped at the space that exists above the hand, and the check measures the
 strip by hit-testing the row a pixel at a time rather than by computing it.
 
 **The say line is a label, and a label is short.** Naming one card with its
-suit runs to 43 characters and the five-card sum the check renders to 94; the
+suit runs to 43 characters and the four-card capture the check renders to 81; the
 budget pays for one line of `--t-tiny`, and anything longer is not a longer
 line but a line cut in half by `.say`. Three rungs, shortest that fits: the
 whole thing, then without the clause naming the raised card, then "Prendi le N

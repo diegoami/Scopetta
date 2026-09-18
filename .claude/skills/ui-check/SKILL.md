@@ -19,7 +19,8 @@ node tools/check_ui.mjs
 ```
 
 Exit code 0 means clean. It takes about fifteen minutes; let it finish rather
-than interrupting it.
+than interrupting it. It prints the Chromium it used, because that is part of
+the answer — `check.yml` pins `playwright-core` so CI runs the same one.
 
 **And then read the `ui` job on the pull request.** Locally the Google Fonts
 request fails, in CI it succeeds, and the type metrics decide how wide every
@@ -164,6 +165,14 @@ listen for `resize` is a page the whole grid agrees with. It rotates four shapes
 both ways with thirteen cards down, and raises a card at one width to read it at
 another.
 
+**A card arriving** — the beat the owner found missing by playing the preview.
+A capturing card never touches `state.tavola`, so a middle row that draws the
+state draws it nowhere and the opponent's play cannot be seen at all. The check
+renders all three beats of a capture — the card lands among the cards it is
+about to take, they all leave together, the table is empty and the scopa is
+announced — and the other way a card arrives, a lay, which is ringed for a beat
+because it lands among as many as twelve others.
+
 **The sweep, and the beat between rounds** — the two states that only playing
 can reach, and the reason for it: a toast over a table that still has cards on
 it is not a scopa, and two empty hands are a position `gioca` deals its way out
@@ -227,6 +236,8 @@ was committed:
 | the plate spills past its own width, or lands on the cards | the seat row is plate, five cards, plate, and the budget paid for the cards only: the table grew to fit and clipped the deck off the right edge, with no sideways scroll to show for it |
 | the middle draws N rows | the wrap rule was a line of JavaScript no assertion read |
 | the beat / the sweep | states the engine will not sit in, so a posed version passes whether or not the page can reach the real one |
+| the card that was played was not laid on the table | `gioca` takes a capturing card from a hand to a pile, so the table never draws it and the opponent's play is invisible — the one defect in this iteration that a player found before the check did |
+| the capture is sweeping the wrong way: N of M | counting "is anything going the right way" cannot see a capture that sends the cards one way and the card that took them the other |
 | the plate spills past its own height | the mazziere tag became a row of its own when the plate became a grid, and a box derived for one line of type drew it behind the cards at every portrait viewport — with both plate assertions green, because both asked about width |
 | the table needs N px of scrolling | `overflow: hidden auto` is the fallback for a budget that comes up short, so a missing term costs a scrollbar rather than an error |
 | the say line is drawn over | the raised card rises into the space above the hand, and that space includes the line — 120px of a 309px line at 1440x900, over the suit the line had just been taught to say |

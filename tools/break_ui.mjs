@@ -65,6 +65,10 @@
 //     counting`, whose EXPECT names the deal pass's phrasing;
 //   - the choice pass's `the toast runs off the screen` with `the toast is
 //     pushed off the right edge`, whose EXPECT names the audit's phrasing;
+//   - `the say line says "X", which is none of the rungs it may say` and `the
+//     say line is Npx in a Npx box` with `the say line says the whole capture
+//     however long it is` and `the say line is sized by its content`, whose
+//     EXPECTs name the two phrasings that fire first;
 //   - `the position meant to say "X" played the card instead of raising it`
 //     with `a capture with a choice plays instead of raising`.
 
@@ -106,7 +110,6 @@ const EXPECT = {
   "the portrait card has a floor of its own": "below the fold",
   "the hand stays live while the table sweeps": "still tappable during the sweep",
   "the page never draws itself again when the screen changes": "after turning",
-  "the say line is never measured again once the font lands": "after turning, the say line",
   "the small type drops below the floor": "want 12.5",
   "the say line is given a strip too short for it": "cut off by",
   "the say line is drawn under the raised card": "drawn over while a card is raised",
@@ -155,6 +158,9 @@ const EXPECT = {
 
   // --- the sweep and the beat ----------------------------------------------
   "the capture is not drawn leaving the table": "not drawn leaving the table",
+  "the played card never lands on the table": "was not laid on the table",
+  "the played card is not drawn as the new one": "drawn as the one just played",
+  "a laid card is not drawn as the new one": "just played after a lay",
   "the sweep never ends": "still draws",
   "the capture sweeps toward the wrong player": "sweeping the wrong way",
   "half the capture is drawn leaving": "marked as leaving",
@@ -369,12 +375,24 @@ const BREAKS = [
    "const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.hands[who];",
    "const mano = who => state.hands[who] || [null, null, null];"],
 
+  // The defect the owner found by playing the preview: a capturing card went
+  // from a hand to a pile and was drawn nowhere, so the opponent's play could
+  // not be seen at all.
+  ["the played card never lands on the table",
+   "  const cards = before.concat([r.card]);",
+   "  const cards = before.slice();"],
+  ["the played card is not drawn as the new one",
+   "      if (sweeping ? idx === sweeping.played : idx === laid) b.dataset.played = \"true\";",
+   "      if (sweeping ? false : idx === laid) b.dataset.played = \"true\";"],
+  ["a laid card is not drawn as the new one",
+   "    laid = state.tavola.length - 1;\n    render();",
+   "    render();"],
   ["the capture is not drawn leaving the table",
    "  if (swept) sweeping = { cards: before, dir };",
    "  if (false) sweeping = { cards: before, dir };"],
   ["the sweep never ends",
-   "  if (swept) later(then, state.speed * 0.45); else then();",
-   "  if (swept) { /* nothing takes the table off hold */ } else then();"],
+   "    later(then, state.speed * 0.45);",
+   "    /* nothing takes the table off hold */"],
   ["half the capture is drawn leaving",
    "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;",
    "  for (const i of (r.presa.length ? (presa || []).slice(0, 1) : [])) dir[i] = who;"],

@@ -382,6 +382,14 @@ button.card:disabled{ cursor: default; }
   to  { opacity: 0; transform: translateY(70px) scale(.82) rotate(6deg); }
 }
 
+/* The card just played, for the beat before the table settles. Ivory rather
+   than brass, because brass on this table means "the capture being proposed"
+   and this is not that: it is "this is the card that just arrived". */
+.card[data-played="true"]{
+  box-shadow: 0 6px 16px rgba(0,0,0,.55), inset 0 0 0 2px var(--ivory),
+              0 0 18px rgba(242,235,220,.35);
+}
+
 /* ---- the middle: the table itself ----------------------------------------- */
 
 /* The layout risk of the project, per §6. Zero to thirteen face-up cards, in
@@ -976,7 +984,11 @@ const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.han
 // player it is going to, which is not always the player who just played: the
 // leftovers on the last play go to whoever captured last.
 let sweeping = null;
-const flushSweep = () => { sweeping = null; };
+// The card just laid down, while it is still the newest thing on the table.
+// A lay puts a card among as many as twelve others and nothing says which one
+// arrived.
+let laid = -1;
+const flushSweep = () => { sweeping = null; laid = -1; };
 
 // The game's own clock: one timer, so a new deal cancels whatever the last one
 // was about to do. An abandoned deal must not keep playing itself behind the
@@ -1128,6 +1140,9 @@ function renderTavola(take){
       // once and taken off later, so there is no end state to be left holding.
       const dir = sweeping ? sweeping.dir[idx] : undefined;
       if (dir !== undefined) b.classList.add(dir === ALTO ? "card--won-up" : "card--won-down");
+      // The card that was just played, whether it is about to gather the cards
+      // around it or has simply been laid among them.
+      if (sweeping ? idx === sweeping.played : idx === laid) b.dataset.played = "true";
       // Tapping a table card switches the proposal to one that contains it.
       b.disabled = !!sweeping || state.selected === null;
       b.addEventListener("click", () => scegliDaTavola(idx));
@@ -1182,8 +1197,8 @@ function renderSay(){
   // What is given up first is "con il sette", which names the card the player
   // is looking at — it is raised, and it is the one they just tapped. What is
   // given up next is the list, and then the brass marks on the table carry it
-  // alone, which is what §3.7 says they are for. The five-card sum the check
-  // renders comes to 94 characters named in full.
+  // alone, which is what §3.7 says they are for. The four-card capture the
+  // check renders comes to 81 characters named in full.
   const rungs = [
     `Prendi ${lista} con ${art(breve(card))}`,
     `Prendi ${lista}`,
@@ -1260,8 +1275,6 @@ function play(who, slot, presa){
   if (r.resto.length)
     before.forEach((_, i) => { if (!(i in dir)) dir[i] = state.ultimaPresa; });
   const swept = Object.keys(dir).length > 0;
-  if (swept) sweeping = { cards: before, dir };
-  render();
 
   // What happens once the table has caught up. The beat between rounds comes
   // after the sweep, not during it: they are two things to look at, not one.
@@ -1276,7 +1289,33 @@ function play(who, slot, presa){
     render();
     resume();
   };
-  if (swept) later(then, state.speed * 0.45); else then();
+
+  // A card that takes nothing is on the table now — gioca pushed it — but it is
+  // one of up to thirteen and nothing says it is the new one. Ring it for a
+  // beat.
+  if (!swept){
+    laid = state.tavola.length - 1;
+    render();
+    later(then, state.speed * 0.5);
+    return;
+  }
+
+  // A card that takes something is never on the table at all: gioca moves it
+  // from a hand straight to a pile, so the player watches cards leave and has
+  // to work out what took them. **This is what the table is for.** The card
+  // lands in front of whoever played it first, among the cards it is about to
+  // gather, and only then does the capture run — which is what a hand does at
+  // a real table, and the only way to see what the opponent played.
+  const cards = before.concat([r.card]);
+  const landed = cards.length - 1;
+  dir[landed] = who;
+  sweeping = { cards, dir: {}, played: landed };
+  render();
+  later(() => {
+    sweeping = { cards, dir, played: landed };
+    render();
+    later(then, state.speed * 0.45);
+  }, state.speed * 0.5);
 }
 
 function resume(){

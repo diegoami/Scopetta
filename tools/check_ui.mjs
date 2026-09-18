@@ -248,12 +248,24 @@ const poseUnnameable = `(() => {
   tapped(0);
 })()`;
 
+// A card that takes nothing, which is the other way a card arrives: gioca puts
+// it on the table among as many as twelve others, and nothing says which one is
+// new unless the page draws it so.
+const playLay = `(() => {
+  state.tavola = [{s:0,n:10}];
+  state.hands[0] = [{s:1,n:3}, {s:3,n:10}, {s:2,n:8}];
+  state.deveGiocare = 0; state.over = false; state.speed = 1000;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
 // A sweep made by the opponent, which goes the other way. §3.7 calls the
 // direction a deliberate departure and nothing was reading it.
 const playSweepOpp = `(() => {
   state.tavola = [{s:2,n:4}];
   state.hands[1] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
-  state.deveGiocare = 1; state.over = false; state.speed = 1200;
+  state.deveGiocare = 1; state.over = false; state.speed = 1000;
   state.selected = null; state.scelta = 0;
   render();
   computerPlay();
@@ -295,16 +307,22 @@ const playToBeat = `(() => {
 const playSweep = `(() => {
   state.tavola = [{s:2,n:2},{s:0,n:2}];
   state.hands[0] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
-  state.deveGiocare = 0; state.over = false; state.speed = 1200;
+  state.deveGiocare = 0; state.over = false; state.speed = 1000;
   state.selected = null; state.scelta = 0;
   render();
   tapped(0);
 })()`;
 
-// How long the sweep started by playSweep takes to finish, plus a margin. The
-// toast outlives it by roughly twice as long, so the settled state is still
-// announcing the scopa when it is measured.
-const SWEEP_MS = 700;
+// A capture is three beats and each is measured: the card lands among the cards
+// it is about to take (speed x 0.5), they all leave together (x 0.45), and the
+// table is empty with the scopa announced. At speed 1000 that is 0→500→950, so
+// the waits below sit inside each. The toast outlives all of it — it hides
+// 1600ms after it is raised — so the settled state is still announcing.
+const LANDS_MS = 200;
+const SWEEPING_MS = 450;
+// The whole of it — landing and sweeping — plus a margin, and still inside the
+// toast's 1600ms.
+const SWEEP_MS = 1150;
 
 /* ---- opening a page -------------------------------------------------------- */
 
@@ -601,7 +619,8 @@ async function checkScreens(browser) {
       await page.close();
     }
   }
-  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${SCREENS.length} screens x ${SCREEN_VIEWPORTS.length} viewports`);
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${SCREENS.length} screens x ${QUICK ? 2 : SCREEN_VIEWPORTS.length} viewports`);
   return failed;
 }
 
@@ -1109,7 +1128,7 @@ async function checkChoice(browser) {
     }
 
     // The rungs below the whole name. Two of them are decided by the character
-    // count alone — 43 characters and 94 — so they are the same string at every
+    // count alone — 43 characters and 81 — so they are the same string at every
     // width and are asserted as strings.
     //
     // The third is not, and that is the point of it: `Prendi l'asso e il fante
@@ -1142,11 +1161,12 @@ async function checkChoice(browser) {
           if (said !== exp) out.push(`the say line should name the capture "${exp}", it says "${said}"`);
           return out;
         }
-        // The rule, rather than the string.
+        // The rule, rather than the string. Not the character count as well:
+        // this position can only produce the three strings below, all of them
+        // inside the cap, so a length check here has a firing set that is a
+        // strict subset of the membership check's and cannot go red on its own.
         if (!rungs.includes(said))
           out.push(`the say line says "${said}", which is none of the rungs it may say`);
-        if (said.length > 39)
-          out.push(`the say line is ${said.length} characters, which is prose and not a label: "${said}"`);
         const cs = getComputedStyle(el);
         const r = el.getBoundingClientRect();
         if (r.height > parseFloat(cs.lineHeight) + 1)
@@ -1199,23 +1219,39 @@ async function checkStates(browser) {
     await page.mouse.move(0, 0);
 
     await page.evaluate(playSweep);
-    await page.waitForTimeout(40);
-    // While it is running: the cards a capture took are still on the table,
-    // going. Without this the only thing that says WHICH cards were taken is
-    // that they are no longer there.
+    await page.waitForTimeout(LANDS_MS);
+    // Beat one: the card that was played is ON THE TABLE, among the two it is
+    // about to take, and nothing is leaving yet. Without this beat a capturing
+    // card is never drawn anywhere — gioca moves it from a hand to a pile — so
+    // the player watches cards leave and has to work out what took them. It is
+    // the defect the owner found by playing the preview.
+    const lands = await page.evaluate(() => {
+      const out = [];
+      const shown = document.querySelectorAll('.tavola .card').length;
+      if (shown !== 3)
+        out.push(`the card that was played was not laid on the table: the middle shows ${shown}, want 3`);
+      const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+      if (played !== 1) out.push(`${played} card(s) drawn as the one just played, want 1`);
+      const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
+      if (going) out.push(`${going} card(s) are already leaving before the card that takes them has landed`);
+      return out;
+    });
+
+    await page.waitForTimeout(SWEEPING_MS);
+    // Beat two: all three leave together — the two that were taken and the one
+    // that took them.
     const flying = await page.evaluate(() => {
       const out = [];
-      // Two cards, not one: a sweep that takes a single card cannot tell a rule
-      // that marks the right cards from one that marks every card it is given.
       const shown = document.querySelectorAll('.tavola .card').length;
-      if (shown !== 2)
+      if (shown !== 3)
         out.push(`the capture was not drawn leaving the table: the middle shows ${shown} card(s)`);
-      const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
-      if (going !== 2) out.push(`${going} card(s) marked as leaving, want 2`);
-      // Down, because you took it. A sweep toward the wrong player is worse
-      // than none: it says the other player captured.
-      if (!document.querySelector('.tavola .card--won-down'))
-        out.push('the capture is sweeping the wrong way');
+      const down = document.querySelectorAll('.tavola .card--won-down').length;
+      const up = document.querySelectorAll('.tavola .card--won-up').length;
+      if (down + up !== 3) out.push(`${down + up} card(s) marked as leaving, want 3`);
+      // Down, because you took it, and ALL of them: a sweep that sends the
+      // cards one way and the card that took them the other says two players
+      // captured, and counting "is anything going down" cannot see it.
+      if (up) out.push(`the capture is sweeping the wrong way: ${up} of ${down + up} card(s) going up`);
       return out;
     });
 
@@ -1227,13 +1263,22 @@ async function checkStates(browser) {
     await page.evaluate(d => applyDeck(d), deck);
     await page.mouse.move(0, 0);
     await page.evaluate(playSweepOpp);
-    await page.waitForTimeout(40);
+    await page.waitForTimeout(LANDS_MS);
+    // The opponent's card, on the table, where the player can see it. This is
+    // the one that matters: you know what you played.
+    const oppLands = await page.evaluate(() => {
+      const out = [];
+      const played = document.querySelector('.tavola .card[data-played="true"]');
+      if (!played) out.push("the opponent's card was never drawn on the table");
+      return out;
+    });
+    await page.waitForTimeout(SWEEPING_MS);
     const flyingOpp = await page.evaluate(() => {
       const out = [];
-      const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
-      if (going !== 1) out.push(`${going} card(s) marked as leaving on the opponent's capture, want 1`);
-      if (!document.querySelector('.tavola .card--won-up'))
-        out.push("the opponent's capture is sweeping the wrong way");
+      const down = document.querySelectorAll('.tavola .card--won-down').length;
+      const up = document.querySelectorAll('.tavola .card--won-up').length;
+      if (down + up !== 2) out.push(`${down + up} card(s) marked as leaving on the opponent's capture, want 2`);
+      if (down) out.push(`the opponent's capture is sweeping the wrong way: ${down} of ${down + up} card(s) going down`);
       // And your hand is plainly not ready while the table is busy. It is your
       // turn the moment their capture resolves, so the cards look live — and
       // `tapped` refuses while the sweep runs. A card that takes a tap and does
@@ -1241,6 +1286,24 @@ async function checkStates(browser) {
       const live = [...document.querySelectorAll('.hand--you .card')]
         .filter((c, i) => state.hands[0][i] && !c.disabled).length;
       if (live) out.push(`${live} card(s) in your hand are still tappable during the sweep`);
+      return out;
+    });
+
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(playLay);
+    await page.waitForTimeout(LANDS_MS);
+    const laidBad = await page.evaluate(() => {
+      const out = [];
+      const shown = document.querySelectorAll('.tavola .card').length;
+      if (shown !== 2) out.push(`a card was laid and the middle shows ${shown}, want 2`);
+      const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+      if (played !== 1) out.push(`${played} card(s) drawn as the one just played after a lay, want 1`);
+      if (document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length)
+        out.push('a card that took nothing is sweeping off the table');
       return out;
     });
 
@@ -1303,7 +1366,8 @@ async function checkStates(browser) {
     });
     if (!reached) between.push('the driver never reached the end of a round');
 
-    const all = [...flying, ...flyingOpp, ...sweep, ...between, ...errs];
+    const all = [...lands, ...flying, ...oppLands, ...flyingOpp, ...laidBad,
+                 ...sweep, ...between, ...errs];
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${vname} / ${deck}`);
@@ -1340,7 +1404,7 @@ async function checkRotation(browser) {
   const TURNS = QUICK ? [[[980, 385], [385, 980]]]
                       : [[[980, 385], [385, 980]], [[360, 800], [800, 360]],
                          [[1024, 1366], [1366, 1024]], [[430, 932], [932, 430]]];
-  for (const [from, to] of TURNS) {
+  for (const [i, [from, to]] of TURNS.entries()) {
     const page = await openPage(browser, { width: from[0], height: from[1] });
     const errs = [];
     page.on('pageerror', e => errs.push(String(e)));
@@ -1348,34 +1412,52 @@ async function checkRotation(browser) {
     await page.goto(URL_);
     await page.addStyleTag({ content: STILL });
     await page.click('#play');
+    // A different deck each time round, as everywhere else: these four shapes
+    // are in no other grid, so one deck here is a gap rather than a decision.
+    const deck = DECKS[i % DECKS.length];
+    await page.evaluate(d => applyDeck(d), deck);
     await page.mouse.move(0, 0);
     await page.evaluate(setTavola(13));
     await page.waitForTimeout(40);
 
-    // Over it goes, without reloading. Everything below is measured on a page
-    // that has been running since the other orientation.
-    await page.setViewportSize({ width: to[0], height: to[1] });
-    await page.waitForTimeout(80);
-
-    const m = await page.evaluate(measure);
+    // Over it goes and back again, without reloading and with the thirteen
+    // cards still down. Both ways, because the two directions are different
+    // questions: one asks whether the row learns to wrap, the other whether it
+    // learns to stop. Everything measured below is on a page that has been
+    // running since the other orientation.
     const bad = [];
-    if (m.tableScroll > 1)
-      bad.push(`after turning, the table needs ${m.tableScroll}px of scrolling`);
-    if (m.youSeatBottom > m.viewportH + 1)
-      bad.push(`after turning, your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
-    if (m.overlapsHand)
-      bad.push(`after turning, ${m.overlapsHand} table card(s) land on a hand`);
-    const wantRows = m.portrait ? 2 : 1;
-    if (m.rowCount !== wantRows)
-      bad.push(`after turning, the middle draws ${m.rowCount} row(s) in `
-        + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
-    const floor = Math.min(24, Math.round(m.cw * 0.45));
-    for (const row of m.rowStats) {
-      if (row.n > 1 && row.minStep < floor)
-        bad.push(`after turning, a table row steps ${row.minStep}px between cards, want ${floor}`);
-      const starved = (row.reach || []).findIndex(g => g < floor);
-      if (starved >= 0)
-        bad.push(`after turning, table card ${starved} is ${row.reach[starved]}px wide to a thumb, want ${floor}`);
+    for (const size of [to, from]) {
+      await page.setViewportSize({ width: size[0], height: size[1] });
+      await page.waitForTimeout(80);
+
+      const m = await page.evaluate(measure);
+      const at = `after turning to ${size.join('x')}`;
+      for (const e of m.offScreen.slice(0, 2)) bad.push(`${at}, ${e} runs off the screen`);
+      bad.push(...m.plateBad.slice(0, 2).map(b => `${at}, ${b}`));
+      if (m.tableScroll > 1)
+        bad.push(`${at}, the table needs ${m.tableScroll}px of scrolling`);
+      if (m.youSeatBottom > m.viewportH + 1)
+        bad.push(`${at}, your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
+      if (m.overlapsHand)
+        bad.push(`${at}, ${m.overlapsHand} table card(s) land on a hand`);
+      if (m.tavolaInsideTable > 1)
+        bad.push(`${at}, the table row runs ${m.tavolaInsideTable}px outside the table`);
+      if (m.tavolaCount !== m.engineCount)
+        bad.push(`${at}, the middle shows ${m.tavolaCount} cards, the engine holds ${m.engineCount}`);
+      const wantRows = m.portrait ? 2 : 1;
+      if (m.rowCount !== wantRows)
+        bad.push(`${at}, the middle draws ${m.rowCount} row(s) in `
+          + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
+      const floor = Math.min(24, Math.round(m.cw * 0.45));
+      for (const row of m.rowStats) {
+        if (row.n > 1 && row.minStep < floor)
+          bad.push(`${at}, a table row steps ${row.minStep}px between cards, want ${floor}`);
+        if (row.spillRight > 1 || row.spillLeft > 1)
+          bad.push(`${at}, a table row spills ${row.spillRight || row.spillLeft}px past its own box`);
+        const starved = (row.reach || []).findIndex(g => g < floor);
+        if (starved >= 0)
+          bad.push(`${at}, table card ${starved} is ${row.reach[starved]}px wide to a thumb, want ${floor}`);
+      }
     }
 
     // And the say line, which picks its rung by measuring: raised at one width,
@@ -1388,6 +1470,12 @@ async function checkRotation(browser) {
     bad.push(...await page.evaluate(() => {
       const out = [];
       const el = document.querySelector('.sel-name');
+      // The rail. Without it this half passes by rendering nothing: the
+      // opponent's first play is scheduled for state.speed and `tapped` refuses
+      // while the table sweeps, so a slow run would measure an empty line and
+      // say `pass`.
+      if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
+        out.push('nothing was raised, so the say line after turning was never measured');
       if (el.hidden) return out;
       const r = el.getBoundingClientRect();
       const box = document.querySelector('.say').getBoundingClientRect();
@@ -1402,12 +1490,13 @@ async function checkRotation(browser) {
     const all = [...bad, ...errs];
     if (all.length) {
       failed++;
-      console.log(`  FAIL  ${from.join('x')} turned to ${to.join('x')}`);
+      console.log(`  FAIL  ${from.join('x')} turned to ${to.join('x')} / ${deck}`);
       all.slice(0, 6).forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }
-  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${TURNS.length} rotations, both ways`);
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${TURNS.length} shapes turned over and back`);
   return failed;
 }
 
@@ -1581,6 +1670,10 @@ async function checkDeal(browser) {
 /* ---- run ------------------------------------------------------------------ */
 
 const browser = await chromium.launch({ ...(CHROME && { executablePath: CHROME }), args: ['--no-sandbox'] });
+// Printed, because every measurement below is this browser's. check.yml pins
+// playwright-core for the same reason the fonts are blocked: two runs that do
+// not agree about the environment are not two runs of the same check.
+console.log(`chromium ${browser.version()}`);
 let failed = 0;
 failed += await checkDocument(browser);
 failed += await checkScreens(browser);

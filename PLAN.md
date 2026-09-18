@@ -890,8 +890,8 @@ proposals and tells the player nothing.
 
 **And the line is a label, so it says the shortest thing that is still true.**
 "Prendi il 4 e il 3 con il 7" is the first of three rungs rather than the only
-one. Naming one card with its suit runs to 43 characters, and the five-card sum
-the check renders to 94; a line that does not fit is not a longer line, it is a
+one. Naming one card with its suit runs to 43 characters, and the four-card capture
+the check renders to 81; a line that does not fit is not a longer line, it is a
 line cut in half by `.say`, which is what Tressette shipped with its
 declarations. So the clause naming the raised card goes first — the player is
 looking at it, and it is the card they just tapped — then the list, and then
@@ -935,6 +935,17 @@ set in `prese()`'s order, which is the table's own order: neutral, not the
 opponent's opinion of the best one. That line costs `--say` whether or not it
 has something to say, in flow, in `--chrome`, because Tressette found what a
 row that costs nothing while empty does to the cards below it.
+
+**The card that was played is on the table, and that is not a detail.** `gioca`
+moves a capturing card from a hand straight to a pile, so a middle row that
+draws `state.tavola` draws it nowhere — and the opponent's play becomes
+invisible: cards leave the table and the player has to work out what took them.
+The card lands among the cards it is about to gather, for a beat, and the
+capture runs after it, which is what a hand does at a real table. A card that
+takes nothing gets the same beat with a ring, because it arrives among as many
+as twelve others. **Found by the owner, playing the preview, after five review
+rounds had not** — the check now renders all three beats of a capture and both
+ways a card can arrive.
 
 **The sweep.** Captured cards leave the table toward whoever took them,
 Tressette's animation forked with the rest of the sheet, and it is the only
