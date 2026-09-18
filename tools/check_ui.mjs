@@ -363,9 +363,17 @@ const playLastLeftovers = `(() => {
   state.hands[1] = [null, null, null];
   state.deveGiocare = 0; state.over = false; state.speed = 1200;
   state.plays = 35; state.ultimaPresa = 1;
+  // The rest of a position 35 plays in: the dealer plays last, so it is the
+  // opponent; and 35 cards are in the piles, not none. Nothing asserts either
+  // today — but a pose that only holds together where the assertions look is
+  // not a position the engine can sit in, which is what CLAUDE.md asks of one.
+  state.mazziere = 1;
+  state.prese = [state.cards.slice(0, 18), state.cards.slice(18, 35)];
   state.selected = null; state.scelta = 0;
   render();
+  const n = state.tavola.length + 1;
   tapped(0);
+  return { cards: n, to: state.ultimaPresa };
 })()`;
 
 // And the same play onto an EMPTY table, which a scopa on the 35th leaves. Then
@@ -379,9 +387,13 @@ const playLastOnEmpty = `(() => {
   state.hands[1] = [null, null, null];
   state.deveGiocare = 0; state.over = false; state.speed = 1200;
   state.plays = 35; state.ultimaPresa = 1;
+  state.mazziere = 1;
+  state.prese = [state.cards.slice(0, 18), state.cards.slice(18, 35)];
   state.selected = null; state.scelta = 0;
   render();
+  const n = state.tavola.length + 1;
   tapped(0);
+  return { cards: n, to: state.ultimaPresa };
 })()`;
 
 // A real sweep: one card on the table and the card that takes it in hand, then
@@ -1512,41 +1524,45 @@ async function checkStates(browser) {
     // reaches — this one captures — so these two are posed up to the play and
     // then played. Both breaks written for the lines below survived until the
     // check rendered them, which is the rule in one sentence.
-    // `want` counts the card that was just played as well as the leftovers it
-    // is joining: two on the table plus itself, and nothing plus itself.
-    for (const [what, pose, want] of [['with leftovers under it', playLastLeftovers, 3],
-                                      ['onto an empty table',     playLastOnEmpty,   1]]) {
+    // Both expectations are DERIVED from what the pose reports — the table it
+    // left plus the card that joins it, and the player it says took last —
+    // rather than written beside it. Twenty lines up, the driven block does the
+    // same with `info`. Hard-coded, they go quietly wrong the moment a pose is
+    // edited, while still passing; and I had them wrong once already, having
+    // forgotten that the played card joins the row it is drawn on.
+    for (const [what, pose] of [['with leftovers under it', playLastLeftovers],
+                                ['onto an empty table',     playLastOnEmpty]]) {
       await page.reload();
       await page.addStyleTag({ content: STILL });
       await page.click('#play');
       await page.evaluate(d => applyDeck(d), deck);
       await page.mouse.move(0, 0);
-      await page.evaluate(pose);
+      const posed = await page.evaluate(pose);
       await page.waitForTimeout(LAST_LANDS_MS);
-      ending.push(...await page.evaluate(([label, n]) => {
+      ending.push(...await page.evaluate(([label, p]) => {
         const out = [];
         const shown = document.querySelectorAll('.tavola .card').length;
-        if (shown !== n)
-          out.push(`the last card ${label} is drawn on a table of ${shown}, want ${n}`);
+        if (shown !== p.cards)
+          out.push(`the last card ${label} is drawn on a table of ${shown}, want ${p.cards}`);
         const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
         if (played !== 1)
           out.push(`${played} card(s) drawn as the last card ${label}, want 1`);
         return out;
-      }, [what, want]));
+      }, [what, posed]));
       await page.waitForTimeout(LAST_FLYING_MS);
-      ending.push(...await page.evaluate(([label, n]) => {
+      ending.push(...await page.evaluate(([label, p]) => {
         const out = [];
         const down = document.querySelectorAll('.tavola .card--won-down').length;
         const up = document.querySelectorAll('.tavola .card--won-up').length;
-        if (down + up !== n)
-          out.push(`${down + up} of ${n} card(s) leaving on the last card ${label}`);
-        // ultimaPresa is the opponent in both poses, so everything goes up —
-        // the leftovers AND the card that was just played, which is what makes
-        // this play unlike every other one.
-        if (down) out.push(`the last card ${label} sends ${down} card(s) the wrong way: `
-          + `it takes nothing, so it goes up with the leftovers`);
+        if (down + up !== p.cards)
+          out.push(`${down + up} of ${p.cards} card(s) leaving on the last card ${label}`);
+        // All of them to whoever took last — the leftovers AND the card that
+        // was just played, which is what makes this play unlike every other.
+        const wrong = p.to === 0 ? up : down;
+        if (wrong) out.push(`the last card ${label} sends ${wrong} card(s) the wrong way: `
+          + `it takes nothing, so it goes to player ${p.to} with the leftovers`);
         return out;
-      }, [what, want]));
+      }, [what, posed]));
     }
 
     const reached = await page.evaluate(playToBeat);
@@ -1619,7 +1635,11 @@ async function checkStates(browser) {
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${vname} / ${deck}`);
-      all.slice(0, 6).forEach(b => console.log(`        ${b}`));
+      // Every one of them. This pass makes eight groups of assertions and up to
+      // thirteen lines can precede the newest; truncating at six reported a
+      // MISMATCH for an assertion that had fired and was simply off the end of
+      // the list, which is what forced one EXPECT to be loosened a commit ago.
+      all.forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }

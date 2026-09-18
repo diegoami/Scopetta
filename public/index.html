@@ -1297,10 +1297,16 @@ function later(fn, ms){
 // before the player presses Back — which is precisely what the three beats
 // exist to prevent, happening on a screen nobody is looking at.
 //
-// It comes back after a beat rather than after whatever was left of the
+// It comes back after a LANDING beat rather than after whatever was left of the
 // original wait, because a player who has just looked up from a page of rules
 // wants the same moment to re-read the table that they got when the card
-// landed.
+// landed — and that moment is LANDS, the one the owner asked to be doubled.
+// NEXT is the wait before the opponent answers, which is 40% of it.
+// The toast's own timer is deliberately NOT held. Cancelling it without
+// re-arming would leave a "Scopa!" on the table for the rest of the deal, and
+// re-arming it would announce a sweep the player has already walked away from.
+// An announcement is for the moment it is made; letting it expire behind the
+// rules is the right one of the three.
 function holdClock(){
   if (!pending) return;
   clearTimeout(timer);
@@ -1310,7 +1316,7 @@ function holdClock(){
 function releaseClock(){
   const was = held;
   held = null;
-  if (was && was.mine === epoch) later(was.fn, state.speed * NEXT);
+  if (was && was.mine === epoch) later(was.fn, state.speed * LANDS);
 }
 // The toast needs its own, or the next scheduled play cancels its auto-hide and
 // "Scopa!" stays on the table for the rest of the deal.
@@ -1342,6 +1348,14 @@ function dealt(node, was){
 function faceOf(node, card){
   if (!card){
     node.dataset.empty = "true";
+    // And the deal-in mark goes with the card. Left on, it is a page-lifetime
+    // mark rather than a per-deal one: a slot that was dealt in round 1 still
+    // carries it in round 2, so the check counts a stale mark as a fresh one
+    // and cannot tell a hand that was dealt from one that appeared. Measured —
+    // with the deal-in disabled for rounds 2 to 6, the whole check still
+    // passed, and the owner's flicker would have come back for five rounds out
+    // of six.
+    node.removeAttribute("data-dealt");
     node.style.removeProperty("--col");
     node.style.removeProperty("--row");
     return;
@@ -1696,6 +1710,11 @@ function play(who, slot, presa){
   // two players took cards from one play. `null` means it stays on the table,
   // which is the ordinary lay.
   const cardGoesTo = r.presa.length ? who : (r.resto.length ? state.ultimaPresa : null);
+  // Never written when it is null: `dir` holds a player, and renderTavola draws
+  // anything that is not `undefined`, so a null would sweep a laid card DOWN.
+  // Unreachable as the two lines below stand — a lay has an empty `dir` and
+  // takes the other path — but the invariant that keeps it so is three lines
+  // away from the code that relies on it, and that is how it stops being true.
 
   // Something is leaving if the table lost cards OR the played card did — and
   // the second without the first is reachable: a scopa on the 35th play leaves
@@ -1710,19 +1729,22 @@ function play(who, slot, presa){
   // beat and deal in AGAIN — the flicker the deal-in was written to remove,
   // in a worse form. The hands are empty from the play that empties them until
   // the beat is over, which is what the player is actually watching.
+  //
+  // Both ends of that are here, in one function, because it is one thing. Set
+  // here and cleared inside `then`, the flag had two owners: anything that
+  // skipped the clearing left it set, the page hung with both hands drawn empty
+  // instead of failing, and the break written for the beat stopped tripping the
+  // assertion written for it — which is how a flag with two owners hides.
   if (r.nuovoGiro) beat = true;
+  const endBeat = () => { beat = false; render(); resume(); };
 
   // What happens once the table has caught up. The beat between rounds comes
   // after the sweep, not during it: they are two things to look at, not one.
   const then = () => {
     flushSweep();
-    if (r.nuovoGiro){
-      render();
-      later(() => { beat = false; render(); resume(); }, state.speed * BEAT);
-      return;
-    }
     render();
-    resume();
+    if (beat) later(endBeat, state.speed * BEAT);
+    else resume();
   };
 
   // A card that takes nothing is on the table now — gioca pushed it — but it is
@@ -1743,7 +1765,7 @@ function play(who, slot, presa){
   // a real table, and the only way to see what the opponent played.
   const cards = before.concat([r.card]);
   const landed = cards.length - 1;
-  dir[landed] = cardGoesTo;
+  if (cardGoesTo !== null) dir[landed] = cardGoesTo;
   sweeping = { cards, dir: {}, played: landed };
   render();
   later(() => {

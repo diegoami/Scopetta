@@ -74,6 +74,15 @@
 //     EXPECTs name the two phrasings that fire first;
 //   - `the position meant to say "X" played the card instead of raising it`
 //     with `a capture with a choice plays instead of raising`;
+//   - `the round ended and the page never entered the beat` with `the next
+//     round is drawn while the last card is still landing`, whose EXPECT names
+//     the window assertion. Giving `beat` ONE owner made these one rule and one
+//     line: the flag is set on the play that empties both hands, so the only
+//     way to falsify "the page entered the beat" is not to set it, and not
+//     setting it draws the next round during the landing beat. Held apart, they
+//     were two lines in two functions — and that is exactly what let the break
+//     for the beat stop tripping the assertion written for it, since whatever
+//     skipped the clearing left the flag set and the page hung instead;
 //   - `N card(s) are already leaving before the card that takes them has landed`
 //     with `nothing is drawn as the card that has just landed`, whose EXPECT
 //     names the last play's phrasing, `N card(s) are already leaving on the
@@ -198,15 +207,16 @@ const EXPECT = {
   "the toast announces the wrong thing": "the toast says",
   "the empty middle is allowed to collapse": "empty middle collapsed",
   "the empty hand is allowed to collapse": "card-sized slot",
-  "the page stops listening for the new round": "never entered the beat",
   "the beat draws the new hand instead of the empty one": "both hands are empty",
   "nothing is drawn as the card that has just landed": "are already leaving on the last play",
   "the opponent's card is not marked as the one just played": "never drawn on the table",
   "a card that takes nothing is drawn leaving": "sweeping off the table",
 
+  "the hand is only dealt in on the first deal": "were not drawn as dealt",
+
   // --- the last play of the deal, and the window before a beat --------------
   "the points are counted out over the last play": "before it has been drawn",
-  "the last play sends the played card to whoever played it": "the wrong way",
+  "the last play sends the played card to whoever played it": "with the leftovers",
   "the last card of an empty table is drawn nowhere": "is drawn on a table of",
   "the next round is drawn while the last card is still landing": "already drawn",
   "the rules let the deal play on behind them": "played on behind the rules",
@@ -414,8 +424,6 @@ const BREAKS = [
   ["the empty hand is allowed to collapse",
    ".card[data-empty=\"true\"]{\n  background-image: none;",
    ".card[data-empty=\"true\"]{\n  display: none;\n  background-image: none;"],
-  ["the page stops listening for the new round",
-   "  if (r.nuovoGiro){", "  if (false && r.nuovoGiro){"],
   ["the beat draws the new hand instead of the empty one",
    "const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.hands[who];",
    "const mano = who => state.hands[who] || [null, null, null];"],
@@ -518,10 +526,22 @@ const BREAKS = [
    "  const over = !!(state.over && state.dealt && !settling());",
    "  const over = !!(state.over && state.dealt);"],
   ["the last play sends the played card to whoever played it",
-   "  dir[landed] = cardGoesTo;", "  dir[landed] = who;"],
+   "  if (cardGoesTo !== null) dir[landed] = cardGoesTo;",
+   "  dir[landed] = who;"],
   ["the last card of an empty table is drawn nowhere",
    "  const swept = Object.keys(dir).length > 0 || cardGoesTo !== null;",
    "  const swept = Object.keys(dir).length > 0;"],
+
+  // The sixth review's mutation, which the check passed: the deal-in disabled
+  // for rounds 2 to 6, which is every round the beat pass actually measures.
+  // `data-dealt` was never taken off a slot, so a mark from the first deal was
+  // still there in the second and the assertion could not tell it from a fresh
+  // one. Removing the mark with the card is what makes this break red; taking
+  // that line out again on its own changes nothing a correct page does, which
+  // is why it has no break of its own.
+  ["the hand is only dealt in on the first deal",
+   "  if (was !== \"true\" || node.dataset.empty !== \"false\") return;",
+   "  if (was !== \"true\" || node.dataset.empty !== \"false\" || state.giro > 0) return;"],
 
   // --- the window between a round's last play and the beat -----------------
   ["the next round is drawn while the last card is still landing",

@@ -730,6 +730,20 @@ settings ──Cambia avversario──► confirm ─► start
   margin. A phrase that can be wrong about the deal it describes is worse
   than no phrase.
 
+**Leaving the table stops its clock, and coming back starts it again.** The
+table runs on one timer, and a screen laid over it does not stop that timer by
+covering it: iteration 3's rules screen let the opponent answer, the capture
+sweep and both vanish while the player was reading, so the three beats the
+table exists for happened where nobody was looking. `show()` holds whatever the
+table was about to do on the way out and re-arms it on the way in, for every
+screen rather than for the one that had a button first — iteration 4 adds three
+more, and a rule written per screen is a rule the fourth one will not have.
+It comes back after a *landing* beat, which is the one the owner asked to be
+doubled, rather than after what was left of the original wait. The toast's own
+timer is deliberately not held: an announcement is for the moment it is made,
+and the alternatives are leaving a "Scopa!" up for the rest of the deal or
+announcing a sweep the player has walked away from.
+
 Keys: `1`–`3` play a card by its sorted slot, or raise it when a capture
 needs choosing; `Space`
 cycles the proposed capture; `Enter` confirms it; `Escape` puts the card

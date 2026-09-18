@@ -143,6 +143,23 @@ cards a side — drawn there, a hand appears, deals in, blanks and deals in agai
 does something extra on a play, that play is a state of its own**, and the beats
 around it need rendering separately from the ordinary ones.
 
+**And a flag with two owners is a flag no assertion can watch.** The fix for
+that flicker set `beat` in `play()` and left it being cleared inside a callback
+in another function — and the break written for the beat stopped tripping the
+assertion written for it, because whatever skipped the clearing now left the
+flag *set*: the page hung with both hands drawn empty instead of failing at the
+rule that watches the flag. Measured on the mutated page: `beat` true forever,
+`plays` stuck at 6. Both ends of a flag belong in one place, and if a driver or
+a fixture has to put a flag back by hand to keep working, that is the same
+defect showing early.
+
+**And a mark that is never taken off is a mark that means nothing.** The card a
+hand is dealt is marked `data-dealt`, and nothing removed it when the card was
+played — so a slot carried the first deal's mark into the second, and the check
+counted a stale mark as a fresh one. The deal-in could be switched off for
+rounds two to six, which is every round the beat pass actually measures, and the
+whole check still passed. `faceOf` clears it with the card now.
+
 **And a state the seed does not reach has to be posed.** A driven deal reaches
 whichever ending its seed reaches: the deal the check drives ends in a capture,
 so the two endings where the last card takes *nothing* — onto leftovers, and
