@@ -786,7 +786,10 @@ box, because overflowing content leaves a box that stays where it was.
 **And then the seat row is as tall as the taller of its card and its plate**,
 which `--plates: 0px` in landscape quietly denied. The plate's type is in rem
 and the card's height is not, so on a short landscape window the plate wins:
-81px against a 73px card at 1100x330, and the seat below the fold. The height
+81px against a 73px card at 1100x330. What that cost was almost entirely
+hidden — the seat stayed 7px above the fold, `--slack` paid for the rest, and
+the only thing that showed anywhere was 2px of scrolling at 1100x320, where
+there was no slack left to pay with. The height
 term is therefore two terms and the smaller wins, with no conditional needed
 because they cross exactly where the card and the plate are the same height:
 
@@ -885,21 +888,32 @@ proposals and tells the player nothing.
 **And the line is a label, so it says the shortest thing that is still true.**
 "Prendi il 4 e il 3 con il 7" is the first of three rungs rather than the only
 one. Naming one card with its suit runs to 43 characters, and the five-card sum
-the check renders to 97; a line that does not fit is not a longer line, it is a
+the check renders to 94; a line that does not fit is not a longer line, it is a
 line cut in half by `.say`, which is what Tressette shipped with its
 declarations. So the clause naming the raised card goes first — the player is
 looking at it, and it is the card they just tapped — then the list, and then
 the brass marks carry it alone, which is what this section says they are for:
 "Prendi le 3 carte segnate".
 
-The cap is 39 characters, and 39 is not where the line wraps: measured at
-360x800 it holds 43 on one line and wraps at 44. It is where the line stops
-being a label. The check holds any string past 40 characters to the 14.5px
-floor it holds body copy to, and `--t-tiny` is 12.5px on a phone — so naming
-the capture in full and setting it at label size are two things this line
-cannot both do. Measured in the state the check gained for it: at 360x800 a
-two-card capture named with suits was cut off by 15px inside `.say` and flagged
-as 12.5px text wanting 14.5.
+A rung has to meet two conditions, and only one of them is a character count.
+The count is about **readability**: past 40 characters a string is something
+somebody reads rather than glances at, the check holds anything longer to the
+floor it holds body copy to, and `--t-tiny` is 12.5px on a phone. The cap is
+39 for that reason and no other.
+
+Whether a rung **fits** is a width, and it is measured. A count cannot answer
+it: one line holds 34 characters at 320px, 39 at 360 and 43 at 430, and
+"Prendi l'asso e il fante con il cavallo" is 39 characters and 335px, so it
+fits neither of the first two. `renderSay` sets each rung and reads back the
+rendered height, taking the first that is one line and inside the count.
+
+Getting that wrong is not theoretical: a count-only ladder kept a 39-character
+line at 360x800 and it ran 20px past the seat; at 320x568 it ran from −8px to
+328px, off **both** edges of a 320px screen, with no sideways scroll to show
+for it because the table clips. The say line and the plaque inside it are in
+the check's off-screen list now, and `.say` is bounded to its own grid track —
+a box sized by its content will otherwise make its parent's box its content's
+width, and `max-width: 100%` then resolves against the box it just grew.
 
 One more thing the line has to get right: "il asso" is not Italian. Only one of
 the ten names begins with a vowel and it is the one the table names most often,
@@ -991,16 +1005,29 @@ the player's own plate hung below the fold. The plate's height is set from its
 own type here as it is there, and a number in that block is a defect waiting
 for the screen that disagrees with it.
 
-Iteration 3 shipped two more of them and the review found the first: `--plates:
-0px` in landscape, which is the paragraph above, and `--extra-gap: .5rem` in
-portrait, which stands in for the row gap `.tavola` uses between the two halves
-of the middle — `--step`, and 6px more than `.5rem` at 1024x1366, where the
-table scrolled by exactly that. Both are named tokens now. The check gained the
-assertion that would have found either without being told: **the table needs no
-scrolling.** `overflow: hidden auto` is the designed fallback for a budget that
-comes up short — reaching a card by scrolling beats a card hidden under another
-one — but needing it at all means a term is missing, and nothing was reading
-it.
+Iteration 3 shipped three more of them, one per round. `--plates: 0px` in
+landscape is the paragraph above. `--extra-gap: .5rem` in portrait stands in
+for the row gap `.tavola` uses between the two halves of the middle — `--step`,
+and 6px more than `.5rem` at 1024x1366, where the table scrolled by exactly
+that. And `--plates` itself carried `+ .5rem` for the gaps a stacked seat costs
+when there are **four** of them: one between the opponent's cards and their
+plate, two in your seat because the say line is a row of its own, and the
+margin above your plate.
+
+All three are named tokens now, read by the layout and the budget alike. Two
+assertions were added for them, and the second is the one that matters:
+
+- **the table needs no scrolling.** `overflow: hidden auto` is the designed
+  fallback for a budget that comes up short — reaching a card by scrolling
+  beats a card hidden under another one — but needing it at all means a term
+  is missing, and nothing was reading it.
+- **and the inflated pass runs with `--slack: 0`.** `--slack` exists so the
+  budget never lands on exactly zero, which means a term that is SHORT by less
+  than `--slack` costs nothing and shows nowhere. `--plates` was 8px short at
+  every portrait viewport and `--slack` is 8px, so it was invisible by
+  construction. Taking the slack away in the pass that already tests the
+  derivation is what makes the arithmetic assertable rather than merely
+  comfortable.
 
 ### 3.8 Persistence
 
@@ -1202,6 +1229,15 @@ and shows up in history with the right score; and every dialog-over-sheet
 path Tressette's iteration 4 found has its row here.
 
 ### 5 — The opponents (1 day)
+
+**One thing settled here in advance.** `--plate-w` is a derived width and the
+check asserts every plate's text fits inside it, but only `Franco` exists
+before this iteration. Measured against the whole of §0's roster at six
+viewports — `Franco`, `Piero`, `Valerio`, `Graziano` — every one fits, because
+what sets the plate's minimum is not the name but the word `avversario` beneath
+it, which is longer than any of them. The table pass renders `Graziano` on
+every case so the margin is asserted rather than remembered.
+
 
 Three weight vectors, tuned to the acceptance numbers and measured for
 difference. Dossier text. The weights disclosure. The README table.

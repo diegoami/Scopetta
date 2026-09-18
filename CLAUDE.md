@@ -122,6 +122,14 @@ the player's own name plate off the right edge — 88px of it at 800x680. **A
 clipped table does not scroll sideways**, so the assertion watching for
 sideways scroll had nothing to say. Ask the elements where they are.
 
+**A term that is SHORT by less than `--slack` costs nothing and shows nowhere.**
+`--slack` is 8px and exists so the budget never lands on exactly zero; `--plates`
+was 8px short at every portrait viewport for exactly that reason and nothing
+could see it. The inflated pass runs with `--slack: 0` now, which is what makes
+the arithmetic assertable rather than merely comfortable. Three terms of
+`--chrome` were hand-set constants when iteration 3 was written, one found per
+review round.
+
 Every term of the width budget is a token the thing it pays for also uses:
 `--plate-w` is the plate's width and half of `--seat-extra`, so the two cannot
 drift. Whether the text fits inside `--plate-w` is not an opinion either — the
@@ -184,15 +192,26 @@ capped at the space that exists above the hand, and the check measures the
 strip by hit-testing the row a pixel at a time rather than by computing it.
 
 **The say line is a label, and a label is short.** Naming one card with its
-suit runs to 43 characters and the five-card sum the check renders to 97; the
+suit runs to 43 characters and the five-card sum the check renders to 94; the
 budget pays for one line of `--t-tiny`, and anything longer is not a longer
 line but a line cut in half by `.say`. Three rungs, shortest that fits: the
 whole thing, then without the clause naming the raised card, then "Prendi le N
-carte segnate" with the brass marks carrying which. The cap is 39 characters,
-and 39 is not where the line wraps — at 360x800 it holds 43 and wraps at 44. It
-is where the line stops being a label: the check holds anything past 40
-characters to the floor it holds body copy to, and `--t-tiny` is 12.5px on a
-phone.
+carte segnate" with the brass marks carrying which.
+
+**A rung has to meet two conditions and only one of them is a count.** The
+39-character cap is about readability — past 40 the check holds a string to the
+floor it holds body copy to, and `--t-tiny` is 12.5px on a phone. Whether a
+rung *fits* is a width, and a count is a bad proxy for one: a line holds 34
+characters at 320px, 39 at 360 and 43 at 430, and "Prendi l'asso e il fante con
+il cavallo" is 39 characters and 335px. `renderSay` sets each rung and reads
+the rendered height back.
+
+**And a box sized by its content will grow the box that holds it.** The plaque
+is `width: max-content`, the seat centres its items, so `.say` took its child's
+max-content as its own width and the `max-width: 100%` under it resolved
+against the box it had just grown — a 39-character line ran off both edges of a
+320px screen. `.say` is bounded to its grid track, and the say line and the
+plaque are in the check's off-screen list.
 
 **And nothing may be drawn over it.** The raised card is lifted into the space
 above the hand, and that space includes the say row — measured, it covered

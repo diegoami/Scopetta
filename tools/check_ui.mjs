@@ -61,6 +61,10 @@ const CHROME = process.env.CHROME || (existsSync(PINNED) ? PINNED : null);
 /* ---- viewports ------------------------------------------------------------ */
 
 const VIEWPORTS = [
+  // The narrowest screen the game claims to work on, and the one the say line
+  // runs off first: a 39-character line is 335px wide, which is wider than the
+  // whole of this.
+  ['narrow phone',      320,  568],
   ['Android small',     360,  800],
   ['iPhone 15',         393,  852],
   ['Pixel',             412,  915],
@@ -95,13 +99,13 @@ const VIEWPORTS = [
   ['shortest window',  1100,  320],
 ];
 
-const SCREEN_VIEWPORTS = ['Android small', 'iPhone Pro Max', 'tablet portrait',
-                          'phone landscape', 'tiny window', 'laptop'];
+const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
+                          'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
 
-// The inflated pass runs these. NOT the two shortest landscape windows: the
-// inflation is calibrated to be the largest that leaves the card's clamp floor
-// unbound, and at 340px of height it binds — which tests the clamp rather than
-// the derivation, exactly as the note on INFLATE says.
+// The inflated pass runs these. Not the short landscape windows — 640x480,
+// 980x340, 1100x330, 1100x320 — where the inflation drives the card onto its
+// clamp floor, which tests the clamp rather than the derivation, exactly as the
+// note on INFLATE says.
 const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
                'Android small', 'small window', 'tiny window'];
 
@@ -150,6 +154,10 @@ const TAVOLA_13 = `[
 const setTavola = n => `(() => {
   const all = ${TAVOLA_13};
   state.tavola = all.slice(0, ${n});
+  // The longest name in §0's roster, on every case of the pass that measures
+  // plates. Only Franco exists until iteration 5, and a plate asserted against
+  // one name is a plate asserted against one name.
+  state.opponent = "Graziano";
   state.selected = null; state.scelta = 0;
   render();
 })()`;
@@ -193,6 +201,22 @@ const LONG_SAY = 'Prendi il quattro di bastoni';
 const poseLongSay = `(() => {
   state.tavola = [{s:3,n:4},{s:1,n:4},{s:0,n:3},{s:2,n:1}];
   state.hands[0] = [{s:2,n:4}, {s:3,n:10}, {s:1,n:9}];
+  state.deveGiocare = 0; state.over = false;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// The widest line the ladder is allowed to keep: 39 characters, and 335px of
+// them — wider than a 360px phone's seat and wider than the whole of a 320px
+// one. A count is a proxy for a width and a bad one, so the fixture that keeps
+// the ladder honest is the one where the two disagree. A cavallo takes the asso
+// and the fante, or the quattro and the cinque, so it raises.
+const WIDEST_SAY = "Prendi l'asso e il fante con il cavallo";
+const CUT_SAY = "Prendi l'asso e il fante";
+const poseWidestSay = `(() => {
+  state.tavola = [{s:0,n:1},{s:1,n:8},{s:2,n:4},{s:3,n:5}];
+  state.hands[0] = [{s:2,n:9}, {s:3,n:10}, {s:1,n:2}];
   state.deveGiocare = 0; state.over = false;
   state.selected = null; state.scelta = 0;
   render();
@@ -309,7 +333,7 @@ const audit = () => {
   // a phone screen through nineteen viewports while that assertion passed. Ask
   // the elements directly. The table row is in this list because it is the one
   // this game added.
-  const past = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .toast')]
+  const past = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .toast, .say, .sel-name')]
     .filter(el => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
@@ -434,9 +458,13 @@ const SCREENS = [
       await p.click('#play');
       await p.evaluate(poseChoice);
     } },
-  { name: 'table, a capture named in full', open: async p => {
+  { name: 'table, a capture named with its suit', open: async p => {
       await p.click('#play');
       await p.evaluate(poseLongSay);
+    } },
+  { name: 'table, the widest line the say line keeps', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseWidestSay);
     } },
   { name: 'table, a capture too long to name', open: async p => {
       await p.click('#play');
@@ -515,7 +543,7 @@ async function checkScreens(browser) {
   // Two shapes in the quick grid, and the second is deliberately not a phone:
   // the phone-shaped media query re-declares every type token, so a break that
   // drops the base --t-tiny below the floor cannot show up on a phone at all.
-  for (const vname of (QUICK ? ['Android small', 'tiny window'] : SCREEN_VIEWPORTS)) {
+  for (const vname of (QUICK ? ['narrow phone', 'tiny window'] : SCREEN_VIEWPORTS)) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     for (const screen of SCREENS) {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
@@ -620,7 +648,7 @@ const measure = () => {
   // card budget and the three breaks for it survived the whole check, because
   // the only pass that could see them ran at one portrait phone.
   const nameOf = e => e.id ? '#' + e.id : '.' + e.className.trim().split(/\s+/)[0];
-  const offScreen = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate')]
+  const offScreen = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .say, .sel-name')]
     .filter(e => {
       const q = e.getBoundingClientRect();
       return q.width > 0 && (q.right > window.innerWidth + 1 || q.left < -1);
@@ -702,6 +730,12 @@ const INFLATE = `:root{
   --pad-block: .95rem !important;
   --step: .85rem !important;
   --say: 26px !important;
+  /* And no slack. --slack exists so the budget never lands on exactly zero,
+     which means a term that is SHORT by less than --slack costs nothing and
+     shows nowhere — --plates was 8px short at every portrait viewport and
+     --slack is 8px. Taking it away here is what makes the budget's arithmetic
+     assertable rather than merely comfortable. */
+  --slack: 0px !important;
 }`;
 
 async function checkTable(browser, only, inflate) {
@@ -713,7 +747,7 @@ async function checkTable(browser, only, inflate) {
   // than the card AND the budget has nothing left over: a break that takes a
   // term out of the budget has to have somewhere to show up.
   if (QUICK) list = list.filter(v =>
-    ['phone landscape', 'Android small', 'laptop', 'tiny window',
+    ['phone landscape', 'narrow phone', 'Android small', 'laptop', 'tiny window',
      'shortest window'].includes(v[0]));
 
   for (const [vname, w, h] of list) {
@@ -1009,6 +1043,7 @@ async function checkChoice(browser) {
       await page.reload();
       await page.addStyleTag({ content: STILL });
       await page.click('#play');
+      await page.evaluate(d => applyDeck(d), deck);
       await page.mouse.move(0, 0);
       await page.evaluate(`(() => {
         state.tavola = [{s:1,n:7},{s:0,n:7},{s:2,n:4},{s:3,n:3}];
@@ -1035,12 +1070,18 @@ async function checkChoice(browser) {
       }));
     }
 
-    // The two rungs below the whole name, each rendered rather than described.
+    // The two rungs below the whole name, each rendered rather than described —
+    // and the widest line the ladder keeps, which is the one where its two
+    // conditions disagree: 39 characters is inside the count and outside a
+    // 360px phone, so the answer depends on the screen and not on the string.
     const rungBad = [];
-    for (const [pose, want] of [[poseLongSay, LONG_SAY], [poseUnnameable, UNNAMEABLE_SAY]]) {
+    const widest = w >= 375 ? WIDEST_SAY : CUT_SAY;
+    for (const [pose, want] of [[poseLongSay, LONG_SAY], [poseUnnameable, UNNAMEABLE_SAY],
+                                [poseWidestSay, widest]]) {
       await page.reload();
       await page.addStyleTag({ content: STILL });
       await page.click('#play');
+      await page.evaluate(d => applyDeck(d), deck);
       await page.mouse.move(0, 0);
       await page.evaluate(pose);
       await page.waitForTimeout(40);
@@ -1063,7 +1104,7 @@ async function checkChoice(browser) {
     await page.close();
   }
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${list.length} viewports, four positions each`);
+    + `${list.length} viewports, seven positions each`);
   return failed;
 }
 
@@ -1130,6 +1171,13 @@ async function checkStates(browser) {
       if (going !== 1) out.push(`${going} card(s) marked as leaving on the opponent's capture, want 1`);
       if (!document.querySelector('.tavola .card--won-up'))
         out.push("the opponent's capture is sweeping the wrong way");
+      // And your hand is plainly not ready while the table is busy. It is your
+      // turn the moment their capture resolves, so the cards look live — and
+      // `tapped` refuses while the sweep runs. A card that takes a tap and does
+      // nothing is worse than one that looks refused.
+      const live = [...document.querySelectorAll('.hand--you .card')]
+        .filter((c, i) => state.hands[0][i] && !c.disabled).length;
+      if (live) out.push(`${live} card(s) in your hand are still tappable during the sweep`);
       return out;
     });
 
@@ -1154,6 +1202,7 @@ async function checkStates(browser) {
       if (shown) out.push(`the middle still draws ${shown} card(s) after the sweep`);
       const marks = document.querySelectorAll('#scopeYou .scopa-mark').length;
       if (marks !== state.scope[0]) out.push(`${marks} scopa mark(s) drawn, the engine counted ${state.scope[0]}`);
+
       // The middle keeps its row while it is empty, or the whole table
       // re-centres on the beat when the player is looking hardest.
       const tav = document.querySelector('.tavola').getBoundingClientRect();

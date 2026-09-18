@@ -117,8 +117,11 @@
      below the crossing the second is the smaller, above it the first is.
 
      Without this, --plates: 0px in landscape was a constant that said "a plate
-     is never taller than a card", and it was already false — at 1100x330 the
-     plate is 81px against a 73px card, and your seat ran below the fold. */
+     is never taller than a card", and it was already false: at 1100x330 the
+     plate is 81px against a 73px card. What that cost was small and entirely
+     hidden — the seat stayed 7px above the fold and --slack paid for the rest,
+     and the only thing that showed was 2px of scrolling at 1100x320, where
+     there was no slack left to pay with. */
   --seat-overhang: calc(2 * var(--plate-h));
   --cw-height: min(
       calc((100dvh - var(--chrome)) / var(--rows) / var(--ratio)),
@@ -379,11 +382,14 @@ button.card:disabled{ cursor: default; }
 /* ---- the middle: the table itself ----------------------------------------- */
 
 /* The layout risk of the project, per §6. Zero to thirteen face-up cards, in
-   one row in landscape and two in portrait. */
+   one row in landscape and two in portrait.
+
+   One child, so no gap of its own: --extra-gap is a budget term and nothing
+   else, standing for the row gap .tavola uses between the two halves of the
+   table in portrait. It reads --step, which is what .tavola reads. */
 .middle{
   display: grid;
   justify-items: center;
-  gap: var(--extra-gap);
 }
 
 .tavola{
@@ -610,6 +616,14 @@ button.card:disabled{ cursor: default; }
      shortening the lift keeps the affordance and costs nothing in the budget. */
   position: relative;
   z-index: 4;
+  /* Bounded by its own track. Without this the plaque below, sized to its
+     content, made THIS box its content's width: in portrait the seat centres
+     its items, so a max-content child grows the row it sits in and the
+     `max-width: 100%` beneath resolves against the box it just grew. Measured
+     at 320x568, a 39-character line ran from -8px to 328px — off both edges of
+     the screen, with no sideways scroll to show for it, because the table
+     clips. The same shape as every other defect in this iteration. */
+  width: 100%;
   height: var(--say);
   display: flex;
   align-items: center;
@@ -630,10 +644,9 @@ button.card:disabled{ cursor: default; }
   font-family: var(--font-label);
   text-transform: uppercase;
   letter-spacing: .1em;
-  color: var(--ivory-dim);
+  color: var(--brass);
   font-size: var(--t-tiny);
 }
-.sel-name--act{ color: var(--brass); }
 
 /* ---- the toast ------------------------------------------------------------ */
 
@@ -714,7 +727,7 @@ button.card:disabled{ cursor: default; }
      columns fit a plate, which is more than a phone is wide. */
   /* Only the plate leaves the row; the cards stay together, or the seat costs
      three card rows instead of one. */
-  .seat{ grid-template-columns: minmax(0,1fr); justify-items: center; gap: .25rem; }
+  .seat{ grid-template-columns: minmax(0,1fr); justify-items: center; gap: var(--seat-gap); }
   .seat__cards, .seat--opp .plate, .seat--you .plate{
     grid-column: 1; justify-self: center;
   }
@@ -723,7 +736,7 @@ button.card:disabled{ cursor: default; }
      paying for it. The height is --plate-h in both orientations, declared with
      the rest of the plate. */
   .plate{ width: auto; }
-  .seat--you .plate{ margin-top: .25rem; }
+  .seat--you .plate{ margin-top: var(--seat-gap); }
 
   :root{
     --rows: 4;
@@ -732,8 +745,21 @@ button.card:disabled{ cursor: default; }
        them, so the second height term has nothing to say. */
     --seat-overhang: 0px;
     --extra-gap: var(--step);
-    --plates: calc(2 * var(--plate-h) + .5rem);
-    --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);
+    /* Two plates and the four gaps the stacked seats cost: one between the
+       opponent's cards and their plate, two in your seat because the say line
+       is a row of its own, and the margin above your plate. It was .5rem when
+       the real figure is four of them — 8px short at every portrait viewport,
+       and --slack, whose whole job is never to land on zero, was landing on
+       exactly zero. Named, so the layout and the budget read the same token. */
+    --seat-gap: .25rem;
+    --plates: calc(2 * var(--plate-h) + 4 * var(--seat-gap));
+    /* The same floor as landscape, not a larger one. The two were 36 and 32
+       with no measurement behind the difference, and the larger one is what
+       takes over at 320x568 — the narrowest phone still in anyone's hand —
+       where the budget wants 32.1px and the floor insists on 36, so the seat
+       runs 15px below the fold and the table hands back a scrollbar. A rail is
+       for catching a page that has run out of room, not for deciding it has. */
+    --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);
     /* In portrait the seat row stacks, so the widest row is the hand's three
        cards rather than five — but the table row is what binds here, and it
        is allowed to overlap. Keeping five is the conservative choice: it never
@@ -886,6 +912,12 @@ function applyDeck(name){
   root.style.setProperty("--sheet", `url("decks/${SHEET[name]}.png")`);
   root.style.setProperty("--ratio", DECK_RATIO[name]);
 }
+
+// Past this a string stops being a label and becomes something somebody reads:
+// the check holds anything longer to the floor it holds body copy to, and the
+// say line is set at --t-tiny, which is 12.5px on a phone. It is a readability
+// bound and nothing else — where the line WRAPS is a width, and measured.
+const LABEL_CHARS = 39;
 
 const NOMI = ["asso", "due", "tre", "quattro", "cinque", "sei", "sette",
               "fante", "cavallo", "re"];
@@ -1121,7 +1153,6 @@ function renderSay(){
   if (state.over && state.dealt){
     const r = scoreDeal(state);
     el.selName.hidden = false;
-    el.selName.classList.add("sel-name--act");
     el.selName.textContent = `Fine: ${r.punti[BASSO]} a ${r.punti[ALTO]}`;
     return;
   }
@@ -1134,11 +1165,9 @@ function renderSay(){
   if (!card){ el.selName.hidden = true; return; }
   const presa = propostaCorrente();
   el.selName.hidden = false;
-  el.selName.classList.add("sel-name--act");
-  if (!presa.length){
-    el.selName.textContent = `Cala ${art(breve(card))}`;
-    return;
-  }
+  // A card is raised only when the rule leaves a choice of CAPTURE, so there is
+  // no branch here for a card that takes nothing: it is laid by the tap that
+  // chose it, and the line never sees it.
   const presi = presa.map(i => art(nomePresa(state.tavola[i])));
   const lista = presi.length === 1 ? presi[0]
               : `${presi.slice(0, -1).join(", ")} e ${presi[presi.length - 1]}`;
@@ -1147,26 +1176,32 @@ function renderSay(){
   // is not a longer line — it is a line cut in half by .say, which is the
   // defect Tressette shipped with its declarations.
   //
-  // LABEL_CHARS is 39, and 39 is not where the line wraps: measured at 360x800
-  // it holds 43 characters on one line and wraps at 44. It is where the line
-  // stops being a label. The check holds any string past 40 characters to the
-  // 14.5px floor it holds body copy to, because past 40 characters a string is
-  // something somebody reads rather than glances at — and --t-tiny is 12.5px
-  // on a phone. Naming the capture in full and setting it at label size are
-  // two things this line cannot both do.
-  //
   // What is given up first is "con il sette", which names the card the player
   // is looking at — it is raised, and it is the one they just tapped. What is
   // given up next is the list, and then the brass marks on the table carry it
   // alone, which is what §3.7 says they are for. The five-card sum the check
-  // renders comes to 97 characters named in full.
-  const full = `Prendi ${lista} con ${art(breve(card))}`;
-  const LABEL_CHARS = 39;
-  el.selName.textContent =
-      full.length <= LABEL_CHARS ? full
-    : `Prendi ${lista}`.length <= LABEL_CHARS ? `Prendi ${lista}`
-    : presa.length === 1 ? "Prendi la carta segnata"
-    : `Prendi le ${presa.length} carte segnate`;
+  // renders comes to 94 characters named in full.
+  const rungs = [
+    `Prendi ${lista} con ${art(breve(card))}`,
+    `Prendi ${lista}`,
+    presa.length === 1 ? "Prendi la carta segnata"
+                       : `Prendi le ${presa.length} carte segnate`,
+  ];
+  // Two conditions, and a rung has to meet both. The count is about
+  // READABILITY — past 40 characters a string is something somebody reads
+  // rather than glances at, and --t-tiny is 12.5px on a phone. Whether a rung
+  // FITS is a width, and a count is a bad proxy for one: measured, a line holds
+  // 34 characters at 320px, 39 at 360 and 43 at 430, and "Prendi l'asso e il
+  // fante con il cavallo" is 39 characters and 335px, so it fits neither of the
+  // first two. So the second condition is read back off the page rather than
+  // counted — LABEL_CHARS is not asked a question it cannot answer.
+  const line = getComputedStyle(el.selName);
+  const oneLine = parseFloat(line.lineHeight) + 1;
+  for (const rung of rungs){
+    el.selName.textContent = rung;
+    if (rung.length <= LABEL_CHARS
+        && el.selName.getBoundingClientRect().height <= oneLine) break;
+  }
 }
 
 /* --- playing ---------------------------------------------------------------- */

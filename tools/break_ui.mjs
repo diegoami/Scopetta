@@ -31,17 +31,34 @@
 //   - the audit's `clips its text` has no subject on this page: it needs an
 //     element whose own overflow-x clips its own text, and the table has none.
 //     It is carried for the sheets iteration 4 brings;
-//   - `the next round was not dealt` and `the sweep left N on the engine's
-//     table` are the engine's business, and tools/engine.test.mjs owns them;
-//   - the deal pass's tail — `the deal did not finish`, `N plays, want 36`,
-//     `N cards in the piles, want 40`, `no capture was chosen by tapping /
-//     by accepting` — are the driver's own rails rather than assertions about
-//     the page: they say the pass did what it claims to do, and breaking the
-//     page is not how they fail.
+//   - `the next round was not dealt` is the engine's business, and
+//     tools/engine.test.mjs owns it;
+//   - the rails, which say the PASS did what it claims rather than anything
+//     about the page, and so do not fail by breaking it: `the deal did not
+//     finish`, `N plays, want 36`, `N cards in the piles, want 40`, `no capture
+//     was chosen by tapping / by accepting`, `the driver never reached the end
+//     of a round`, `the deal could not be driven to the end`, `the posed
+//     position offers only one capture`, `nothing on the crowded table is
+//     marked`, `the say line has no box while a card is raised`.
 //
-// Some assertions share a break, which is not a hole: `a sweep was played and
-// nothing announced it` goes red with `the toast never shows`, and the table
-// pass and the deal pass phrase the same rule twice.
+// And some assertions share a break, which is not a hole either. An EXPECT
+// value names one RULE; a rule phrased in two passes is still one rule:
+//
+//   - `a sweep was played and nothing announced it` goes red with `the toast
+//     never shows`;
+//   - the audit's `N table card(s) overlap a hand card` with `the raised card
+//     is lifted by 40% again`, whose EXPECT names the choice pass's phrasing,
+//     `the raised card stands on N table card(s)` — the two are one rule and
+//     the second is the one that fires at the shapes the quick grid renders;
+//   - `after tapping a table card the marks are …` with `the proposal marks
+//     every card on the table`;
+//   - `table card N is Npx wide to a thumb` — the hit-tested floor, in both the
+//     table pass and the choice pass — with `the table row loses its step
+//     floor`, whose EXPECT names the computed one;
+//   - `N scopa mark(s) drawn` in the sweep pass with `the scopa marks stop
+//     counting`, whose EXPECT names the deal pass's phrasing;
+//   - `the position meant to say "X" played the card instead of raising it`
+//     with `a capture with a choice plays instead of raising`.
 
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -68,13 +85,18 @@ const EXPECT = {
   // --- the screens ----------------------------------------------------------
   "[hidden] stops beating the display rule": "screens visible at once",
   "the icon bar is made wider than the screen": "scrolls sideways",
-  "the plates are left out of the card budget": "runs off the screen",
+  "the plates are left out of the card budget": ".seat__cards runs off",
   "the plates are squeezed instead of budgeted": "lands on the cards",
   "the plate is laid out as a flex row again": "past its own width",
   "the plate pays for one row again": "lands on the cards",
   "the plate's rows are under-measured": "past its own height",
-  "a plate taller than a card costs nothing": "needs",
-  "the middle's own row gap is a hand-set constant again": "needs",
+  "a plate taller than a card costs nothing": "of scrolling",
+  "the middle's own row gap is a hand-set constant again": "of scrolling",
+  "the stacked seat's own gaps are not in the budget": "of scrolling",
+  "the say line is sized by its content": "#selName runs off",
+  "the say line is cut by a character count alone": "should name the capture",
+  "the portrait card has a floor of its own": "below the fold",
+  "the hand stays live while the table sweeps": "still tappable during the sweep",
   "the small type drops below the floor": "want 12.5",
   "the say line is given a strip too short for it": "cut off by",
   "the say line is drawn under the raised card": "drawn over while a card is raised",
@@ -103,12 +125,12 @@ const EXPECT = {
   "a pointer takes the mark off a marked card": "not drawn as marked",
 
   // --- the raised card ------------------------------------------------------
-  "the raised card is lifted by 40% again": "overlap a hand card",
+  "the raised card is lifted by 40% again": "stands on",
 
   // --- the toast ------------------------------------------------------------
   "the toast joins the flow": "in the flow",
   "the toast is given a strip too short for it": "clips its own text",
-  "the toast is pushed off the right edge": "toast runs off the screen",
+  "the toast is pushed off the right edge": "#toast runs off",
   "the toast never shows": "did not show",
 
   // --- the capture choice ---------------------------------------------------
@@ -194,6 +216,12 @@ const BREAKS = [
   ["the plate's rows are under-measured",
    "  --plate-row: calc(var(--t-tiny) * 1.4);    /* the role, and the mazziere tag */",
    "  --plate-row: calc(var(--t-tiny) * 0.6);    /* the role, and the mazziere tag */"],
+  ["the stacked seat's own gaps are not in the budget",
+   "    --plates: calc(2 * var(--plate-h) + 4 * var(--seat-gap));",
+   "    --plates: calc(2 * var(--plate-h) + 2 * var(--seat-gap));"],
+  ["the portrait card has a floor of its own",
+   "    --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);",
+   "    --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);"],
   ["a plate taller than a card costs nothing",
    "  --seat-overhang: calc(2 * var(--plate-h));",
    "  --seat-overhang: 0px;"],
@@ -288,16 +316,24 @@ const BREAKS = [
    "  const presa = propostaCorrente();\n  el.selName.hidden = false;",
    "  const presa = propostaCorrente();\n  el.selName.hidden = true;"],
   ["the say line says the whole capture however long it is",
-   "  el.selName.textContent =\n      full.length <= LABEL_CHARS ? full\n    : `Prendi ${lista}`.length <= LABEL_CHARS ? `Prendi ${lista}`\n    : presa.length === 1 ? \"Prendi la carta segnata\"\n    : `Prendi le ${presa.length} carte segnate`;",
-   "  el.selName.textContent = full;"],
+   "  for (const rung of rungs){\n    el.selName.textContent = rung;\n    if (rung.length <= LABEL_CHARS\n        && el.selName.getBoundingClientRect().height <= oneLine) break;\n  }",
+   "  el.selName.textContent = rungs[0];"],
+  ["the say line is sized by its content",
+   "  width: 100%;\n  height: var(--say);\n  display: flex;",
+   "  height: var(--say);\n  display: flex;"],
+  ["the say line is cut by a character count alone",
+   "    if (rung.length <= LABEL_CHARS\n        && el.selName.getBoundingClientRect().height <= oneLine) break;",
+   "    if (rung.length <= LABEL_CHARS) break;"],
+  ["the hand stays live while the table sweeps",
+   "    node.disabled = !yourTurn || !card || !!sweeping;",
+   "    node.disabled = !yourTurn || !card;"],
   ["the say line is drawn under the raised card",
-   "  position: relative;\n  z-index: 4;\n  height: var(--say);",
-   "  height: var(--say);"],
+   "  position: relative;\n  z-index: 4;\n", "  position: relative;\n"],
   ["the say line gives up before it has to",
-   "  const LABEL_CHARS = 39;", "  const LABEL_CHARS = 0;"],
+   "const LABEL_CHARS = 39;", "const LABEL_CHARS = 0;"],
   ["the say line names the card instead of the capture",
-   "  const full = `Prendi ${lista} con ${art(breve(card))}`;",
-   "  const full = `Il ${breve(card)}`;"],
+   "    `Prendi ${lista} con ${art(breve(card))}`,",
+   "    `Il ${breve(card)}`,"],
   ["the say line drops the suit that tells two sevens apart",
    "  const presi = presa.map(i => art(nomePresa(state.tavola[i])));",
    "  const presi = presa.map(i => art(breve(state.tavola[i])));"],
