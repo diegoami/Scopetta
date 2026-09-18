@@ -741,7 +741,7 @@ and four gaps:
 
 ```
 height:  (100dvh − --chrome) / --rows / --ratio
-width:   (100vw − 2 × --pad-inline − 4 × --gap) / 5
+width:   (100vw − 2 × --pad-inline − 4 × --gap − --seat-extra) / 5
 --cw:    clamp(floor, min(height, width), cap)
 ```
 
@@ -751,6 +751,38 @@ viewport the height term binds, as it always has. Estimates, to be measured.
 
 Measured at iteration 3: **60px** at 360x800 with the Trevisane sheet, and the
 height term binding in landscape as predicted. The estimate was right.
+
+**`--seat-extra` is iteration 3's correction, and it is the term the first
+draft of this section got wrong.** In landscape the widest row is not five card
+widths: it is a name plate, five card widths and a second name plate. Leaving
+the plates out did not make the cards too big in any way that showed — it made
+the row need more width than the screen had, `.table` grew to its content's
+min-content, and `overflow: hidden auto` clipped the deck and the player's own
+name plate off the right edge. The page did not scroll sideways, because a
+table that clips is a table that cannot scroll, so the assertion that watches
+for sideways scroll had nothing to say. Measured, before the fix: **43px past
+the edge at 500x425, 45px at 640x480, 88px at 800x680**, in the Romagnole deck
+whose cards are widest.
+
+So the plate has a width of its own and the budget subtracts the same token:
+
+```
+--plate-w:    --t-pick × 7.5          (the plate's own width, landscape)
+--seat-extra: 2 × --plate-w + 2 × --step      (0 in portrait, where it stacks)
+```
+
+The plate and the sum that pays for it cannot drift apart, which is the rule
+this section has already applied twice — to `--chrome` and to `--plates`. The
+7.5 is not taste either: `check_ui.mjs` asserts every plate's `scrollWidth`
+against its `clientWidth` at every viewport, so a plate whose text does not fit
+the width the budget bought is a failure and not an opinion. The plate is laid
+out as a grid for the same reason — as a flex row its items' min-content adds
+to 200px against a 132px plate and the text leaves the box sideways, over the
+cards, while the box itself measures exactly right.
+
+The cost is paid where it should be: **85px at 800x680 and 124px at 1024x768
+in Romagnole, where the row was over-wide**, and **nothing at all at 1180x820
+and above**, where the height term binds and always did.
 
 **The table is the risk.** It holds four cards at the deal and anything from
 zero to thirteen after that: thirteen is the bound the rules allow — the four
@@ -791,16 +823,61 @@ Thirteen cards do not sit side by side on a phone. Two rules, in this order:
    step and six below at 50px**, against a floor of `min(24, .45 x 60) = 24px`.
    The estimate was right to within three pixels.
 
+   **The step is not the strip, and only the strip plays the card.** Which
+   card a tap lands on is decided by paint order, and two rules in the first
+   draft of the sheet changed it without moving a box: a marked card and a
+   hovered card were each raised above their neighbours, which takes
+   `cw − step` off the strip of the card after them. Measured: a neighbour's
+   reachable width of **7px at 1024x768** beside a marked card, and **40px of
+   a 50px strip** beside a hovered one at 360x800 with twelve cards down.
+   Nothing errors, no box moves, and the diff is two lines of `z-index`. The
+   check therefore measures the strip by hit-testing the row a pixel at a time
+   — `elementFromPoint` across the row, counting who answers — rather than by
+   computing it from the steps, and asserts both that every strip clears the
+   floor and that it is the whole step the layout promised.
+
+   Tressette's "the last card of the fan is a whole card" does not survive the
+   move: the cards here are `width: --cw; flex: none` and the row's negative
+   margins keep its content inside its box, so nothing can shrink them —
+   `flex: 1 1 auto` on `.card` changes not one measurement. An assertion that
+   cannot fail reads like cover and is not any, so it is gone; what can fail,
+   and does, is the spill past the row's own box.
+
 **Choosing a capture.** With one tap per play (decision 6), the choice state
 is entered only when the rule leaves one. The card lifts as Tressette's does,
 the cards of the first proposed capture take a brass outline, the line above
 your hand says what the next tap does — "Prendi il 4 e il 3 con il 7" — and a
 tap on any table card switches to a capture that contains it, `Space` cycles,
-a second tap on the raised card or `Enter` plays it. The proposal is the first
+a second tap on the raised card or `Enter` plays it. The card named is named
+with its suit **when, and only when, the table holds another of that value** —
+which is exactly the position the line exists for, two sevens down and a seven
+in hand, where "Prendi il sette con il sette" reads the same for both
+proposals and tells the player nothing. Only when, because a three-card
+capture named in full does not fit the one line of `--say` the budget pays
+for. The lift is capped at `--say + --step + --tavola-pad`, the space that
+actually exists above the hand: Tressette's `-40%` is more than that gap, and
+the raised card then stands on two to four of the cards it is proposing to
+take. The proposal is the first
 set in `prese()`'s order, which is the table's own order: neutral, not the
 opponent's opinion of the best one. That line costs `--say` whether or not it
 has something to say, in flow, in `--chrome`, because Tressette found what a
 row that costs nothing while empty does to the cards below it.
+
+**The sweep.** Captured cards leave the table toward whoever took them,
+Tressette's animation forked with the rest of the sheet, and it is the only
+thing on the page that says *which* cards a capture took — without it the
+table simply has fewer cards on it the next time the player looks, and they
+have to work backwards from what is missing. The table keeps drawing the
+pre-capture row while the sweep runs, because `gioca` has already moved the
+cards and a render straight after it animates nothing. Two departures from
+Tressette: the leftovers of the last play sweep toward whoever captured last
+rather than toward whoever played, which is read from `ultimaPresa` rather
+than assumed; and the class is written from the held table on every render
+instead of being added once and taken off later, so there is no `animation:
+both` end state for a cut-short sweep to leave behind — Tressette's
+`flushSweep` existed because two cards stayed invisible for twenty tricks.
+The failure mode that replaces it is the table never catching up, and the
+check reads that directly.
 
 **The piles.** Each is a face-down stack with a count badge, the scope face
 up across its top edge as tradition shows them. The count is the engine's
@@ -811,11 +888,19 @@ badge that lags the state is the kind of defect nothing throws for.
 deliberately broken page before the good one, per the `ui-check` skill:
 
 1. the table at 0, 4, 8 and 13 cards, in every deck at every viewport, with
-   the spacing inflated: no card leaves the table, no card overlaps either
-   hand, the fan floors hold, and your seat is above the fold under all four;
+   the spacing inflated: no card leaves the table, no card overlaps a card in
+   either hand, the fan floors hold, every card's strip is the whole step, the
+   middle draws one row in landscape and two in portrait, and your seat is
+   above the fold under all four;
 2. a card raised with a choice: exactly the cards of the proposed capture are
-   marked, the line says what the tap will do, and switching the proposal by
-   tapping a table card marks exactly the new set;
+   marked, the line says what the tap will do and reads differently for the two
+   proposals, and switching the proposal by tapping a table card marks exactly
+   the new set. Twice: on a four-card table and on a crowded one, with a
+   pointer resting on a card, because that is where marking one can take the
+   tap that belongs to the card beside it. **A crowded choice is twelve cards,
+   not thirteen** — a thirteen-card table holds four of one value and one of
+   each of the other nine, so every value is on it, every hand card has a
+   single capture, and a table of thirteen can never offer a choice at all;
 3. the toast floats: it takes no space in the flow and is never clipped;
 4. the badges agree with the engine after every play of the deal pass, and
    the table's DOM count agrees with `tavola.length`;
@@ -824,7 +909,17 @@ deliberately broken page before the good one, per the `ui-check` skill:
    Tressette's issue #7 is the rule that a pass that drives the page is not
    a pass that reads it;
 6. the last play: the table is empty in the DOM after the leftovers go, and
-   the result's five lines are what `scoreDeal` returned.
+   the result's five lines are what `scoreDeal` returned;
+7. the two states that only playing can reach: a sweep, played rather than
+   posed — the captured card still on the table and marked as leaving, going
+   the right way; then the toast over the empty table it left behind, the
+   scopa mark under the pile, and nothing left carrying the sweep class — and
+   the beat between rounds, reached by finishing a round.
+   Neither can be posed. A toast over a table that still has cards on it is
+   not a scopa, and two empty hands are a state the engine refuses to sit in:
+   `gioca` deals the next round before it returns and says so in `nuovoGiro`,
+   so a page that does not listen simply never draws the beat, and a check
+   that poses it by emptying `state.hands` passes either way.
 
 The remaining assertions — one screen visible, text floors, tap targets,
 hand above the fold, rows drift, inflated spacing, the head tags, the raised
@@ -997,10 +1092,13 @@ its fan, the capture-choice state, the badges, the mazziere tag, the toast.
 Then the check: the copy on hand is Tressette inside — ten-card fixtures,
 declarations, `tressette.history` — so rewrite the fixtures and the key,
 keep the document pass and every assertion §3.7 says carries over, and add
-the six rows and assertions of §3.7 against a broken page first: a table row
+the seven rows and assertions of §3.7 against a broken page first: a table row
 with the step floor removed, a badge that does not update, a toast in flow.
-Run it at all nineteen viewports in all five decks, and add the `ui` job to
-`check.yml`.
+Run it at every viewport in all five decks, and add the `ui` job to
+`check.yml`. The grid was nineteen when this was written and is twenty-two
+now: iteration 3's review found that not one of the nineteen was a small
+landscape *window*, and the widest row on the table is exactly what a narrow
+landscape window runs out of room for.
 
 **The rule from Tressette's iterations 3 and 4, which is the one this
 iteration is most likely to break:** an assertion only sees the states the
@@ -1257,6 +1355,22 @@ in the handoff.
 figure in this document that is not followed by how it was obtained is a
 claim, not a measurement; the estimates in §3.7 say they are estimates, and
 the one measurement in §3.4 says what it counted.
+
+**A grid of viewports is an assertion about which screens exist.** Iteration 3
+shipped a table that clipped the deck and a name plate off the right edge, with
+every assertion that would have caught it already written and already green,
+because the nineteen viewports held no landscape window narrower than 980px.
+The same sentence as the one above it in `CLAUDE.md`, one level up: an
+assertion only sees the states the check renders, and a viewport is a state.
+When a rule is about the widest thing on the screen, the grid needs the
+narrowest screen the rule has to hold on.
+
+**And geometry is not the same question as reachability.** Three of iteration
+3's defects moved no box at all: a marked card, a hovered card and a raised
+card each changed only what was painted over what, and each took a strip of
+another card away from the thumb. Every step was even, every card was whole,
+every assertion passed. Measure what a tap hits, not what the boxes say —
+`elementFromPoint`, a pixel at a time.
 
 **The ancestors move.** Tressette is shipped and still takes defects; it
 moved twice between this plan being written and being confirmed, the first

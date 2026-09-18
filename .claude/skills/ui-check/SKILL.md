@@ -68,18 +68,21 @@ consulted under mobile emulation — the page measures identically with or witho
 it.
 
 **Screens pass** — every screen, and **every state that exists only in the
-middle of a deal**, at five real device shapes: the start sheet; the table just
+middle of a deal**, at six real device shapes: the start sheet; the table just
 dealt; the table with an empty middle; the table with thirteen cards; a capture
 waiting to be chosen; a scopa announced; both hands empty for the beat between
 rounds; a pile with three scope showing; and the deal over. Asserts exactly one
-screen is visible, no sideways scroll, no text below its size floor, no text
-clipped by a container that cannot scroll, no tap target under 32px, and no
-script or console errors.
+screen is visible, no sideways scroll, nothing past the screen edge, no table
+card on a hand card, no name plate on the cards or wider than its own box, no
+text below its size floor, no text clipped by a container that cannot scroll, no
+tap target under 32px, and no script or console errors.
 
 Rows arrive with their screens. A row pointing at a state that does not exist is
-a check that silently passes.
+a check that silently passes. **Two of them are played rather than posed** — the
+sweep and the beat between rounds — because neither is a state the engine will
+sit in; see the pass below.
 
-**Table pass** — the card table at all nineteen viewports in all five decks,
+**Table pass** — the card table at all twenty-two viewports in all five decks,
 **with the middle row holding 0, 4, 8 and 13 cards**. Asserts that no table card
 lands on either hand, that your whole seat is above the fold, that the middle
 stays inside the table, that the DOM and the engine agree on how many cards are
@@ -104,12 +107,40 @@ the last card is whole, and the row stays inside its box. A step too narrow to
 touch does not error — it just makes a capture unreachable, and a misplay costs
 the deal.
 
+**And the strip, which is not the step.** Every one of those assertions can pass
+while a card is untappable, because which card a tap lands on is decided by
+paint order and paint order moves no box. So the check walks each row a pixel at
+a time with `elementFromPoint` and counts who answers: every card must be
+reachable across its whole step, and never under the floor. Three defects in
+iteration 3 were only this — a marked card, a hovered card and the raised card
+in your hand, each painted over its neighbour, leaving 7px of a 98px card beside
+a marked one.
+
 **The capture choice, and the toast** — the interaction neither ancestor had.
 Asserts that a card with more than one capture raises instead of playing, that
 **exactly** the cards of the proposal are marked (not more, not fewer), that the
 line above your hand says what the next tap will *do* rather than naming the
-card, and that tapping a table card switches the proposal to one containing it.
-Then that the toast floats: out of the flow, never clipped, never off-screen.
+card, that it reads *differently* for the two proposals — two sevens down and a
+seven in hand is the whole point of the line, and without the suit both
+proposals read "Prendi il sette con il sette" — and that tapping a table card
+switches the proposal to one containing it. Then that the toast floats: out of
+the flow, never clipped, never off-screen.
+
+It then poses the same choice on a **crowded** table with a pointer resting on a
+card, and measures every strip there. Crowded is twelve cards, not thirteen: a
+thirteen-card table is four of one value plus one of each of the other nine, so
+every value is on it, every hand card has exactly one capture, and thirteen can
+never be a choice at all.
+
+**The sweep, and the beat between rounds** — the two states that only playing
+can reach, and the reason for it: a toast over a table that still has cards on
+it is not a scopa, and two empty hands are a position `gioca` deals its way out
+of before it returns. The sweep is measured twice, while it runs and after it:
+the captured card still drawn and marked as leaving, going toward the player
+who took it; then the empty table, the toast, the scopa mark and nothing left
+carrying the class. It reports the round in `nuovoGiro`; the page draws the
+beat from that flag. Posing either state by assigning to `state` renders a page
+the game cannot reach, and passes whether or not the page can reach it.
 
 **Deal pass** — one whole deal against Franco at one viewport, played by
 tapping. The passes above measure a table that has just been dealt, so this is
@@ -159,6 +190,12 @@ was committed:
 | head tags | no viewport meta, so a 393px phone laid the page out at 980px and scaled it down; Chrome's text autosizing then inflated body copy to 55px |
 | past the screen edge | the table sets `overflow: hidden auto`, so a too-wide row is clipped rather than scrollable and "no sideways scroll" never fires — the opponent's third card was cut off a phone screen through nineteen viewports |
 | the table row has collapsed | a step too narrow to single out makes a capture unreachable, and a misplay costs the deal |
+| a card loses its strip | a marked card and a hovered card were each painted above the card to their right, which took `cw - step` off it — no box moved, and 7px of a 98px card was left to the thumb |
+| a table card overlaps a hand card | the raised card was lifted 40% of a card into a gap that was not 40% of a card, and stood on two to four of the cards it was proposing to take |
+| the plate spills past its own width, or lands on the cards | the seat row is plate, five cards, plate, and the budget paid for the cards only: the table grew to fit and clipped the deck off the right edge, with no sideways scroll to show for it |
+| the middle draws N rows | the wrap rule was a line of JavaScript no assertion read |
+| the beat / the sweep | states the engine will not sit in, so a posed version passes whether or not the page can reach the real one |
+| N screens visible at once | counted by computed `display`, not by the `hidden` attribute: the attribute was always right and the rule acting on it was what lost, so an assertion reading the attribute survives the defect it is named for |
 | the table row spills past its box | the row's grid column sized to its content, so a row that should overlap grew the whole table instead — and the per-row assertion could never fire, which would have made it decoration |
 | the say line takes no space | in Tressette the line was `hidden` until it had something to say, so raising a card added a row and moved every card 31px down, past the fold in landscape |
 | cut off inside an ancestor | a declaration in a strip sized for one line lost half a line off the top and half off the bottom at every phone width; the horizontal rule could not see it, because the element that clips is not the element that holds the text |
@@ -173,12 +210,24 @@ there. A threshold that no longer catches its own bug is worse than none.
 
 ## Extending it
 
-Add a screen to `SCREENS` with a function that puts the page in that state. Add
-a device to `VIEWPORTS`, and to `SCREEN_VIEWPORTS` if that shape can break a
-sheet rather than only the table.
+Add a screen to `SCREENS` with a function that puts the page in that state —
+one that *plays* the page into it wherever playing can reach it. Add a device to
+`VIEWPORTS`, and to `SCREEN_VIEWPORTS` if that shape can break a sheet rather
+than only the table. **A viewport is a state too**: the grid held nineteen
+shapes and not one small landscape window, and the assertions that would have
+caught a clipped deck were all written and all green.
 
 When adding an assertion, add a break to `tools/break_ui.mjs` with it, and an
-`EXPECT` entry naming the assertion. An assertion written against
+`EXPECT` entry naming the assertion. The entry is a substring of the line the
+check prints, so it has to name **one** assertion: `"steps"` stood for the step
+floor once and matched "the steps are uneven" just as well. A break whose defect
+takes two edits — two rules holding the same thing up, where removing either
+alone changes nothing — passes arrays for `find` and `replace`.
+
+And write the assertion against what the browser **did**, not what the page
+meant. The `[hidden]` break survived an assertion that counted `.view` elements
+by their `hidden` attribute, because the attribute was set correctly every time;
+what failed was the rule that acts on it. An assertion written against
 already-correct code tends to encode what the code happens to do rather than
 what it should do — Discola's gap metric was written that way once and passed
 the broken layout while failing every good one.

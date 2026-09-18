@@ -73,10 +73,30 @@
   /* §3.7: two terms, and the smaller wins. The height term is Discola's. The
      width term is NOT Tressette's fan — a Scopa hand is three whole cards —
      it is the widest row on the table, which is the opponent's seat: their
-     pile, three cards and the deck. Five card widths and four gaps. */
+     pile, three cards and the deck. Five card widths and four gaps…
+
+     …and, in landscape, the two name plates that sit at the ends of that row.
+     Leaving them out is what shipped the first defect of iteration 3: the row
+     needed more width than the screen had, the plates' min-content pushed
+     `.table` wider than the viewport, and `overflow: hidden auto` clipped the
+     deck and your own plate off the right edge at 500x425, 640x480 and 800x680
+     — with no sideways scroll to betray it, because the table clips rather than
+     scrolls. A term that is not in the budget is paid for by something, and
+     here it was paid for off-screen.
+
+     So the plate has a width of its own, --plate-w, and the budget subtracts
+     the same token: the plate and the sum that pays for it cannot drift apart.
+     It is derived from --plate-h's own input, --t-pick, for the reason that
+     block gives — a constant here is a defect waiting for a screen that
+     disagrees. Whether the plate's text fits inside it is not a matter of
+     opinion either: check_ui.mjs asserts scrollWidth against clientWidth on
+     every plate at every viewport, which is what makes 7.5 a measurement. */
   --seat-span: 5;
+  --plate-w: calc(var(--t-pick) * 7.5);
+  --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));
   --cw-height: calc((100dvh - var(--chrome)) / var(--rows) / var(--ratio));
-  --cw-width: calc((100vw - 2 * var(--pad-inline) - 4 * var(--gap)) / var(--seat-span));
+  --cw-width: calc((100vw - 2 * var(--pad-inline) - 4 * var(--gap)
+                    - var(--seat-extra)) / var(--seat-span));
   --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 156px);
   --ratio: 2.0833;
   --ch: calc(var(--cw) * var(--ratio));
@@ -167,6 +187,15 @@ button, select, input{ font: inherit; color: inherit; }
 .table{
   position: relative;
   display: grid;
+  /* One column, bounded — not the implicit `auto`, whose minimum is the widest
+     row's min-content, so an over-budget seat row drags every other row out
+     with it. Measured, with --seat-extra forced to 0 at 500x425 in Romagnole:
+     bounded, the seat's own cards and a plate run off the screen; unbounded,
+     the middle row and the whole table go with them. It does not stop an
+     over-budget row running off the screen — nothing in the sheet can, and the
+     check's assertion sees it either way — it stops the rest of the table
+     being dragged along. */
+  grid-template-columns: minmax(0, 1fr);
   /* Rows hug their content and the group is centred, so leftover height sits
      above and below rather than being shared out between the rows — a 1fr
      middle row gave every spare pixel to the gaps and the table drifted
@@ -229,9 +258,19 @@ button, select, input{ font: inherit; color: inherit; }
 }
 .pile--ghost{ visibility: hidden; }
 
+/* The raised card. The lift is capped at the space that actually exists above
+   the hand — the say line, the gap to the middle and the table's own padding,
+   less a little — because -40% of a card is more than that gap and the raised
+   card then stands on the table row, covering two to four of the cards it is
+   proposing to capture. Nothing errors and the diff reads fine; the check
+   measures hand cards against table cards, with a card raised. */
 .hand--you > .card[aria-pressed="true"]{
   z-index: 3;
-  transform: translateY(-40%) scale(1.04);
+  transform:
+    translateY(calc(-1 * min(.4 * var(--ch),
+                             var(--say) + var(--step) + var(--tavola-pad)
+                             - .03 * var(--ch))))
+    scale(1.04);
   box-shadow: 0 18px 30px rgba(0,0,0,.6), 0 0 0 2px var(--brass),
               0 0 26px rgba(200,162,74,.38);
 }
@@ -270,10 +309,42 @@ button.card:not(:disabled):focus-visible{
 button.card:disabled{ cursor: default; }
 
 /* A card in the capture the table is proposing. Brass, so the proposal is
-   read off the table rather than out of the line above the hand. */
+   read off the table rather than out of the line above the hand.
+
+   The ring is INSET, and that is not a style choice. An outer ring on an
+   overlapping row is drawn under the card to its right, so marking a card used
+   to raise it — and a raised card covers the strip that belongs to its
+   neighbour: the neighbour's reachable width drops from `step` to
+   `2*step - cw`, measured at 7px on a 1024x768 window and at 0 on narrower
+   ones. A card nobody can tap is a capture nobody can choose, and a misplay
+   costs the deal. An inset ring needs no raise: it is drawn inside the card,
+   so it reads on the strip that is visible. */
 .card[data-take="true"]{
-  box-shadow: 0 2px 5px rgba(0,0,0,.45), 0 0 0 2px var(--brass),
-              0 0 20px rgba(200,162,74,.34);
+  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--brass),
+              inset 0 0 22px rgba(200,162,74,.4);
+}
+
+/* Captured cards leaving the table, toward whoever took them — Tressette's
+   sweep, forked with the rest of this sheet. It is the only thing that says
+   WHICH cards a capture took: without it the table simply has fewer cards on
+   it the next time you look, and the player has to work backwards from what is
+   missing.
+
+   Tressette's `flushSweep` existed because `animation: both` holds its end
+   state — transparent, 70px away — until something takes the class off, and a
+   sweep cut short left two cards invisible for twenty tricks. Here the class is
+   not held: it is written from `sweeping` on every render, so clearing
+   `sweeping` clears it. The failure mode that replaces it is the table never
+   catching up, which the check's count assertion reads directly. */
+.card--won-up{   animation: sweepUp   .42s ease-in both; }
+.card--won-down{ animation: sweepDown .42s ease-in both; }
+@keyframes sweepUp{
+  from{ opacity: 1; transform: none; }
+  to  { opacity: 0; transform: translateY(-70px) scale(.82) rotate(-6deg); }
+}
+@keyframes sweepDown{
+  from{ opacity: 1; transform: none; }
+  to  { opacity: 0; transform: translateY(70px) scale(.82) rotate(6deg); }
 }
 
 /* ---- the middle: the table itself ----------------------------------------- */
@@ -288,13 +359,20 @@ button.card:disabled{ cursor: default; }
 
 .tavola{
   display: grid;
-  /* minmax(0,1fr), not the implicit `auto`: an auto column sizes to its widest
-     row, so a row that should overlap its cards grows the whole table instead
-     and the row's own percentage step is computed against a width that moved
-     to fit it. Bounded, the step formula below has a fixed width to divide and
-     the cards overlap as §3.7 says they should. It also makes the per-row spill
-     assertion reachable — against an auto column it could never fire, which
-     would have made it decoration. */
+  /* minmax(0,1fr), not the implicit `auto`. An auto column sizes to its widest
+     row, and .tavola-row's `width: 100%` then resolves against a width that
+     moved to fit the row — so the row can never be measured against anything
+     it does not already fit inside.
+
+     On a correct page this line changes nothing, and that was measured first
+     and read as meaning it could go: with and without, at 360x800, 500x425,
+     980x385, 768x1024 and 1440x900 with thirteen cards down, identical to the
+     pixel. The measurement was of the wrong page. With the step formula below
+     replaced by a fixed gap — the break tools/break_ui.mjs uses for the spill
+     assertion — the bounded column reports `a table row spills 74px past its
+     own box` at 360x800 with thirteen cards, and the unbounded one reports
+     nothing at all, because the box grew with the cards. A line whose only effect is on a broken page still
+     has an effect: it is what makes the assertion reachable. */
   grid-template-columns: minmax(0, 1fr);
   gap: var(--step);
   justify-items: center;
@@ -321,6 +399,7 @@ button.card:disabled{ cursor: default; }
   display: flex;
   justify-content: center;
   align-items: center;
+  /* 100% of the column above, which is bounded — the two lines are one rule. */
   width: 100%;
   min-height: var(--ch);
 }
@@ -329,9 +408,27 @@ button.card:disabled{ cursor: default; }
     min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1))
     - var(--cw));
 }
-.tavola-row > *{ z-index: 1; }
-.tavola-row > *:hover,
-.tavola-row > *[data-take="true"]{ z-index: 2; }
+/* Nothing in this row is allowed to change its paint order. Painting is what
+   decides which card a tap lands on, so a rule that lifts one card above its
+   neighbours silently takes `cw - step` off the neighbour's reachable strip —
+   see .card[data-take] above. Document order alone, so every card's strip is
+   exactly `step` wide and the floor the check asserts is the floor a thumb
+   gets. The hover lift keeps its transform and loses only its raise. */
+.tavola-row > *{ z-index: auto; }
+
+/* And no transform either, which is the same rule wearing a different hat: a
+   transformed element paints as its own stacking context, above the in-flow
+   siblings that come after it — so the hover lift every card gets takes 10px
+   off the strip of the card to its right for as long as the cursor is on the
+   left one, and the card you were reaching for is not where you are pointing.
+   Measured at 40px of a 50px strip at 360x800 with twelve cards down. In this
+   row the response to a pointer is a ring drawn inside the card, which moves
+   nothing and paints nowhere new. */
+.tavola-row > button.card:not(:disabled):hover,
+.tavola-row > button.card:not(:disabled):focus-visible{
+  transform: none;
+  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--ivory);
+}
 
 /* ---- piles and the deck --------------------------------------------------- */
 
@@ -401,10 +498,19 @@ button.card:disabled{ cursor: default; }
 
 /* ---- name plates ---------------------------------------------------------- */
 
+/* Two columns and as many rows as the content needs: the dot beside the name,
+   the dealer badge under it. A flex row cannot do this at --plate-w — its
+   items' min-content adds up to 200px against a 132px plate and the text spills
+   sideways over the cards, which the plate's own box does not show, because the
+   box stays 132px and only its children leave it. That is why the check asserts
+   scrollWidth here rather than the bounding box. */
 .plate{
-  display: flex;
+  width: var(--plate-w);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: .7rem;
+  column-gap: .5rem;
+  row-gap: .1rem;
   padding: .35rem .8rem;
   border-radius: 3px;
   background: linear-gradient(180deg, rgba(0,0,0,.24), rgba(0,0,0,.36));
@@ -427,6 +533,8 @@ button.card:disabled{ cursor: default; }
 /* Who dealt. The dealer plays the last card of every round and of the deal,
    which is worth knowing while choosing one. */
 .plate__deal{
+  grid-column: 2;
+  justify-self: start;
   font-family: var(--font-label);
   text-transform: uppercase;
   letter-spacing: .12em;
@@ -557,12 +665,15 @@ button.card:disabled{ cursor: default; }
     grid-column: 1; justify-self: center;
   }
   /* The height --plates reserves, made explicit, so the budget and the plate
-     cannot drift apart. */
-  .plate{ height: var(--plate-h); }
+     cannot drift apart. The plate is on its own row here, so it is no longer
+     competing with the cards for width: it takes what it needs, and the width
+     term below stops paying for it. */
+  .plate{ height: var(--plate-h); width: auto; }
   .seat--you .plate{ margin-top: .25rem; }
 
   :root{
     --rows: 4;
+    --seat-extra: 0px;
     --extra-gap: .5rem;
     --plates: calc(2 * var(--plate-h) + .5rem);
     --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);
@@ -725,6 +836,21 @@ const SEMI = ["denari", "coppe", "spade", "bastoni"];
 const nomeDi = c => `${NOMI[c.n - 1]} di ${SEMI[c.s]}`;
 const breve  = c => NOMI[c.n - 1];
 
+// A card named on the say line. The value alone is enough — "Prendi il sette
+// con il sette" — right up to the one position where the line matters most: two
+// sevens on the table and a seven in hand is exactly when the player is being
+// asked WHICH seven, and both proposals read identically without the suit. So
+// the suit is added when, and only when, the table holds another card of that
+// value. Only when, because a capture of three cards named in full does not fit
+// the one line of --say the budget pays for.
+const nomePresa = c =>
+  (state.tavola || []).filter(o => o.n === c.n).length > 1 ? nomeDi(c) : breve(c);
+
+// "il asso" is not Italian. Only one of the ten names begins with a vowel, but
+// it is the one the table names most often — an asso takes and is taken by
+// everything — so the article is written rather than assumed.
+const art = name => /^[aeiou]/i.test(name) ? `l'${name}` : `il ${name}`;
+
 /* --- state ------------------------------------------------------------------ */
 
 // §3.2: the page rolls, the engine does not. Piero's weights are rolled once
@@ -739,6 +865,26 @@ const state = {
 
 let timer = null, sayTimer = null;
 let epoch = 0;          // bumped on every new deal, so a stale timer cannot fire into it
+
+// Both hands are empty for a beat between rounds. gioca() deals the next round
+// itself — §2.2's flow has the deal there, and a state with two empty hands and
+// nobody dealing is one the engine must not be able to sit in — so by the time
+// the page hears about the round the state no longer shows the beat. That is
+// what `nuovoGiro` is for. Drawing it from the flag rather than from the state
+// is the difference between a state the game passes through and one the player
+// sees: Tressette shipped a finished trick that was never drawn for exactly
+// this reason, and every assertion was green.
+let beat = false;
+const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.hands[who];
+
+// The table as it was when the capture was made, held while the captured cards
+// animate off it. gioca() has already moved them, so a render straight after it
+// draws a table they have vanished from and the sweep animates nothing —
+// Tressette's reason, and the same fix. `dir` maps an index in `cards` to the
+// player it is going to, which is not always the player who just played: the
+// leftovers on the last play go to whoever captured last.
+let sweeping = null;
+const flushSweep = () => { sweeping = null; };
 
 // The game's own clock: one timer, so a new deal cancels whatever the last one
 // was about to do. An abandoned deal must not keep playing itself behind the
@@ -821,19 +967,24 @@ function render(){
   // --- your hand
   const take = new Set(propostaCorrente());
   [...el.youHand.children].forEach((node, slot) => {
-    const card = state.hands[BASSO] ? state.hands[BASSO][slot] : null;
+    const card = mano(BASSO)[slot];
     faceOf(node, card);
     node.disabled = !yourTurn || !card;
     node.setAttribute("aria-pressed", String(state.selected === slot));
+    // What the tap will actually do. "Scegli" was on every card, and on all but
+    // one in a hand a tap plays the card then and there — a label that promises
+    // a choice and plays instead is worse than no label.
+    const raises = card && state.selected !== slot
+      && prese(state.tavola, card).length > 1;
     node.setAttribute("aria-label", card
-      ? (state.selected === slot ? `Gioca il ${nomeDi(card)}` : `Scegli il ${nomeDi(card)}`)
+      ? (raises ? `Scegli come prendere con ${art(nomeDi(card))}`
+                : `Gioca ${art(nomeDi(card))}`)
       : "");
   });
 
   // --- their hand, face down
   [...el.oppHand.children].forEach((node, slot) => {
-    const card = state.hands[ALTO] ? state.hands[ALTO][slot] : null;
-    if (card) backOf(node); else faceOf(node, null);
+    if (mano(ALTO)[slot]) backOf(node); else faceOf(node, null);
   });
 
   // --- the table
@@ -858,7 +1009,7 @@ function render(){
 // §3.7. One row in landscape, two in portrait with the first ceil(n/2) cards
 // above. `--n` goes on the row so the step formula in the sheet can use it.
 function renderTavola(take){
-  const cards = state.tavola || [];
+  const cards = sweeping ? sweeping.cards : (state.tavola || []);
   const portrait = window.matchMedia("(orientation: portrait)").matches;
   const rows = portrait && cards.length > 1
     ? [cards.slice(0, Math.ceil(cards.length / 2)), cards.slice(Math.ceil(cards.length / 2))]
@@ -876,10 +1027,14 @@ function renderTavola(take){
       b.className = "card";
       b.dataset.index = String(idx);
       faceOf(b, card);
-      b.dataset.take = String(take.has(idx));
+      b.dataset.take = String(!sweeping && take.has(idx));
       b.setAttribute("aria-label", nomeDi(card));
+      // The class is written from `sweeping` on every render rather than added
+      // once and taken off later, so there is no end state to be left holding.
+      const dir = sweeping ? sweeping.dir[idx] : undefined;
+      if (dir !== undefined) b.classList.add(dir === ALTO ? "card--won-up" : "card--won-down");
       // Tapping a table card switches the proposal to one that contains it.
-      b.disabled = state.selected === null;
+      b.disabled = !!sweeping || state.selected === null;
       b.addEventListener("click", () => scegliDaTavola(idx));
       return b;
     }));
@@ -921,13 +1076,31 @@ function renderSay(){
   el.selName.hidden = false;
   el.selName.classList.add("sel-name--act");
   if (!presa.length){
-    el.selName.textContent = `Cala il ${breve(card)}`;
+    el.selName.textContent = `Cala ${art(breve(card))}`;
     return;
   }
-  const presi = presa.map(i => breve(state.tavola[i]));
-  const lista = presi.length === 1 ? `il ${presi[0]}`
-              : `il ${presi.slice(0, -1).join(", il ")} e il ${presi[presi.length - 1]}`;
-  el.selName.textContent = `Prendi ${lista} con il ${breve(card)}`;
+  const presi = presa.map(i => art(nomePresa(state.tavola[i])));
+  const lista = presi.length === 1 ? presi[0]
+              : `${presi.slice(0, -1).join(", ")} e ${presi[presi.length - 1]}`;
+  // Three ways to say it, shortest that fits wins. The line has one line of
+  // --t-tiny and the budget pays for exactly that, so a name that does not fit
+  // is not a longer line — it is a line cut in half by .say, which is the
+  // defect Tressette shipped with its declarations. LABEL_CHARS is 39 because
+  // the readability tier the check holds every string to starts at 40: past
+  // that a string is prose, and prose does not belong at label size.
+  //
+  // What is given up first is "con il sette", which names the card the player
+  // is looking at — it is raised, and it is the one they just tapped. What is
+  // given up next is the list, and then the brass marks on the table carry it
+  // alone, which is what §3.7 says they are for. A five-card sum named in full
+  // runs to 45 characters and there is no phone where that is one line.
+  const full = `Prendi ${lista} con ${art(breve(card))}`;
+  const LABEL_CHARS = 39;
+  el.selName.textContent =
+      full.length <= LABEL_CHARS ? full
+    : `Prendi ${lista}`.length <= LABEL_CHARS ? `Prendi ${lista}`
+    : presa.length === 1 ? "Prendi la carta segnata"
+    : `Prendi le ${presa.length} carte segnate`;
 }
 
 /* --- playing ---------------------------------------------------------------- */
@@ -936,7 +1109,7 @@ function renderSay(){
 // the rule leaves a choice of capture — two sevens on the table, or 4+3 and
 // 5+2 — and then a second tap plays the proposal.
 function tapped(slot){
-  if (state.deveGiocare !== BASSO || state.over || !state.dealt) return;
+  if (state.deveGiocare !== BASSO || state.over || !state.dealt || beat || sweeping) return;
   if (!state.hands[BASSO][slot]) return;
 
   if (state.selected === slot){ play(BASSO, slot, propostaCorrente()); return; }
@@ -963,13 +1136,46 @@ function scegliDaTavola(idx){
 }
 
 function play(who, slot, presa){
+  // A play can arrive before the last sweep has run — `later` has one timer and
+  // scheduling this play cancels it — so finish that one here rather than leave
+  // the table drawing a capture from two plays ago.
+  flushSweep();
+
+  const before = (state.tavola || []).slice();
   const r = gioca(state, who, slot, presa);
   state.selected = null;
   state.scelta = 0;
   blip(who === BASSO ? 760 : 620);
   if (r.scopa) toast("Scopa!");
+
+  // Which cards are leaving, and which way. The capture goes to whoever played;
+  // the leftovers of the last play go to whoever captured last, which is read
+  // from the state gioca left rather than assumed to be the same player.
+  const dir = {};
+  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;
+  if (r.resto.length)
+    before.forEach((_, i) => { if (!(i in dir)) dir[i] = state.ultimaPresa; });
+  const swept = Object.keys(dir).length > 0;
+  if (swept) sweeping = { cards: before, dir };
   render();
 
+  // What happens once the table has caught up. The beat between rounds comes
+  // after the sweep, not during it: they are two things to look at, not one.
+  const then = () => {
+    flushSweep();
+    if (r.nuovoGiro){
+      beat = true;
+      render();
+      later(() => { beat = false; render(); resume(); }, state.speed * 0.5);
+      return;
+    }
+    render();
+    resume();
+  };
+  if (swept) later(then, state.speed * 0.45); else then();
+}
+
+function resume(){
   if (state.over){ later(() => finish(), state.speed * 0.6); return; }
   if (state.deveGiocare === ALTO) later(() => computerPlay(), state.speed * 0.6);
 }
@@ -997,6 +1203,8 @@ function newDealHere(){
   epoch++;
   clearTimeout(timer);
   clearTimeout(sayTimer);
+  beat = false;
+  flushSweep();
   el.toast.hidden = true;
   newDeal(state, Math.random);
   state.selected = null;

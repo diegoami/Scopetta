@@ -37,28 +37,83 @@ const CHECK = fileURLToPath(new URL("./check_ui.mjs", import.meta.url));
 const TEXT = readFileSync(PAGE, "utf8");
 
 // The assertion each break must trip, as a substring of the line the check
-// prints. §3.7's six rows are all represented.
+// prints. Substrings, so they have to be chosen to name ONE assertion: "steps"
+// used to stand for the step floor and matched "a table row's steps are uneven"
+// just as well, which made the entry unable to tell the two apart.
 const EXPECT = {
-  "the table row loses its step floor": "steps",
-  "the table row spills past its own box": "spills",
-  "the middle row lands on the hands": "land on a hand",
-  "the say line collapses when it is empty": "say line",
+  // --- the document ---------------------------------------------------------
+  "the viewport meta goes missing": "viewport meta",
+  "the doctype goes missing": "quirks mode",
+  "the charset is wrong": "charset is",
+  "the lang attribute goes missing": "no lang",
+
+  // --- the screens ----------------------------------------------------------
+  "[hidden] stops beating the display rule": "screens visible at once",
+  "the icon bar is made wider than the screen": "scrolls sideways",
+  "the plates are left out of the card budget": "runs off the screen",
+  "the plates are squeezed instead of budgeted": "lands on the cards",
+  "the plate is laid out as a flex row again": "past its own width",
+  "the small type drops below the floor": "want 12.5",
+  "the say line is given a strip too short for it": "cut off by",
+  "the icon buttons shrink under the thumb": "tap target",
+
+  // --- the budget -----------------------------------------------------------
   "--chrome is hard-coded instead of derived": "below the fold",
-  // Wrapping in landscape does not overlap a hand, it costs a fourth card row
-  // against a budget that paid for three — so the seat goes below the fold, and
-  // that is the assertion that should see it. The expectation here was wrong,
-  // not the check.
-  "the table row wraps in landscape too": "below the fold",
+  "the say line collapses when it is empty": "say line",
+  "the rows of the table drift apart": "drift apart",
+
+  // --- the middle row, §3.7 -------------------------------------------------
+  "the table row loses its step floor": "px between cards, want",
+  "the table row's steps go uneven": "steps are uneven",
+  "the table row spills past its own box": "spills",
+  "the table grows wider than the table": "outside the table",
+  "the middle row lands on the hands": "land on a hand",
+  // Wrapping in landscape costs a fourth card row against a budget that paid
+  // for three. Before iteration 3's review this break was expected to go red on
+  // "below the fold" — which it did, and which was the wrong answer written
+  // down after the fact: the rule being broken is the wrap rule, and there was
+  // no assertion for it. There is one now, and this is what it is for.
+  "the table row wraps in landscape too": "row(s) in",
+  "a marked card is raised above its neighbour": "of its strip",
+  "a hovered card is raised above its neighbour": "of its strip",
+
+  // --- the raised card ------------------------------------------------------
+  "the raised card is lifted by 40% again": "overlap a hand card",
+
+  // --- the toast ------------------------------------------------------------
   "the toast joins the flow": "in the flow",
   "the toast is given a strip too short for it": "clips its own text",
+  "the toast is pushed off the right edge": "toast runs off the screen",
+  "the toast never shows": "did not show",
+
+  // --- the capture choice ---------------------------------------------------
+  "a capture with a choice plays instead of raising": "did not raise",
   "the proposal marks every card on the table": "the table marks",
+  "the proposal marks nothing at all": "nothing on the table is marked",
+  "the say line goes quiet while a card is raised": "say line is hidden",
+  "the say line says the whole capture however long it is": "want 14.5",
   "the say line names the card instead of the capture": "does not say what the tap does",
+  "the say line drops the suit that tells two sevens apart": "reads the same for both",
   "tapping a table card does not switch the proposal": "did not change the proposal",
+
+  // --- the sweep and the beat ----------------------------------------------
+  "the capture is not drawn leaving the table": "not drawn leaving the table",
+  "the sweep never ends": "still draws",
+  "the capture sweeps toward the wrong player": "sweeping the wrong way",
+  "the empty middle is allowed to collapse": "empty middle collapsed",
+  "the empty hand is allowed to collapse": "card-sized slot",
+  "the page stops listening for the new round": "never entered the beat",
+  "the beat draws the new hand instead of the empty one": "both hands are empty",
+
+  // --- the page against the engine -----------------------------------------
   "the pile badge stops counting": "badges say",
+  "the deck badge stops counting": "the deck badge says",
   "the scopa marks stop counting": "scopa marks",
   "the middle draws a card the engine does not hold": "the middle shows",
   "the leftovers are left on the table": "still shows",
   "a played card keeps its face": "shows a card",
+  "a slot you hold is drawn empty": "holds a card and shows none",
+  "the final score is read out backwards": "scoreDeal returned",
 };
 
 // A break that cannot change what the page does, with how that was measured.
@@ -66,77 +121,193 @@ const EXPECT = {
 // claimed equivalent that IS caught means the claim was wrong, which is red.
 const EQUIVALENT = {
   "the table row grows the table instead of overlapping":
-    "`width: 100%` on .tavola-row already bounds it, so the grid column rule is " +
-    "belt-and-braces: at 360x800 with thirteen cards both versions give the same " +
-    "two rows, same 312px row, same 42px and 50px steps, same first and last edges.",
+    "On a correct page it changes nothing, measured with and without at " +
+    "360x800, 500x425, 980x385, 768x1024 and 1440x900 with thirteen cards " +
+    "down: same rows, same steps, same edges to the pixel. What it changes is " +
+    "on a BROKEN page — it is what makes the spill assertion reachable, since " +
+    "an auto column grows with its row and .tavola-row's `width: 100%` follows " +
+    "it. Measured that way too: with the step formula replaced by a fixed gap, " +
+    "bounded the check reports `a table row spills 74px past its own box`, " +
+    "unbounded it reports nothing about the row at all. So no single break can " +
+    "catch this line, and the pair of them is the evidence instead.",
 };
 
 const BREAKS = [
-  // --- §3.7 row 1: the table at 0, 4, 8 and 13 cards -----------------------
-  ["the table row loses its step floor",
-   "    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1))\n    - var(--cw));",
-   "    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1)) * .18\n    - var(--cw));"],
-  ["the table row spills past its own box",
-   "  margin-left: calc(\n    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1))\n    - var(--cw));",
-   "  margin-left: var(--gap);"],
-  ["the table row grows the table instead of overlapping",
-   "  grid-template-columns: minmax(0, 1fr);\n  gap: var(--step);",
-   "  gap: var(--step);"],
-  ["the middle row lands on the hands",
-   ".middle{\n  display: grid;",
-   ".middle{\n  margin-block: -42px;\n  display: grid;"],
-  ["the table row wraps in landscape too",
-   "  const portrait = window.matchMedia(\"(orientation: portrait)\").matches;",
-   "  const portrait = true;"],
+  // --- the document ---------------------------------------------------------
+  ["the viewport meta goes missing",
+   `<meta name="viewport" content="width=device-width, initial-scale=1">\n`, ""],
+  ["the doctype goes missing", "<!DOCTYPE html>\n", ""],
+  ["the charset is wrong", `<meta charset="utf-8">`, `<meta charset="iso-8859-1">`],
+  ["the lang attribute goes missing", `<html lang="it">`, "<html>"],
 
-  // --- the budget ----------------------------------------------------------
+  // --- every screen at once, and the page's own width -----------------------
+  ["[hidden] stops beating the display rule",
+   "[hidden]{ display: none !important; }", "[hidden]{ display: none; }"],
+  ["the icon bar is made wider than the screen",
+   ".topbar{\n  height: var(--topbar);", ".topbar{\n  min-width: 130vw;\n  height: var(--topbar);"],
+
+  // --- §3.7's width term, which is where iteration 3's first defect lived ----
+  // Without the plates the seat row needs more width than the screen has, the
+  // table grows to fit it, and `overflow: hidden auto` carries the deck and
+  // your own plate off the right edge with no sideways scroll to show for it.
+  ["the plates are left out of the card budget",
+   "  --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));",
+   "  --seat-extra: 0px;"],
+  // The other half of the same defect: bound the columns instead of paying for
+  // the plates and the plate sits on the cards rather than off the screen.
+  ["the plates are squeezed instead of budgeted",
+   ["  --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));",
+    "  grid-template-columns: 1fr auto 1fr;"],
+   ["  --seat-extra: 0px;",
+    "  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);"]],
+  ["the plate is laid out as a flex row again",
+   "  display: grid;\n  grid-template-columns: auto minmax(0, 1fr);\n  align-items: center;\n  column-gap: .5rem;\n  row-gap: .1rem;\n  padding: .35rem .8rem;",
+   "  display: flex;\n  align-items: center;\n  gap: .7rem;\n  padding: .35rem .8rem;"],
+
+  // --- type, and what clips it ----------------------------------------------
+  ["the small type drops below the floor", "  --t-tiny:  .8rem;", "  --t-tiny:  .62rem;"],
+  ["the say line is given a strip too short for it",
+   "  --say: calc(var(--t-tiny) * 1.5 + 4px);", "  --say: 9px;"],
+  ["the icon buttons shrink under the thumb",
+   "  width: 38px; height: 38px;", "  width: 24px; height: 24px;"],
+
+  // --- the budget -----------------------------------------------------------
   ["--chrome is hard-coded instead of derived",
    "  --chrome: calc(var(--topbar) + 2*var(--pad-block) + 2*var(--step)\n                 + 2*var(--tavola-pad) + var(--extra-gap) + var(--plates)\n                 + var(--say) + var(--slack));",
    "  --chrome: 150px;"],
   ["the say line collapses when it is empty",
    "  height: var(--say);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  overflow: hidden;\n}",
    "  height: auto;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  overflow: hidden;\n}"],
+  ["the rows of the table drift apart",
+   ".middle{\n  display: grid;", ".middle{\n  margin-top: 110px;\n  display: grid;"],
 
-  // --- §3.7 row 3: the toast floats ---------------------------------------
+  ["the table row grows the table instead of overlapping",
+   "  grid-template-columns: minmax(0, 1fr);\n  gap: var(--step);\n  justify-items: center;",
+   "  gap: var(--step);\n  justify-items: center;"],
+
+  // --- §3.7 row 1: the middle row at 0, 4, 8 and 13 cards -------------------
+  ["the table row loses its step floor",
+   "    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1))\n    - var(--cw));",
+   "    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1)) * .18\n    - var(--cw));"],
+  ["the table row's steps go uneven",
+   ".tavola-row > * + *{", ".tavola-row > *:nth-child(3){ margin-left: 7px; }\n.tavola-row > * + *{"],
+  ["the table row spills past its own box",
+   "  margin-left: calc(\n    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1))\n    - var(--cw));",
+   "  margin-left: var(--gap);"],
+  ["the table grows wider than the table",
+   "  justify-items: center;\n  width: 100%;\n  padding: var(--tavola-pad);",
+   "  justify-items: center;\n  width: 124%;\n  padding: var(--tavola-pad);"],
+  ["the middle row lands on the hands",
+   ".middle{\n  display: grid;", ".middle{\n  margin-block: -42px;\n  display: grid;"],
+  ["the table row wraps in landscape too",
+   "  const portrait = window.matchMedia(\"(orientation: portrait)\").matches;",
+   "  const portrait = true;"],
+
+  // --- who a tap lands on ---------------------------------------------------
+  // Both of these were in the sheet when iteration 3 was first pushed. Neither
+  // moves a box: they change which card is PAINTED on top, and the card under
+  // it stops taking taps over the part that is covered.
+  ["a marked card is raised above its neighbour",
+   ".tavola-row > *{ z-index: auto; }",
+   ".tavola-row > *{ z-index: 1; }\n.tavola-row > *[data-take=\"true\"]{ z-index: 2; }"],
+  ["a hovered card is raised above its neighbour",
+   ".tavola-row > button.card:not(:disabled):hover,\n.tavola-row > button.card:not(:disabled):focus-visible{\n  transform: none;\n  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px var(--ivory);\n}",
+   ""],
+
+  // --- the raised card ------------------------------------------------------
+  ["the raised card is lifted by 40% again",
+   "  transform:\n    translateY(calc(-1 * min(.4 * var(--ch),\n                             var(--say) + var(--step) + var(--tavola-pad)\n                             - .03 * var(--ch))))\n    scale(1.04);",
+   "  transform: translateY(-40%) scale(1.04);"],
+
+  // --- §3.7 row 3: the toast floats ----------------------------------------
   ["the toast joins the flow",
-   ".table > .toast{\n  position: absolute;",
-   ".table > .toast{\n  position: static;"],
+   ".table > .toast{\n  position: absolute;", ".table > .toast{\n  position: static;"],
   ["the toast is given a strip too short for it",
    "  max-width: calc(100% - 2 * var(--pad-inline));\n  margin: 0 auto;",
    "  max-width: 90px;\n  height: 1.2em;\n  overflow: hidden;\n  margin: 0 auto;"],
+  ["the toast is pushed off the right edge",
+   "  left: var(--pad-inline);\n  right: var(--pad-inline);",
+   "  left: 92%;\n  right: auto;"],
+  ["the toast never shows",
+   "  el.toast.textContent = text;\n  el.toast.hidden = false;",
+   "  el.toast.textContent = text;"],
 
-  // --- §3.7 row 2: the capture choice --------------------------------------
+  // --- §3.7 row 2: the capture choice ---------------------------------------
+  ["a capture with a choice plays instead of raising",
+   "  const opts = prese(state.tavola, state.hands[BASSO][slot]);\n  if (opts.length > 1){",
+   "  const opts = prese(state.tavola, state.hands[BASSO][slot]);\n  if (opts.length > 99){"],
   ["the proposal marks every card on the table",
-   "      b.dataset.take = String(take.has(idx));",
+   "      b.dataset.take = String(!sweeping && take.has(idx));",
    "      b.dataset.take = \"true\";"],
+  ["the proposal marks nothing at all",
+   "      b.dataset.take = String(!sweeping && take.has(idx));",
+   "      b.dataset.take = \"false\";"],
+  ["the say line goes quiet while a card is raised",
+   "  const presa = propostaCorrente();\n  el.selName.hidden = false;",
+   "  const presa = propostaCorrente();\n  el.selName.hidden = true;"],
+  ["the say line says the whole capture however long it is",
+   "  el.selName.textContent =\n      full.length <= LABEL_CHARS ? full\n    : `Prendi ${lista}`.length <= LABEL_CHARS ? `Prendi ${lista}`\n    : presa.length === 1 ? \"Prendi la carta segnata\"\n    : `Prendi le ${presa.length} carte segnate`;",
+   "  el.selName.textContent = full;"],
   ["the say line names the card instead of the capture",
-   "  el.selName.textContent = `Prendi ${lista} con il ${breve(card)}`;",
-   "  el.selName.textContent = `Il ${breve(card)}`;"],
+   "  const full = `Prendi ${lista} con ${art(breve(card))}`;",
+   "  const full = `Il ${breve(card)}`;"],
+  ["the say line drops the suit that tells two sevens apart",
+   "  const presi = presa.map(i => art(nomePresa(state.tavola[i])));",
+   "  const presi = presa.map(i => art(breve(state.tavola[i])));"],
   ["tapping a table card does not switch the proposal",
    "  const found = opts.findIndex(set => set.includes(idx));\n  if (found < 0) return;\n  state.scelta = found;",
-   "  const found = opts.findIndex(set => set.includes(idx));\n  if (found < 0) return;",
-   ],
+   "  const found = opts.findIndex(set => set.includes(idx));\n  if (found < 0) return;"],
 
-  // --- §3.7 row 4: the badges agree with the engine ------------------------
+  // --- the sweep, and the beat between rounds -------------------------------
+  ["the empty middle is allowed to collapse",
+   ["  /* A table row all deal, so an empty table does not collapse the middle and\n     re-centre everything above and below it. A scopa empties it every few\n     plays, which is exactly when the player is looking. */\n  min-height: var(--ch);",
+    "  width: 100%;\n  min-height: var(--ch);\n}\n.tavola-row > * + *{"],
+   ["",
+    "  width: 100%;\n}\n.tavola-row > * + *{"]],
+  ["the empty hand is allowed to collapse",
+   ".card[data-empty=\"true\"]{\n  background-image: none;",
+   ".card[data-empty=\"true\"]{\n  display: none;\n  background-image: none;"],
+  ["the page stops listening for the new round",
+   "  if (r.nuovoGiro){", "  if (false && r.nuovoGiro){"],
+  ["the beat draws the new hand instead of the empty one",
+   "const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.hands[who];",
+   "const mano = who => state.hands[who] || [null, null, null];"],
+
+  ["the capture is not drawn leaving the table",
+   "  if (swept) sweeping = { cards: before, dir };",
+   "  if (false) sweeping = { cards: before, dir };"],
+  ["the sweep never ends",
+   "  if (swept) later(then, state.speed * 0.45); else then();",
+   "  if (swept) { /* nothing takes the table off hold */ } else then();"],
+  ["the capture sweeps toward the wrong player",
+   "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;",
+   "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = 1 - who;"],
+
+  // --- the page against the engine ------------------------------------------
   ["the pile badge stops counting",
    "  badge.textContent = String(n);",
    "  if (n < 8) badge.textContent = String(n);"],
+  ["the deck badge stops counting",
+   "  el.countMazzo.textContent = String(left);",
+   "  el.countMazzo.textContent = String(left + 1);"],
   ["the scopa marks stop counting",
    "  const s = state.scope ? state.scope[who] : 0;",
    "  const s = 0;"],
   ["the middle draws a card the engine does not hold",
-   "  const cards = state.tavola || [];",
-   "  const cards = (state.tavola || []).slice(0, 12);"],
-
-  // --- §3.7 row 6: the last play -------------------------------------------
+   "  const cards = sweeping ? sweeping.cards : (state.tavola || []);",
+   "  const cards = (sweeping ? sweeping.cards : (state.tavola || [])).concat([{s:0,n:1}]);"],
   ["the leftovers are left on the table",
-   "function renderTavola(take){\n  const cards = state.tavola || [];",
-   "function renderTavola(take){\n  const cards = state.over ? [{s:0,n:1}] : (state.tavola || []);"],
-
-  // --- the hand ------------------------------------------------------------
+   "function renderTavola(take){\n  const cards = sweeping ? sweeping.cards : (state.tavola || []);",
+   "function renderTavola(take){\n  const cards = state.over ? [{s:0,n:1}] : (sweeping ? sweeping.cards : (state.tavola || []));"],
   ["a played card keeps its face",
-   "    const card = state.hands[BASSO] ? state.hands[BASSO][slot] : null;\n    faceOf(node, card);",
-   "    const card = state.hands[BASSO] ? (state.hands[BASSO][slot] || {s:0,n:1}) : null;\n    faceOf(node, card);"],
+   "    const card = mano(BASSO)[slot];\n    faceOf(node, card);",
+   "    const card = mano(BASSO)[slot] || {s:0,n:1};\n    faceOf(node, card);"],
+  ["a slot you hold is drawn empty",
+   "    const card = mano(BASSO)[slot];\n    faceOf(node, card);",
+   "    const card = slot === 2 ? null : mano(BASSO)[slot];\n    faceOf(node, card);"],
+  ["the final score is read out backwards",
+   "    el.selName.textContent = `Fine: ${r.punti[BASSO]} a ${r.punti[ALTO]}`;",
+   "    el.selName.textContent = `Fine: ${r.punti[ALTO]} a ${r.punti[BASSO]}`;"],
 ];
 
 const filter = process.argv[2];
@@ -170,15 +341,22 @@ const run = file => {
 let caught = 0; const survived = [], mismatched = [], invalid = [], equivalent = [];
 
 for (const [name, find, replace] of chosen){
-  const hits = TEXT.split(find).length - 1;
-  if (hits !== 1){
-    invalid.push([name, `matched ${hits} times, want exactly 1`]);
-    console.log(`INVALID  ${name} — matched ${hits} times`);
+  // A break is one edit, except where one edit cannot express the defect: two
+  // rules can hold the same thing up, and removing either alone changes
+  // nothing. Then `find` and `replace` are equal-length arrays and the edits
+  // are applied in order. Each still has to match exactly once.
+  const finds = Array.isArray(find) ? find : [find];
+  const reps  = Array.isArray(replace) ? replace : [replace];
+  const bad = finds.map(f => TEXT.split(f).length - 1).filter(h => h !== 1).length;
+  if (bad || finds.length !== reps.length){
+    invalid.push([name, `${bad} of ${finds.length} edits did not match exactly once`]);
+    console.log(`INVALID  ${name} — ${bad} edit(s) did not match exactly once`);
     continue;
   }
   const work = join(dir, name.replace(/[^a-z0-9]+/gi, "-"));
   cpSync(PUBLIC, work, { recursive: true });
-  writeFileSync(join(work, "index.html"), TEXT.replace(find, replace));
+  writeFileSync(join(work, "index.html"),
+    finds.reduce((text, f, i) => text.replace(f, reps[i]), TEXT));
 
   const out = run(join(work, "index.html"));
   const why = EQUIVALENT[name];

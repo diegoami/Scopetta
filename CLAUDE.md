@@ -26,9 +26,10 @@ pull request as well, and a red check does not merge.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
-and `check.yml` has the job that runs it. Six passes: the document, every
+and `check.yml` has the job that runs it. Seven passes: the document, every
 screen, the table at every viewport in every deck, the table again with the
-spacing inflated, the capture choice and the toast, and one whole deal.
+spacing inflated, the capture choice and the toast, the two states only playing
+can reach — a sweep and the beat between rounds — and one whole deal.
 
 **`node tools/break_ui.mjs` is the other half.** It breaks the page on purpose,
 one defect at a time, and checks that the assertion *written for that defect*
@@ -55,6 +56,29 @@ play and the leftovers, a pile with three scope showing. When the page gains a
 state, the check gains the row that puts it there, and that is the harder half
 of the work.
 
+**A state the engine refuses to sit in has to be played, not posed.** Two of
+those rows cannot be set up by assigning to `state`: a toast over a table that
+still has cards on it is not a scopa, and two empty hands are a position
+`gioca` deals its way out of before it returns — it reports the beat in
+`nuovoGiro` and the page draws it from the flag. Pose either one and the check
+passes whether or not the page can reach it. Both are played now, with the
+page's own `play`.
+
+**And measure the broken page, not the healthy one.** `.tavola`'s bounded grid
+column was taken out of the sheet on a measurement that said it changed
+nothing — and it does change nothing, on a page whose row already fits. Its
+whole job is on a page whose row does not: an auto column grows with its row,
+`width: 100%` follows it, and the assertion that watches for a row spilling
+past its own box can never fire. A line that only matters when something else
+is wrong is exactly the line a mutation harness is for, and the evidence for
+one is a pair of runs, not one.
+
+**And a viewport is a state.** The same defect a third time: iteration 3's
+nineteen viewports held no landscape window narrower than 980px, and the
+assertions that would have caught the clipped deck were all written and all
+green. When a rule is about the widest thing on the screen, the grid needs the
+narrowest screen the rule has to hold on.
+
 **And a new assertion is made to fail before it is made to pass.** Write it
 against a deliberately broken page first and watch it go red, because an
 assertion written against already-correct code encodes what the code happens to
@@ -74,12 +98,28 @@ cards and needs no fan:
 
 ```
 height:  (100dvh − --chrome) / --rows / --ratio
-width:   (100vw − 2 × --pad-inline − 4 × --gap) / 5
+width:   (100vw − 2 × --pad-inline − 4 × --gap − --seat-extra) / 5
 ```
 
 The width term is the widest seat row, which is the opponent's: their pile,
-three cards and the deck, five card widths and four gaps. `--rows` is 3 in
-landscape and 4 in portrait, where the middle stacks.
+three cards and the deck, five card widths and four gaps — **and, in landscape,
+the two name plates at the ends of that row**, which is `--seat-extra`.
+`--rows` is 3 in landscape and 4 in portrait, where the middle stacks and the
+plates stack with it, so `--seat-extra` is 0 there.
+
+Leaving the plates out is what iteration 3 shipped. It did not make a card too
+big in any visible way: it made the row need more width than the screen had,
+`.table` grew to its content, and `overflow: hidden auto` clipped the deck and
+the player's own name plate off the right edge — 88px of it at 800x680. **A
+clipped table does not scroll sideways**, so the assertion watching for
+sideways scroll had nothing to say. Ask the elements where they are.
+
+Every term of the width budget is a token the thing it pays for also uses:
+`--plate-w` is the plate's width and half of `--seat-extra`, so the two cannot
+drift. Whether the text fits inside `--plate-w` is not an opinion either — the
+check asserts `scrollWidth` against `clientWidth` on every plate at every
+viewport, because a flex row's items can leave the box sideways while the box
+measures exactly right.
 
 `--chrome` is **derived** from the spacing tokens next to it — never hard-code
 it. It was hand-estimated three times in Discola and wrong three times,
@@ -122,6 +162,31 @@ assertions move to this row with it: the strip is never under `min(24px, .45 of
 a card)`, the steps are even, the last card is whole, and the row stays inside
 the table. A card too narrow to touch does not error — it just makes a capture
 unreachable, and a misplay costs the deal.
+
+**The step is not the strip, and only the strip plays the card.** Which card a
+tap lands on is decided by paint order, and nothing about paint order moves a
+box. Iteration 3 shipped three of these: a marked card, a hovered card and the
+raised card in your hand were each painted above their neighbours — by
+`z-index`, by a `transform`, by a lift of 40% of a card — and each took a strip
+of another card away from the thumb, leaving 7px of a neighbour beside a marked
+card at 1024x768. The steps were even, the cards were whole, the assertions
+were green. So nothing in the table row may change its paint order, the lift is
+capped at the space that exists above the hand, and the check measures the
+strip by hit-testing the row a pixel at a time rather than by computing it.
+
+**The say line is a label, and a label is short.** Naming a two-card capture
+with suits runs to 50 characters and a five-card sum to 45; the budget pays for
+one line of `--t-tiny`, and anything longer is not a longer line but a line cut
+in half by `.say`. Three rungs, shortest that fits: the whole thing, then
+without the clause naming the raised card, then "Prendi le N carte segnate"
+with the brass marks carrying which. The cap is 39 characters because the
+check's readability tier starts at 40, where a string stops being a label and
+starts being prose.
+
+**A table of thirteen can never offer a capture to choose.** Thirteen is four
+of one value plus one of each of the other nine, so every value is on the
+table and every card in hand has a single capture. The crowded choice the
+check poses is twelve.
 
 ## The engine is ours, and then it is frozen
 
