@@ -7,14 +7,1068 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600;6..96,700&family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap">
 
-<!-- Empty on purpose. Four of these are the facts the check's document pass
-     asserts — standards mode, a lang, UTF-8, and a viewport meta that sets
-     width=device-width; the title and the font links it never looks at, and
-     they are here because PLAN.md §4 iteration 0 asks for them. The four are
-     here from the first commit because the last of them is the one that cannot
-     be caught later by looking: without it a 393px phone lays the page out at
-     980px and scales it down, and three rounds of mobile sizing work in
-     Discola chased the symptom instead.
+<style>
+/* ---------------------------------------------------------------------------
+   Scopetta — a card table, lit from above. Forked from Tressette's sheet at
+   dec1c74, which forked Discola's: the same committed visual world, green
+   baize under warm light, so no theme swap. Every colour is painted explicitly
+   so the page holds on any host ground.
 
-     The table arrives in iteration 3, the sheets and the result in iteration
-     4. The engine lands beside this file in iteration 1. See PLAN.md. -->
+   What is different is different because Scopa is. The middle of the table is
+   not two cards facing each other, it is *the table* — up to thirteen cards —
+   and the hand is three whole cards rather than a fan of ten. So the fan
+   leaves the hand and arrives in the middle row, and the width term of the
+   card budget comes from the widest seat row instead.
+   --------------------------------------------------------------------------- */
+:root{
+  --felt:        #1e5140;
+  --felt-lit:    #2a6b54;
+  --edge:        #12332a;
+  --rail:        #0d2620;
+  --rail-line:   #1f4a3d;
+  --brass:       #c8a24a;
+  --brass-dim:   #8d7136;
+  --ivory:       #f2ebdc;
+  --ivory-dim:   #b9b09c;
+  --rosso:       #a33b2a;
+  --verde:       #5f9e72;
+
+  /* Spacing tokens. Everything that eats vertical space on the table is
+     declared here once and used by name below, so --chrome can be DERIVED
+     rather than hand-estimated.
+
+     Why that matters: the card height is (viewport - chrome) / --rows, so a
+     chrome that drifts out of step with the real padding shrinks or grows
+     every card on the table. Discola hard-coded it three times and was wrong
+     three times, each time silently. Change a padding now and the budget
+     follows it.
+
+     tools/check_ui.mjs asserts the result, and re-runs with these tokens
+     inflated so that replacing the derivation with a constant fails there. */
+  --topbar: 48px;                            /* the icon bar above the table */
+  --pad-block: clamp(.6rem, 1.6vw, 1.25rem); /* .table, top and bottom       */
+  --step: clamp(.5rem, 1.4vw, 1rem);         /* .table row gaps              */
+  --gap: clamp(.4rem, 1.2vw, .9rem);         /* between cards in a seat row  */
+  --tavola-pad: var(--step);                 /* .tavola, inside its border   */
+  --extra-gap: 0px;                          /* .middle's gap when it stacks */
+  /* A name plate is its type plus its padding. Derived, because --t-pick is
+     expressed in vw on phone-shaped screens — Tressette's was hard-coded at
+     76px against plates that cost 120px at 770x1475, and the player's own
+     plate hung below the fold while the check said `pass`. */
+  --plate-h: calc(max(var(--t-pick) * 1.45, 1.5rem) + .7rem);
+  --plates: 0px;                             /* name plates, when they stack */
+  --slack: 8px;                              /* never land exactly on zero   */
+  --pad-inline: clamp(16px, 3vw, 2rem);      /* .table, left and right       */
+  --rows: 3;                                 /* card rows down the table     */
+  /* The line above your hand that names the proposed capture. Always in flow
+     and always this tall, empty or not: in Tressette, showing it moved every
+     card below it down 31px, past the fold in landscape. Reserving the space
+     costs those pixels honestly, in the budget. A capture is named in a few
+     words — "Prendi il 4 e il 3 con il 7" — so one line of --t-tiny holds it. */
+  --say: calc(var(--t-tiny) * 1.5 + 4px);
+  --chrome: calc(var(--topbar) + 2*var(--pad-block) + 2*var(--step)
+                 + 2*var(--tavola-pad) + var(--extra-gap) + var(--plates)
+                 + var(--say) + var(--slack));
+
+  /* §3.7: two terms, and the smaller wins. The height term is Discola's. The
+     width term is NOT Tressette's fan — a Scopa hand is three whole cards —
+     it is the widest row on the table, which is the opponent's seat: their
+     pile, three cards and the deck. Five card widths and four gaps. */
+  --seat-span: 5;
+  --cw-height: calc((100dvh - var(--chrome)) / var(--rows) / var(--ratio));
+  --cw-width: calc((100vw - 2 * var(--pad-inline) - 4 * var(--gap)) / var(--seat-span));
+  --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 156px);
+  --ratio: 2.0833;
+  --ch: calc(var(--cw) * var(--ratio));
+  --sheet: url("decks/trevisane.png");
+
+  --radius: 5px;
+
+  --t-title: clamp(2.6rem, 9vw, 4rem);
+  --t-body:  1.15rem;
+  --t-name:  1.35rem;
+  --t-label: .95rem;
+  --t-pick:  1.1rem;
+  --t-cta:   1.22rem;
+  --t-btn:   .95rem;
+  --t-tiny:  .8rem;
+
+  --font-display: "Bodoni Moda", "Didot", "Times New Roman", serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-label: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+}
+
+*{ box-sizing: border-box; }
+
+/* Elements below declare `display`, and an author display rule beats the UA
+   stylesheet's [hidden]{display:none} — so .view would stay on screen and
+   every screen would render at once. Discola shipped exactly that. */
+[hidden]{ display: none !important; }
+
+body{
+  margin: 0;
+  background: var(--rail);
+  color: var(--ivory);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+button, select, input{ font: inherit; color: inherit; }
+:focus-visible{ outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* ---- screens -------------------------------------------------------------- */
+
+.view{
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+}
+
+/* ---- the icon bar --------------------------------------------------------- */
+
+.topbar{
+  height: var(--topbar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-inline: clamp(12px, 3vw, 1.5rem);
+  background: var(--rail);
+  border-bottom: 1px solid var(--rail-line);
+}
+.wordmark{
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1;
+}
+.tools{ display: flex; gap: .15rem; }
+.tool{
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 4px;
+  background: transparent;
+  color: var(--ivory-dim);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.tool:hover{ background: rgba(200,162,74,.14); color: var(--brass); }
+.tool svg{
+  width: 21px; height: 21px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ---- the table ------------------------------------------------------------ */
+
+.table{
+  position: relative;
+  display: grid;
+  /* Rows hug their content and the group is centred, so leftover height sits
+     above and below rather than being shared out between the rows — a 1fr
+     middle row gave every spare pixel to the gaps and the table drifted
+     apart. `safe` keeps the top reachable if the content ever does overflow. */
+  grid-template-rows: auto auto auto;
+  align-content: safe center;
+  gap: var(--step);
+  padding-block: var(--pad-block);
+  padding-inline: var(--pad-inline);
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 45%, var(--felt-lit) 0%, var(--felt) 55%, var(--edge) 100%);
+  /* Vertical scroll is the safe fallback if the budget is ever exceeded:
+     reaching a card by scrolling beats a card hidden under another one. */
+  overflow: hidden auto;
+}
+.table::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .35;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.055) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg,  rgba(0,0,0,.055) 0 1px, transparent 1px 3px);
+}
+.table > *{ position: relative; z-index: 1; }
+
+/* ---- seats ---------------------------------------------------------------- */
+
+.seat{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--step);
+}
+
+/* Three whole cards, side by side, with the pile at one end and the deck at
+   the other. No fan and no strip: the width term above is sized so that this
+   row fits, which is what makes a Scopa hand tappable anywhere on the card. */
+.hand{
+  display: flex;
+  gap: var(--gap);
+  /* A card row all deal, whether or not it has a card in it. A hand empties
+     for a beat between rounds, and an empty flex row is zero tall — which
+     would re-centre the whole table five times a deal. */
+  min-height: var(--ch);
+}
+
+/* The pile, the hand and the deck on ONE row — five card widths and four gaps,
+   which is exactly what --cw-width measures. They were three stacked rows in
+   portrait once, so a seat cost three card heights against a budget that had
+   paid for one, and your own seat hung up to 203px below the fold. The check
+   caught it at fourteen viewports before anything was committed. */
+.seat__cards{
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+}
+.pile--ghost{ visibility: hidden; }
+
+.hand--you > .card[aria-pressed="true"]{
+  z-index: 3;
+  transform: translateY(-40%) scale(1.04);
+  box-shadow: 0 18px 30px rgba(0,0,0,.6), 0 0 0 2px var(--brass),
+              0 0 26px rgba(200,162,74,.38);
+}
+
+/* ---- cards ---------------------------------------------------------------- */
+
+.card{
+  width: var(--cw);
+  height: var(--ch);
+  flex: none;
+  border: 0;
+  padding: 0;
+  border-radius: var(--radius);
+  background-color: transparent;
+  background-image: var(--sheet);
+  background-repeat: no-repeat;
+  background-size: calc(var(--cw) * 11) calc(var(--ch) * 4);
+  background-position: calc(var(--cw) * var(--col, 10) * -1) calc(var(--ch) * var(--row, 0) * -1);
+  box-shadow: 0 2px 5px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.25);
+  transition: transform .16s ease, box-shadow .16s ease, opacity .3s ease;
+}
+.card[data-empty="true"]{
+  background-image: none;
+  box-shadow: inset 0 0 0 1px rgba(242,235,220,.11);
+  /* An empty slot must not take a tap meant for the card beside it. A disabled
+     button eats the click rather than passing it on, so this has to be
+     pointer-events. Tressette's issue #7. */
+  pointer-events: none;
+}
+button.card:not(:disabled){ cursor: pointer; }
+button.card:not(:disabled):hover,
+button.card:not(:disabled):focus-visible{
+  transform: translateY(-10px);
+  box-shadow: 0 10px 18px rgba(0,0,0,.5), 0 0 0 1px var(--brass);
+}
+button.card:disabled{ cursor: default; }
+
+/* A card in the capture the table is proposing. Brass, so the proposal is
+   read off the table rather than out of the line above the hand. */
+.card[data-take="true"]{
+  box-shadow: 0 2px 5px rgba(0,0,0,.45), 0 0 0 2px var(--brass),
+              0 0 20px rgba(200,162,74,.34);
+}
+
+/* ---- the middle: the table itself ----------------------------------------- */
+
+/* The layout risk of the project, per §6. Zero to thirteen face-up cards, in
+   one row in landscape and two in portrait. */
+.middle{
+  display: grid;
+  justify-items: center;
+  gap: var(--extra-gap);
+}
+
+.tavola{
+  display: grid;
+  /* minmax(0,1fr), not the implicit `auto`: an auto column sizes to its widest
+     row, so a row that should overlap its cards grows the whole table instead
+     and the row's own percentage step is computed against a width that moved
+     to fit it. Bounded, the step formula below has a fixed width to divide and
+     the cards overlap as §3.7 says they should. It also makes the per-row spill
+     assertion reachable — against an auto column it could never fire, which
+     would have made it decoration. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--step);
+  justify-items: center;
+  width: 100%;
+  padding: var(--tavola-pad);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(242,235,220,.09), inset 0 0 34px rgba(0,0,0,.22);
+  /* A table row all deal, so an empty table does not collapse the middle and
+     re-centre everything above and below it. A scopa empties it every few
+     plays, which is exactly when the player is looking. */
+  min-height: var(--ch);
+}
+
+/* A row of the table. Cards space out while they fit and overlap when they do
+   not, per §3.7:
+       step = min(--cw + --gap, (row width − --cw) / (n − 1))
+   The second term is expressed as a percentage, which resolves against this
+   row's own width — so the derivation lives in the sheet and cannot drift
+   from a number someone measured once. `--n` is written by render().
+
+   Everything right of a card's strip belongs to the card after it, so a card
+   in an overlapping row is chosen by tapping its strip, not its middle. */
+.tavola-row{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: var(--ch);
+}
+.tavola-row > * + *{
+  margin-left: calc(
+    min(var(--cw) + var(--gap), (100% - var(--cw)) / (max(var(--n, 2), 2) - 1))
+    - var(--cw));
+}
+.tavola-row > *{ z-index: 1; }
+.tavola-row > *:hover,
+.tavola-row > *[data-take="true"]{ z-index: 2; }
+
+/* ---- piles and the deck --------------------------------------------------- */
+
+.pile{
+  position: relative;
+  width: var(--cw);
+  height: var(--ch);
+  flex: none;
+}
+.pile .card{ position: absolute; top: 0; right: 0; }
+.pile[data-count="0"] > .card{ display: none; }
+
+/* The count of cards taken, and the scope face up across the top edge, as
+   tradition shows them. A badge that lags the state is the kind of defect
+   nothing throws for, so the deal pass asserts it after every play. */
+.badge{
+  position: absolute;
+  right: -.35rem;
+  bottom: -.35rem;
+  z-index: 2;
+  min-width: 1.9ch;
+  padding: .05rem .35rem;
+  border-radius: 999px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--t-tiny);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--rail);
+  background: var(--brass);
+  box-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+.scope{
+  position: absolute;
+  top: -.3rem;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: .18rem;
+  pointer-events: none;
+}
+.scopa-mark{
+  width: .42rem;
+  height: .42rem;
+  border-radius: 50%;
+  background: var(--brass);
+  box-shadow: 0 0 8px rgba(200,162,74,.6);
+}
+
+.stack-meta{ display: grid; gap: .2rem; min-width: 0; }
+.count{
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.6vw, 1.6rem);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.eyebrow{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: var(--t-tiny);
+  color: var(--ivory-dim);
+}
+
+/* ---- name plates ---------------------------------------------------------- */
+
+.plate{
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .35rem .8rem;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(0,0,0,.24), rgba(0,0,0,.36));
+  box-shadow: inset 0 0 0 1px var(--brass-dim);
+}
+.seat--opp .plate{ grid-column: 1; justify-self: start; }
+.seat--you .plate{ grid-column: 3; justify-self: end; }
+.plate__who{
+  font-family: var(--font-display);
+  font-size: var(--t-pick);
+  font-weight: 600;
+}
+.plate__role{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: var(--t-tiny);
+  color: var(--ivory-dim);
+}
+/* Who dealt. The dealer plays the last card of every round and of the deal,
+   which is worth knowing while choosing one. */
+.plate__deal{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: var(--t-tiny);
+  color: var(--brass);
+  border: 1px solid var(--brass-dim);
+  border-radius: 2px;
+  padding: 0 .3rem;
+}
+.plate--turn{ box-shadow: inset 0 0 0 1px var(--brass), 0 0 16px rgba(200,162,74,.3); }
+.turn-dot{
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--brass);
+  flex: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.plate--turn .turn-dot{ opacity: 1; }
+
+/* ---- the say line --------------------------------------------------------- */
+
+/* Spans your seat, directly above the cards it talks about. It never leaves
+   the flow — see --say — so it cannot move the cards; only its contents come
+   and go. Row gap zero because --say already carries the 4px. */
+.seat--you{ row-gap: 0; }
+.say{
+  grid-column: 1 / -1;
+  height: var(--say);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.sel-name{
+  margin: 0;
+  text-align: center;
+  line-height: 1.5;
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--ivory-dim);
+  font-size: var(--t-tiny);
+}
+.sel-name--act{ color: var(--brass); }
+
+/* ---- the toast ------------------------------------------------------------ */
+
+/* "Scopa!" — a word, on screen for a beat. Out of the card budget entirely,
+   because anything that cannot be budgeted floats: Tressette sized a strip for
+   one line of a declaration and clipped the second in half at every phone
+   width. There is nothing under it but the opponent's face-down hand. */
+.table > .toast{
+  position: absolute;
+  top: calc(var(--pad-block) + var(--step));
+  left: var(--pad-inline);
+  right: var(--pad-inline);
+  z-index: 4;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--pad-inline));
+  margin: 0 auto;
+  padding: .4rem .9rem;
+  border-radius: 4px;
+  text-align: center;
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: var(--t-body);
+  line-height: 1.35;
+  color: var(--brass);
+  background: rgba(8, 26, 21, .92);
+  box-shadow: inset 0 0 0 1px var(--brass-dim), 0 8px 24px rgba(0, 0, 0, .45);
+}
+
+/* ---- the start sheet ------------------------------------------------------ */
+
+/* Iteration 4 builds this out; for now it is a way in and a way back. */
+.sheet-body{
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 2rem);
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, var(--felt-lit) 0%, var(--felt) 60%, var(--edge) 100%);
+}
+.sheet-inner{ width: min(620px, 100%); display: grid; gap: 1.4rem; justify-items: center; }
+.hero-title{
+  font-family: var(--font-display);
+  font-size: var(--t-title);
+  font-weight: 700;
+  line-height: 1;
+  margin: 0;
+}
+.hero-sub{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: var(--t-label);
+  color: var(--ivory-dim);
+  margin: 0;
+}
+.btn{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: var(--t-cta);
+  padding: .7rem 2.2rem;
+  border: 0;
+  border-radius: 3px;
+  background: var(--brass);
+  color: var(--rail);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+/* ---- portrait ------------------------------------------------------------- */
+
+@media (orientation: portrait){
+  /* Stacked, so the table is four card rows deep: the opponent's seat, the
+     two halves of the table, and your seat. All four have to be on screen at
+     once — having to scroll to see your own cards is not playing — so the card
+     is bounded by a quarter of the height. `1fr auto 1fr` makes both side
+     columns fit a plate, which is more than a phone is wide. */
+  /* Only the plate leaves the row; the cards stay together, or the seat costs
+     three card rows instead of one. */
+  .seat{ grid-template-columns: minmax(0,1fr); justify-items: center; gap: .25rem; }
+  .seat__cards, .seat--opp .plate, .seat--you .plate{
+    grid-column: 1; justify-self: center;
+  }
+  /* The height --plates reserves, made explicit, so the budget and the plate
+     cannot drift apart. */
+  .plate{ height: var(--plate-h); }
+  .seat--you .plate{ margin-top: .25rem; }
+
+  :root{
+    --rows: 4;
+    --extra-gap: .5rem;
+    --plates: calc(2 * var(--plate-h) + .5rem);
+    --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);
+    /* In portrait the seat row stacks, so the widest row is the hand's three
+       cards rather than five — but the table row is what binds here, and it
+       is allowed to overlap. Keeping five is the conservative choice: it never
+       makes a card bigger than the landscape rule would. */
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px){
+  /* Only tokens: --chrome recomputes itself. Overriding .table directly from
+     here loses to the earlier declarations at the same specificity. */
+  :root{ --topbar: 40px; --pad-block: .4rem; --step: .4rem; --gap: .3rem; }
+  .wordmark{ font-size: 1.1rem; }
+  .tool{ width: 32px; height: 32px; }
+}
+
+/* ---- phone-shaped screens -------------------------------------------------
+   A portrait screen this tall is a phone in someone's hand, and a phone's
+   width is a hand's width. The aspect ratio separates a phone from a tablet,
+   not the width. The caps are safety rails and never bind on a real phone. */
+@media (orientation: portrait) and (max-aspect-ratio: 3/5){
+  :root{
+    --t-title: clamp(40px, 11vw,  96px);
+    --t-body:  clamp(17px, 4.6vw, 42px);
+    --t-name:  clamp(20px, 5.4vw, 48px);
+    --t-label: clamp(13px, 3.4vw, 30px);
+    --t-pick:  clamp(16px, 4.4vw, 40px);
+    --t-cta:   clamp(19px, 5.2vw, 46px);
+    --t-btn:   clamp(15px, 4vw,   32px);
+    --t-tiny:  clamp(12.5px, 3.2vw, 28px);
+  }
+  .sheet-inner{ width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+</style>
+
+<!-- ============================ the table ============================ -->
+<div class="view" id="viewTable" hidden>
+  <header class="topbar">
+    <span class="wordmark">Scopetta</span>
+    <nav class="tools">
+      <button class="tool" id="again" type="button" title="Nuova smazzata" aria-label="Nuova smazzata">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.7 3.3"/><path d="M20 5.5V11h-5.5"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="table" id="table">
+    <section class="seat seat--opp">
+      <div class="plate" id="plateOpp">
+        <span class="turn-dot"></span>
+        <span>
+          <span class="plate__who" id="oppName">Franco</span>
+          <span class="plate__role">avversario</span>
+        </span>
+        <span class="plate__deal" id="oppDeal" hidden>mazziere</span>
+      </div>
+      <div class="seat__cards">
+        <div class="pile" id="pileOpp" data-count="0">
+          <div class="card" style="--col:10;--row:0"></div>
+          <span class="scope" id="scopeOpp"></span>
+          <span class="badge" id="countOpp">0</span>
+        </div>
+        <div class="hand hand--opp" id="oppHand"></div>
+        <div class="pile" id="mazzo" data-count="30">
+          <div class="card" style="--col:10;--row:0"></div>
+          <span class="badge" id="countMazzo">30</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="middle">
+      <div class="tavola" id="tavola"></div>
+    </section>
+
+    <p class="toast" id="toast" hidden></p>
+
+    <section class="seat seat--you">
+      <div class="say">
+        <p class="sel-name" id="selName" hidden></p>
+      </div>
+      <div class="seat__cards">
+        <div class="pile" id="pileYou" data-count="0">
+          <div class="card" style="--col:10;--row:0"></div>
+          <span class="scope" id="scopeYou"></span>
+          <span class="badge" id="countYou">0</span>
+        </div>
+        <div class="hand hand--you" id="youHand"></div>
+        <!-- The deck sits at the opponent's end of the table, so your side of
+             this row is a spacer: the row stays five card widths wide in both
+             seats, which is what the width term of the budget measures. -->
+        <div class="pile pile--ghost" aria-hidden="true"></div>
+      </div>
+      <div class="plate" id="plateYou">
+        <span class="turn-dot"></span>
+        <span>
+          <span class="plate__who">Tu</span>
+          <span class="plate__role">giocatore</span>
+        </span>
+        <span class="plate__deal" id="youDeal" hidden>mazziere</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============================ start ============================ -->
+<div class="view" id="viewStart">
+  <header class="topbar"><span class="wordmark">Scopetta</span></header>
+  <div class="sheet-body">
+    <div class="sheet-inner">
+      <h1 class="hero-title">Scopetta</h1>
+      <p class="hero-sub">Scopa a due</p>
+      <button class="btn" id="play" type="button">Gioca</button>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+/* ---------------------------------------------------------------------------
+   The page. The rules and the opponent are engine.js's; this file renders a
+   state and turns taps into calls on it.
+
+   Iteration 3 is the table. The sheets, the result dialog and the settings are
+   iteration 4's, and the start screen here is a way in and nothing more.
+   --------------------------------------------------------------------------- */
+
+/* --- decks ------------------------------------------------------------------ */
+
+// Each sheet was packed from its own 1997 bitmaps and they are not the same
+// shape, so the deck carries a ratio and the card budget uses it. The settings
+// sheet that lets a player pick one is iteration 4's; applyDeck is here now
+// because --ratio is a term of the budget and the check runs all five.
+const DECK_RATIO = {
+  Trevisane: 125 / 60, Romagnole: 112 / 71, Napoletane: 128 / 78,
+  Piacentine: 128 / 74, Francesi: 128 / 75
+};
+const SHEET = { Trevisane: "trevisane", Piacentine: "piacentine", Napoletane: "napoletane",
+                Romagnole: "romagnole", Francesi: "francesi" };
+
+function applyDeck(name){
+  state.deck = name;
+  const root = document.documentElement;
+  root.style.setProperty("--sheet", `url("decks/${SHEET[name]}.png")`);
+  root.style.setProperty("--ratio", DECK_RATIO[name]);
+}
+
+const NOMI = ["asso", "due", "tre", "quattro", "cinque", "sei", "sette",
+              "fante", "cavallo", "re"];
+const SEMI = ["denari", "coppe", "spade", "bastoni"];
+const nomeDi = c => `${NOMI[c.n - 1]} di ${SEMI[c.s]}`;
+const breve  = c => NOMI[c.n - 1];
+
+/* --- state ------------------------------------------------------------------ */
+
+// §3.2: the page rolls, the engine does not. Piero's weights are rolled once
+// per session, as in Discola where SetProfiles ran from FormCreate.
+const PROFILES = rollProfiles(Math.random);
+
+const state = {
+  hands: [], opponent: "Franco", deck: "Trevisane", speed: 900, sound: false,
+  dealt: false, over: false,
+  selected: null, scelta: 0,
+};
+
+let timer = null, sayTimer = null;
+let epoch = 0;          // bumped on every new deal, so a stale timer cannot fire into it
+
+// The game's own clock: one timer, so a new deal cancels whatever the last one
+// was about to do. An abandoned deal must not keep playing itself behind the
+// start screen.
+function later(fn, ms){
+  const mine = epoch;
+  clearTimeout(timer);
+  timer = setTimeout(() => { if (mine === epoch) fn(); }, ms);
+}
+// The toast needs its own, or the next scheduled play cancels its auto-hide and
+// "Scopa!" stays on the table for the rest of the deal.
+function sayLater(fn, ms){
+  const mine = epoch;
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(() => { if (mine === epoch) fn(); }, ms);
+}
+
+/* --- the DOM ---------------------------------------------------------------- */
+
+const el = {};
+for (const id of ["table","tavola","oppHand","youHand","pileOpp","pileYou","mazzo",
+  "countOpp","countYou","countMazzo","scopeOpp","scopeYou","oppName","oppDeal","youDeal",
+  "plateOpp","plateYou","selName","toast","viewTable","viewStart","play","again"])
+  el[id] = document.getElementById(id);
+
+function faceOf(node, card){
+  if (!card){
+    node.dataset.empty = "true";
+    node.style.removeProperty("--col");
+    node.style.removeProperty("--row");
+    return;
+  }
+  node.dataset.empty = "false";
+  node.style.setProperty("--col", card.n - 1);
+  node.style.setProperty("--row", card.s);
+}
+function backOf(node){
+  node.dataset.empty = "false";
+  node.style.setProperty("--col", 10);
+  node.style.setProperty("--row", 0);
+}
+
+// Three card elements a side, built once and reused. A hand keeps its holes —
+// §2.2, a card that moves under the thumb between one glance and the next is a
+// misplay — so a button is a slot, and `data-slot` is read at click time rather
+// than closed over.
+function buildHands(){
+  el.oppHand.replaceChildren(...Array.from({ length: 3 }, () => {
+    const d = document.createElement("div");
+    d.className = "card";
+    return d;
+  }));
+  el.youHand.replaceChildren(...Array.from({ length: 3 }, (_, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "card";
+    b.dataset.slot = String(i);
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => tapped(Number(b.dataset.slot)));
+    return b;
+  }));
+}
+
+/* --- rendering -------------------------------------------------------------- */
+
+// Every legal capture for the raised card, and which one is being proposed.
+function proposte(){
+  if (state.selected === null) return [];
+  const card = state.hands[BASSO][state.selected];
+  return card ? prese(state.tavola, card) : [];
+}
+function propostaCorrente(){
+  const opts = proposte();
+  return opts.length ? opts[state.scelta % opts.length] : [];
+}
+
+function render(){
+  const yourTurn = state.deveGiocare === BASSO && !state.over && state.dealt;
+
+  // --- your hand
+  const take = new Set(propostaCorrente());
+  [...el.youHand.children].forEach((node, slot) => {
+    const card = state.hands[BASSO] ? state.hands[BASSO][slot] : null;
+    faceOf(node, card);
+    node.disabled = !yourTurn || !card;
+    node.setAttribute("aria-pressed", String(state.selected === slot));
+    node.setAttribute("aria-label", card
+      ? (state.selected === slot ? `Gioca il ${nomeDi(card)}` : `Scegli il ${nomeDi(card)}`)
+      : "");
+  });
+
+  // --- their hand, face down
+  [...el.oppHand.children].forEach((node, slot) => {
+    const card = state.hands[ALTO] ? state.hands[ALTO][slot] : null;
+    if (card) backOf(node); else faceOf(node, null);
+  });
+
+  // --- the table
+  renderTavola(take);
+
+  // --- piles, the deck and the plates
+  renderPile(el.pileOpp, el.countOpp, el.scopeOpp, ALTO);
+  renderPile(el.pileYou, el.countYou, el.scopeYou, BASSO);
+  const left = state.cards ? state.cards.length - state.next : 0;
+  el.mazzo.dataset.count = String(left);
+  el.countMazzo.textContent = String(left);
+
+  el.oppName.textContent = state.opponent;
+  el.oppDeal.hidden = state.mazziere !== ALTO;
+  el.youDeal.hidden = state.mazziere !== BASSO;
+  el.plateOpp.classList.toggle("plate--turn", state.deveGiocare === ALTO && !state.over);
+  el.plateYou.classList.toggle("plate--turn", yourTurn);
+
+  renderSay();
+}
+
+// §3.7. One row in landscape, two in portrait with the first ceil(n/2) cards
+// above. `--n` goes on the row so the step formula in the sheet can use it.
+function renderTavola(take){
+  const cards = state.tavola || [];
+  const portrait = window.matchMedia("(orientation: portrait)").matches;
+  const rows = portrait && cards.length > 1
+    ? [cards.slice(0, Math.ceil(cards.length / 2)), cards.slice(Math.ceil(cards.length / 2))]
+    : [cards];
+
+  el.tavola.replaceChildren(...rows.map((row, r) => {
+    const div = document.createElement("div");
+    div.className = "tavola-row";
+    div.style.setProperty("--n", String(Math.max(row.length, 1)));
+    const offset = r === 0 ? 0 : rows[0].length;
+    div.replaceChildren(...row.map((card, i) => {
+      const idx = offset + i;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "card";
+      b.dataset.index = String(idx);
+      faceOf(b, card);
+      b.dataset.take = String(take.has(idx));
+      b.setAttribute("aria-label", nomeDi(card));
+      // Tapping a table card switches the proposal to one that contains it.
+      b.disabled = state.selected === null;
+      b.addEventListener("click", () => scegliDaTavola(idx));
+      return b;
+    }));
+    return div;
+  }));
+}
+
+function renderPile(pile, badge, scope, who){
+  const n = state.prese ? state.prese[who].length : 0;
+  pile.dataset.count = String(n);
+  badge.textContent = String(n);
+  const s = state.scope ? state.scope[who] : 0;
+  scope.replaceChildren(...Array.from({ length: s }, () => {
+    const d = document.createElement("span");
+    d.className = "scopa-mark";
+    return d;
+  }));
+}
+
+// The line above your hand. It costs --say whether or not it has something to
+// say; only its contents come and go.
+function renderSay(){
+  // The deal's result lives here until iteration 4 gives it a dialog.
+  if (state.over && state.dealt){
+    const r = scoreDeal(state);
+    el.selName.hidden = false;
+    el.selName.classList.add("sel-name--act");
+    el.selName.textContent = `Fine: ${r.punti[BASSO]} a ${r.punti[ALTO]}`;
+    return;
+  }
+  if (state.selected === null){
+    el.selName.hidden = true;
+    el.selName.textContent = "";
+    return;
+  }
+  const card = state.hands[BASSO][state.selected];
+  if (!card){ el.selName.hidden = true; return; }
+  const presa = propostaCorrente();
+  el.selName.hidden = false;
+  el.selName.classList.add("sel-name--act");
+  if (!presa.length){
+    el.selName.textContent = `Cala il ${breve(card)}`;
+    return;
+  }
+  const presi = presa.map(i => breve(state.tavola[i]));
+  const lista = presi.length === 1 ? `il ${presi[0]}`
+              : `il ${presi.slice(0, -1).join(", il ")} e il ${presi[presi.length - 1]}`;
+  el.selName.textContent = `Prendi ${lista} con il ${breve(card)}`;
+}
+
+/* --- playing ---------------------------------------------------------------- */
+
+// §0 decision 6: one tap plays the card. The tap raises it instead only when
+// the rule leaves a choice of capture — two sevens on the table, or 4+3 and
+// 5+2 — and then a second tap plays the proposal.
+function tapped(slot){
+  if (state.deveGiocare !== BASSO || state.over || !state.dealt) return;
+  if (!state.hands[BASSO][slot]) return;
+
+  if (state.selected === slot){ play(BASSO, slot, propostaCorrente()); return; }
+
+  const opts = prese(state.tavola, state.hands[BASSO][slot]);
+  if (opts.length > 1){
+    // A choice: raise it, propose the first, and let the player pick.
+    state.selected = slot;
+    state.scelta = 0;
+    render();
+    return;
+  }
+  play(BASSO, slot, opts[0] || []);
+}
+
+// A tap on a table card switches the proposal to a capture that contains it.
+function scegliDaTavola(idx){
+  const opts = proposte();
+  if (opts.length < 2) return;
+  const found = opts.findIndex(set => set.includes(idx));
+  if (found < 0) return;
+  state.scelta = found;
+  render();
+}
+
+function play(who, slot, presa){
+  const r = gioca(state, who, slot, presa);
+  state.selected = null;
+  state.scelta = 0;
+  blip(who === BASSO ? 760 : 620);
+  if (r.scopa) toast("Scopa!");
+  render();
+
+  if (state.over){ later(() => finish(), state.speed * 0.6); return; }
+  if (state.deveGiocare === ALTO) later(() => computerPlay(), state.speed * 0.6);
+}
+
+function computerPlay(){
+  if (state.deveGiocare !== ALTO || state.over) return;
+  const m = compGioca(state, PROFILES[state.opponent] || PROFILES.Franco);
+  if (!m) return;
+  play(ALTO, m.slot, m.presa);
+}
+
+function toast(text){
+  el.toast.textContent = text;
+  el.toast.hidden = false;
+  sayLater(() => { el.toast.hidden = true; }, 1600);
+}
+
+// Iteration 4 gives this a dialog. For now the deal ends on the table with the
+// score in the say line, so that a full deal can be played and read.
+function finish(){
+  render();
+}
+
+function newDealHere(){
+  epoch++;
+  clearTimeout(timer);
+  clearTimeout(sayTimer);
+  el.toast.hidden = true;
+  newDeal(state, Math.random);
+  state.selected = null;
+  state.scelta = 0;
+  render();
+  if (state.deveGiocare === ALTO) later(() => computerPlay(), state.speed);
+}
+
+/* --- sound ------------------------------------------------------------------ */
+
+let audio = null;
+function blip(cut){
+  if (!state.sound) return;
+  try{
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    const dur = 0.09;
+    const buf = audio.createBuffer(1, Math.ceil(audio.sampleRate * dur), audio.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++){
+      const fade = 1 - i / data.length;
+      data[i] = (Math.random() * 2 - 1) * fade * fade * 0.5;
+    }
+    const src = audio.createBufferSource();
+    src.buffer = buf;
+    const filter = audio.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = cut;
+    filter.Q.value = 0.7;
+    const gain = audio.createGain();
+    gain.gain.value = 0.22;
+    src.connect(filter).connect(gain).connect(audio.destination);
+    src.start();
+  } catch (e){ /* no audio available; the game plays on regardless */ }
+}
+
+/* --- screens ---------------------------------------------------------------- */
+
+const VIEWS = { table: el.viewTable, start: el.viewStart };
+
+function show(name){
+  for (const [k, node] of Object.entries(VIEWS)) node.hidden = k !== name;
+}
+
+/* --- keys ------------------------------------------------------------------- */
+
+// 1-3 play a card by its slot, or raise it when a capture needs choosing.
+// Space cycles the proposal, Enter confirms it, Escape puts the card back.
+document.addEventListener("keydown", e => {
+  if (el.viewTable.hidden) return;
+  if (e.key >= "1" && e.key <= "3"){ tapped(Number(e.key) - 1); return; }
+  if (state.selected === null) return;
+  if (e.key === " "){
+    e.preventDefault();
+    const opts = proposte();
+    if (opts.length > 1){ state.scelta = (state.scelta + 1) % opts.length; render(); }
+    return;
+  }
+  if (e.key === "Enter"){
+    e.preventDefault();
+    play(BASSO, state.selected, propostaCorrente());
+    return;
+  }
+  if (e.key === "Escape"){ state.selected = null; state.scelta = 0; render(); }
+});
+
+/* --- go --------------------------------------------------------------------- */
+
+el.play.addEventListener("click", () => { show("table"); newDealHere(); });
+el.again.addEventListener("click", () => newDealHere());
+
+buildHands();
+applyDeck(state.deck);
+show("start");
+</script>

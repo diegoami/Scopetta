@@ -8,10 +8,9 @@ above, the house's named opponents, who share one formula and differ only in
 their weights, and a UI check calibrated against the defects that actually
 ship.
 
-**Status: iterations 0, 1 and 2 are merged** — the scaffold, the rules with
-their tests, and the opponent with its harness, its traps and its golden
-fixture. `public/index.html` is still a title and the font links; the table is
-iteration 3. This document is the plan, and it becomes `SPEC.md` once the game
+**Status: iterations 0 to 3 are merged** — the scaffold, the rules with their
+tests, the opponent with its harness and its golden fixture, and the table. The
+sheets, the result dialog and the settings are iteration 4. This document is the plan, and it becomes `SPEC.md` once the game
 exists, the way Discola's and Tressette's did. Where an iteration measured
 something the plan had guessed, the plan says so at the place it guessed.
 
@@ -217,6 +216,7 @@ public/decks/*.png  the five sprite sheets, byte-identical copies from Tressette
 tools/check_ui.mjs  the UI check, forked from Tressette and extended for the table (§3.7)
 tools/engine.test.mjs   unit tests on node --test, no dependencies
 tools/break.mjs     every rule broken on purpose, and whether a test caught it (§4 iteration 1)
+tools/break_ui.mjs  the same for the page: every defect broken on purpose, and which assertion saw it
 tools/opponent.test.mjs the trap suite and the golden test
 tools/selfplay.mjs  headless matches: profile vs profile, vs baselines; the tuning loop
 tools/golden.json   the frozen plays, re-recorded by `selfplay.mjs --golden`
@@ -749,6 +749,9 @@ On a 360px phone that is about a 59px card, which is about what Tressette's
 fan got and a little less than Discola's three; at the tightest landscape
 viewport the height term binds, as it always has. Estimates, to be measured.
 
+Measured at iteration 3: **60px** at 360x800 with the Trevisane sheet, and the
+height term binding in landscape as predicted. The estimate was right.
+
 **The table is the risk.** It holds four cards at the deal and anything from
 zero to thirteen after that: thirteen is the bound the rules allow — the four
 dealt cards can be four cavalli, and 10, 8, 7, 6, 5, 4, 3, 2, 1 can then be
@@ -783,6 +786,10 @@ Thirteen cards do not sit side by side on a phone. Two rules, in this order:
    is seven cards in a row at a 45px step, comfortably above the floor; on a
    1920px desktop at the 156px cap, thirteen overlap at about 140px, which is
    a fan in name only.
+
+   Measured at iteration 3, 360x800, thirteen cards: **seven above at a 42px
+   step and six below at 50px**, against a floor of `min(24, .45 x 60) = 24px`.
+   The estimate was right to within three pixels.
 
 **Choosing a capture.** With one tap per play (decision 6), the choice state
 is entered only when the rule leaves one. The card lifts as Tressette's does,
@@ -1262,7 +1269,7 @@ and the next iteration that forks checks for movement first.
 | Forked | From | At | By |
 |---|---|---|---|
 | decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `ed445bd` | iteration 0 |
-| CSS and table markup | Tressette | to be recorded | iteration 3 |
+| CSS and table markup | Tressette | `dec1c74` | iteration 3 |
 | selfplay harness | Tressette | `dec1c74` | iteration 2 |
 
 Iteration 0 checked for movement before forking, as the paragraph above says

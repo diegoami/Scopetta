@@ -24,14 +24,16 @@ node tools/check_ui.mjs
 Not optional, and not only when something looks wrong. It runs in CI on every
 pull request as well, and a red check does not merge.
 
-**Until iteration 3 this rule is suspended, and only until then.** The check
-and the `ui-check` skill were copied from Tressette in iteration 0, before
-there was a table to check, and the copy is still Tressette's inside: ten-card
-fixtures, tricks, declarations, `tressette.history`. Nobody runs it and nobody
-tries to make it pass while `public/index.html` holds a title and the font
-links. Iteration 3 rewrites it, adds the rows §3.7 of `PLAN.md` lists, and
-gives `check.yml` the job that runs it; from that commit the paragraph above
-applies without exception.
+**The suspension ended at iteration 3.** The check is this game's now — its
+own fixtures, its own table row, `scopetta` where it used to say `tressette` —
+and `check.yml` has the job that runs it. Six passes: the document, every
+screen, the table at every viewport in every deck, the table again with the
+spacing inflated, the capture choice and the toast, and one whole deal.
+
+**`node tools/break_ui.mjs` is the other half.** It breaks the page on purpose,
+one defect at a time, and checks that the assertion *written for that defect*
+goes red — not merely that something did. Run it after adding an assertion, the
+way `tools/break.mjs` is run after adding a rule test.
 
 Every UI defect Discola shipped was invisible in the diff and threw no error:
 cards overlapping the hand, the player's own hand pushed below the fold, the
