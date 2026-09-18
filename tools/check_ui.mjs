@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * UI check for Tressette. Run it after any UI change.
+ * UI check for Scopetta. Run it after any UI change.
  *
  *   node tools/check_ui.mjs [path-to-index.html]   # defaults to public/index.html
  *
@@ -8,30 +8,39 @@
  *   npm i playwright-core && npx playwright-core install chromium
  *   CHROME=/path/to/chrome node tools/check_ui.mjs   # or name one yourself
  *
- * Four passes. The middle two are Discola's, because the failures that project
- * shipped came in two different shapes; the last plays a deal, because a table
- * can measure perfectly and still not be wired to the engine.
+ * Forked from Tressette's at dec1c74. The document pass and the audit are its
+ * and Discola's, unchanged where the defect they name is the same; the table
+ * and deal passes are rewritten, because Scopa's middle row is a table of up
+ * to thirteen cards rather than a trick of two, and its hand is three whole
+ * cards rather than a fan of ten.
  *
  * 0. DOCUMENT — the four document facts that cannot be expressed as a layout
  *    assertion: the viewport meta, the doctype, the charset and <html lang>.
  *
- * 1. SCREENS — every screen and both dialogs, at a handful of real device
- *    shapes. Catches things that are wrong anywhere: more than one screen
- *    visible at once, text set too small to read, clipped labels, tap targets
- *    below the thumb, sideways scroll, script errors.
+ * 1. SCREENS — every screen and every state worth looking at, at a handful of
+ *    real device shapes. Catches what is wrong anywhere: more than one screen
+ *    visible at once, text too small to read, clipped labels, tap targets under
+ *    the thumb, sideways scroll, script errors.
  *
  * 2. TABLE — the card table only, at every viewport and in all five decks, and
- *    then the tightest five again with the spacing tokens inflated.
- *    The card size is a budget, (viewport height - chrome) / rows, and when
- *    that budget is wrong nothing throws and nothing looks broken in review:
- *    the cards quietly overlap, or your hand slides below the fold, or the
- *    rows drift apart until the table stops reading as one surface. Each of
- *    those shipped once. They are assertions now.
+ *    then the tightest of them again with the spacing tokens inflated. The card
+ *    size is a budget and when it is wrong nothing throws: the cards quietly
+ *    overlap, or your seat slides below the fold, or the rows drift apart.
+ *    **It renders the table at 0, 4, 8 and 13 cards**, because the number of
+ *    cards in the middle is this game's own way to fail and a freshly dealt
+ *    table only ever shows four. It also asks the page which card a tap would
+ *    land on, a pixel at a time, because paint order decides that and paint
+ *    order moves no box.
  *
- * 3. DEAL — one whole deal against the house opponent, played through the fan by tapping,
- *    at one viewport in one deck, then a second deal abandoned through the
- *    confirm. It asserts the game can be finished, recorded and walked away
- *    from, not how it looks.
+ * 2b. CHOICE — a capture waiting to be chosen, on a four-card table and on a
+ *    crowded one with a pointer resting on a card; and the toast.
+ *
+ * 2c. STATES — the sweep and the beat between rounds, PLAYED rather than posed.
+ *    Neither is a state the engine will sit in, so a posed one passes whether
+ *    or not the page can reach the real one.
+ *
+ * 3. DEAL — one whole deal against Franco, played by tapping, choosing a
+ *    capture by both paths, reading the table after every play.
  *
  * Every threshold below is calibrated against a real defect, not taste. If you
  * relax one, check it still fails the commit that introduced the bug it names.
@@ -45,18 +54,17 @@ const URL_ = 'file://' + FILE;
 
 // Three ways to find a Chromium, in order: the one CHROME names, the one this
 // development container ships, and the one `playwright-core install chromium`
-// put in its own cache — which is the only one CI has. Passing a path that does
-// not exist fails at launch with a message about the path rather than about the
-// missing browser, so the fallback is a check for the file, not a try/catch.
+// put in its own cache — which is the only one CI has.
 const PINNED = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const CHROME = process.env.CHROME || (existsSync(PINNED) ? PINNED : null);
 
 /* ---- viewports ------------------------------------------------------------ */
 
-// Real device shapes. The tall ones in the middle are where the table drifted
-// apart: big enough for the cards to hit their cap, after which the leftover
-// height had to go somewhere.
 const VIEWPORTS = [
+  // The narrowest screen the game claims to work on, and the one the say line
+  // runs off first: a 39-character line is 335px wide, which is wider than the
+  // whole of this.
+  ['narrow phone',      320,  568],
   ['Android small',     360,  800],
   ['iPhone 15',         393,  852],
   ['Pixel',             412,  915],
@@ -76,223 +84,386 @@ const VIEWPORTS = [
   ['laptop',           1440,  900],
   ['laptop short',     1366,  700],
   ['desktop',          1920, 1080],
+  // Small landscape WINDOWS, which the grid had none of until iteration 3's
+  // review: every landscape shape above is at least 980 wide, and the seat row
+  // is the widest thing on the table. A browser window dragged down to 800x680
+  // is an ordinary thing to do, and it clipped the deck and your own name plate
+  // off the right edge with the check green.
+  ['small window',      800,  680],
+  ['VGA window',        640,  480],
+  ['tiny window',       500,  425],
+  // Shorter than they are wide by a lot, which is where the plate's type — in
+  // rem — grows past the card's height and the seat row stops costing a card.
+  ['short window',      980,  340],
+  ['shorter window',   1100,  330],
+  // Not 1100x320, which was here to give the plate-overhang break somewhere to
+  // fire. The card is on its clamp floor there with nothing left over, so the
+  // six pixels the say line grew when it stopped being the smallest type on the
+  // page have nowhere to go — the budget is right and the shape is simply below
+  // what four rows of chrome and three of cards can fit in. The break fires in
+  // the inflated pass at 500x425 instead, where --slack is 0 and the plate is
+  // taller than the card by four pixels.
+  //
+  // Measured, so that this reads as a limit rather than as a pass kept green:
+  // at 1100x320 the table asks for 6px of scrolling and --cw resolves to 32px,
+  // its floor. Scrolling is the designed fallback — reaching a card by
+  // scrolling beats a card hidden under another one — so the page is not broken
+  // there, it is at the bottom of its range. Note too that 1100x330, the
+  // shortest shape still in the grid, is ALSO on the clamp floor: neither of
+  // them tests the derivation any more, and the shape that does is 980x340.
 ];
 
-// Enough shapes to cover the ways a screen can go wrong, without visiting all
-// eight screens at all nineteen sizes.
-const SCREEN_VIEWPORTS = ['Android small', 'iPhone Pro Max', 'tablet portrait',
-                          'phone landscape', 'laptop'];
+const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
+                          'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
 
-// The tightest ones; worth re-running the table budget against inflated spacing.
-const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait', 'Android small'];
+// The inflated pass runs these, and it is a list of what is IN rather than a
+// list of what is out. What is deliberately not here: the short landscape
+// windows (640x480, 980x340, 1100x330) and the narrowest phone
+// (320x568, whose budget wants 32.1px against a 32px floor). At all of them the
+// inflation drives the card onto its clamp floor, which tests the clamp rather
+// than the derivation, exactly as the note on INFLATE says. The rest are
+// simply not the tightest shapes in the grid.
+const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
+               'Android small', 'small window', 'tiny window'];
+
+// Where an interaction is measured. The screen shapes, plus the narrow portrait
+// one where the middle row has to overlap hardest — a card's reachable strip is
+// a geometry question and it is at its worst where the cards are most crowded.
+const CHOICE_VIEWPORTS = [...SCREEN_VIEWPORTS, 'narrow and tall', 'iPad'];
 
 const DECKS = ['Trevisane', 'Romagnole', 'Napoletane', 'Piacentine', 'Francesi'];
 
-// Raising a card is a transition, and every measurement below is taken on the
-// tick that starts it — where the box is still the unraised one. The raised-card
-// assertions were reading the geometry they exist to catch: reversing the lift
-// so a raised card hangs off the bottom of the screen passed the whole check.
-// Motion off for the measuring passes, so a measurement is of where the page
-// settles rather than of where it starts.
+// tools/break_ui.mjs breaks the page on purpose and needs to run the check
+// dozens of times. QUICK trims the grid to the shapes that actually catch
+// things — the tightest viewport, the widest, one portrait and one deck — so a
+// break takes seconds instead of minutes. Nothing else sets it, and CI does
+// not: a quick run is for proving an assertion bites, never for clearing one.
+const QUICK = !!process.env.QUICK;
+
+// How many cards the middle row is asked to hold. Not "whatever a deal
+// produced": §3.7's bound is thirteen and a random deal reaches twelve, so the
+// state that breaks the row has to be rendered on purpose.
+const TABLE_SIZES = [0, 4, 8, 13];
+
+// Raising a card is a transition, and a measurement taken on the tick that
+// starts it reads the unraised box. Motion off for the measuring passes, so a
+// measurement is of where the page settles rather than of where it starts.
 const STILL = '*, *::before, *::after{ transition: none !important; animation: none !important; }';
 
-/* ---- getting to each screen ----------------------------------------------- */
+/* ---- putting the page into a state ---------------------------------------- */
 
-// Every screen and dialog the page has, and the states worth looking at inside
-// them. A row that cannot reach its screen is a check that silently passes, so
-// rows arrive with their screens — these five came with iteration 4.
-const SCREENS = [
-  { name: 'start, after a hand', open: async p => {
-      // #lastResult only exists once something has been played, and the screens
-      // pass clears the history before every row, so this line had never been
-      // on screen when any rule ran.
-      await p.evaluate(() => {
-        localStorage.setItem('tressette.history', JSON.stringify(
-          [{ t: Date.now(), o: 'Graziano', d: 'Trevisane', y: 11, a: 4 }]));
-        renderLastResult();
-      });
-    } },
-  // The review of iteration 5: nothing ever rendered an opponent other than the
-  // default, so two new dossiers and a rolled weights table went into the game
-  // without a single rule ever looking at them. Rule 3 again.
-  { name: 'start, an opponent other than the default', open: async p => {
-      // Valerio's dossier, four lines on a phone where Graziano's is three. The
-      // row used to select Graziano and call him the loosest, both of which were
-      // true of the vector that is now Valerio's: the name moved and the row did
-      // not follow it, so the screen rules were reading the shortest of the four.
-      // Which one is longest is not this row's business — the rule below cycles
-      // all four, and that is what caught Piero's dossier growing to five lines
-      // and pushing the deck row 15px down the phone.
-      await p.evaluate(() => selectOpponent('Valerio'));
-    },
-    // The dossier holds three lines open so that switching opponent does not
-    // move the deck row under the player's thumb. That is a claim about a
-    // layout, so it is measured: pick each of them in turn and watch the row.
-    check: () => {
-      const top = () => Math.round(document.querySelector('.decks').getBoundingClientRect().top);
-      const was = state.opponent;
-      const tops = Object.keys(PROFILES).map(name => { selectOpponent(name); return [name, top()]; });
-      selectOpponent(was);
-      const spread = Math.max(...tops.map(t => t[1])) - Math.min(...tops.map(t => t[1]));
-      return spread > 1
-        ? [`the deck row moves ${spread}px when the opponent changes (` +
-           tops.map(([n, t]) => `${n} ${t}`).join(', ') + ')']
-        : [];
-    } },
-  { name: "settings, the rolled opponent's weights", open: async p => {
-      await p.evaluate(() => selectOpponent('Piero'));
-      await p.click('#play');
-      await p.click('#btnSettings');
-      await p.evaluate(() => { document.querySelector('#viewSettings details').open = true; });
-    } },
-  { name: 'start', open: async () => {},
-    // The primary action has to be reachable without hunting for it. Readable
-    // type pushed it past the fold once; a pinned footer is the fix, and this
-    // is what stops it drifting back.
-    check: () => {
-      const r = document.querySelector('#play').getBoundingClientRect();
-      return (r.bottom > window.innerHeight + 1 || r.top < -1)
-        ? [`Gioca is off screen (bottom ${Math.round(r.bottom)} vs viewport ${window.innerHeight})`]
-        : [];
-    } },
-  { name: 'table',  open: async p => { await p.click('#play'); } },
-  // The longest thing the game can say: a hand of ten can hold a napoletana and
-  // three sets at once. announce() is the page's own, so this is the real text
-  // at the real size, in the place the page really puts it.
-  { name: 'table, a declaration', open: async p => {
-      await p.click('#play');
-      await p.evaluate(() => announce(ALTO, [
-        { kind: 'napoletana', suit: 0, points: 3 },
-        { kind: 'set', n: 1, count: 3, points: 3 },
-        { kind: 'set', n: 2, count: 3, points: 3 },
-        { kind: 'set', n: 3, count: 3, points: 3 }]));
-    },
-    // It floats over the table, so the two things that make that safe are
-    // assertions: it stays on the table, and it never reaches the cards you are
-    // choosing between.
-    check: () => {
-      const a = document.querySelector('.announce').getBoundingClientRect();
-      const t = document.querySelector('.table').getBoundingClientRect();
-      const you = document.querySelector('.seat--you').getBoundingClientRect();
-      return [
-        (a.top < t.top - 1 || a.bottom > t.bottom + 1 || a.left < t.left - 1 || a.right > t.right + 1)
-          && `the declaration is outside the table (${Math.round(a.top)}…${Math.round(a.bottom)} `
-             + `vs ${Math.round(t.top)}…${Math.round(t.bottom)})`,
-        a.bottom > you.top && `the declaration covers your own seat by ${Math.round(a.bottom - you.top)}px`,
-      ].filter(Boolean);
-    } },
-  { name: 'settings', open: async p => {
-      await p.click('#play');
-      await p.click('#btnSettings');
-      // The disclosure is shut by default, and the weights table is the state
-      // somebody reading their opponent is in. It has to be opened here rather
-      // than in `check`: the audit has already run by the time a row's own
-      // check is called, so a table of weights opened there was never audited.
-      await p.evaluate(() => { document.querySelector('#viewSettings details').open = true; });
-    } },
-  { name: 'history, empty', open: async p => { await p.click('#play'); await p.click('#btnHistory'); } },
-  { name: 'history, a hundred hands', open: async p => {
-      // The cap, so the tally, the per-opponent table and the log are all at
-      // their widest: three-figure counts and four names.
-      await p.evaluate(() => {
-        const now = Date.now();
-        localStorage.setItem('tressette.history', JSON.stringify(
-          Array.from({ length: 100 }, (_, i) => ({
-            t: now - i * 36e5, o: ['Franco', 'Valerio', 'Graziano', 'Piero'][i % 4],
-            d: 'Trevisane', y: 15 - (i % 16), a: i % 16 }))));
-      });
-      await p.click('#play');
-      await p.click('#btnHistory');
-    } },
-  { name: 'history, written by something else', open: async p => {
-      // Entries from another shape — an older build, a null, a number. They
-      // used to throw mid-render and leave the sheet without its log and
-      // without the button that clears it, so there was no way out from inside
-      // the game.
-      await p.evaluate(() => {
-        localStorage.setItem('tressette.history', JSON.stringify(
-          [null, 7, { o: 'Franco' }, { t: Date.now(), o: 'Franco', d: 'Trevisane', y: 6, a: 5 }]));
-      });
-      await p.click('#play');
-      await p.click('#btnHistory');
-    },
-    check: () => [...document.querySelectorAll('#historyBody button')]
-      .some(b => /Cancella/.test(b.textContent))
-      ? [] : ['the history has no way to clear itself'] },
-  { name: 'about', open: async p => { await p.click('#play'); await p.click('#btnAbout'); } },
-  { name: 'the abandon confirm', open: async p => { await p.click('#play'); await p.click('#again'); },
-    // Without this the row passes on a page that never asks: a new deal is a
-    // perfectly good screen, and the audit has nothing to object to.
-    check: () => document.querySelector('#confirmScrim').hidden
-      ? ['the confirm did not open over a deal in play'] : [] },
-  { name: 'the result, with declarations', open: async p => {
-      await p.click('#play');
-      // The dialog at its longest: both players declaring, which is where the
-      // extra line and the widest numbers are.
-      await p.evaluate(() => {
-        state.over = true;
-        state.terzi = [17, 15];
-        // A hand the deck can deal: the opponent holds the napoletana di denari
-        // and three 2s, you hold the three 3s that are left. Four assi against
-        // a napoletana di denari needs the asso di denari twice.
-        state.accusi[BASSO] = [{ kind: 'set', n: 3, count: 3, points: 3 }];
-        state.accusi[ALTO] = [{ kind: 'napoletana', suit: 0, points: 3 },
-                              { kind: 'set', n: 2, count: 3, points: 3 }];
-        state.prese = [11, 9];
-        finish();
-      });
-    } },
-  { name: 'the result, reached from a sheet', open: async p => {
-      await p.click('#play');
-      await p.click('#btnHistory');
-      await p.evaluate(() => { state.over = true; state.terzi = [17, 15]; state.prese = [12, 8]; finish(); });
-    },
-    // The deal ends while you are reading the history: the dialog used to open
-    // over the sheet, and "Ancora" dealt the next hand behind it, under a list
-    // still saying no hand had ever been played.
-    check: () => [
-      screen !== 'table' && `the result opened over the ${screen} sheet`,
-      ...[...document.querySelectorAll('.view')].filter(v => !v.hidden && v.id !== 'viewTable')
-        .map(v => `${v.id} is still on screen under the result`),
-    ].filter(Boolean) },
-  { name: 'the result, over the abandon confirm', open: async p => {
-      await p.click('#play');
-      await p.click('#again');
-      await p.evaluate(() => { state.over = true; state.terzi = [12, 20]; state.prese = [8, 12]; finish(); });
-    },
-    // The hand ends while the confirm is up. The question is about a deal that
-    // no longer exists, and its promise that nothing is written down stopped
-    // being true the moment finish() recorded it.
-    check: () => document.querySelector('#confirmScrim').hidden ? []
-      : ['the abandon confirm is still open under the result dialog'] },
-  { name: "table, the opponent's hand face up", open: async p => {
-      // The 1997 easter egg, typed the way it is typed — on the start sheet,
-      // because at the table every digit is a card key and the word has four
-      // of them in it. It is also the only row that drives the page entirely
-      // through the keyboard.
-      await p.keyboard.type('6winouj64ie');
-      await p.click('#play');
-    },
-    check: () => {
-      const backs = [...document.querySelectorAll('.hand--opp .card')]
-        .filter(c => c.style.getPropertyValue('--col') === '10').length;
-      return [
-        document.querySelector('#cheatNote').hidden && 'the face-up note is not shown',
-        backs > 0 && `${backs} of the opponent's cards are still face down`,
-      ].filter(Boolean);
-    } },
-  { name: 'table, a card raised', open: async p => {
-      await p.click('#play');
-      // Raised straight through the state, because this pass is about how the
-      // screen reads, not about whether a tap reaches the strip — the deal pass
-      // taps for real, ten times a deal.
-      await p.evaluate(() => { state.selected = 0; render(); });
-    } },
-];
+// Thirteen cards, the way the rules actually reach thirteen: the four dealt
+// cards are four of a kind, and then one card of every other value is laid.
+// **Not thirteen low cards.** A synthetic table of assi, due and tre makes
+// `prese` enumerate hundreds of capture sets for a single re, which is a state
+// no deal can reach — a value already on the table always captures, so no value
+// is ever laid twice. A fixture that ignores that measures a page nobody can
+// get to, slowly.
+const TAVOLA_13 = `[
+  {s:0,n:9},{s:1,n:9},{s:2,n:9},{s:3,n:9},
+  {s:0,n:10},{s:1,n:8},{s:2,n:7},{s:3,n:6},
+  {s:0,n:5},{s:1,n:4},{s:2,n:3},{s:3,n:2},{s:0,n:1}
+]`;
+
+// A dealt table, then `n` cards on it. Deterministic: the page's own newDeal
+// runs first so every other part of the state is real, and only `tavola` is
+// posed.
+const setTavola = n => `(() => {
+  const all = ${TAVOLA_13};
+  state.tavola = all.slice(0, ${n});
+  // The longest name in §0's roster, on every case of the pass that measures
+  // plates. Only Franco exists until iteration 5, and a plate asserted against
+  // one name is a plate asserted against one name.
+  state.opponent = "Graziano";
+  state.selected = null; state.scelta = 0;
+  render();
+})()`;
+
+// A capture with a real choice in it: two sevens on the table and a seven in
+// hand, so `prese` offers exactly two and the page must let the player pick.
+const poseChoice = `(() => {
+  state.tavola = [{s:1,n:7},{s:0,n:7},{s:2,n:4},{s:3,n:3}];
+  state.hands[0] = [{s:2,n:7}, {s:3,n:10}, {s:1,n:2}];
+  state.deveGiocare = 0; state.over = false;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// The same choice on a crowded table, which is where marking a card can take
+// the tap that belongs to the card beside it. Twelve, not thirteen: a
+// thirteen-card table holds four of one value and one of each of the other
+// nine, so every value is on it and every hand card has a single capture —
+// **a table of thirteen can never offer a choice**. Twelve is the crowded
+// table that can: three nines dealt down, the fourth in hand.
+const poseChoiceCrowded = `(() => {
+  state.tavola = [
+    {s:0,n:9},{s:1,n:9},{s:2,n:9},
+    {s:0,n:10},{s:1,n:8},{s:2,n:7},{s:3,n:6},
+    {s:0,n:5},{s:1,n:4},{s:2,n:3},{s:3,n:2},{s:0,n:1}
+  ];
+  state.hands[0] = [{s:3,n:9}, {s:3,n:10}, {s:1,n:2}];
+  state.deveGiocare = 0; state.over = false;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// The say line's middle rung: a card named with its suit, which is 43
+// characters with the clause naming the raised card and 28 without it, so the
+// clause goes and the name stays. Two quattro on the table and the third in
+// hand — a real choice, so `tapped` raises rather than plays, which the first
+// version of this fixture did not check and did not get.
+const LONG_SAY = 'Prendi il quattro di bastoni';
+const poseLongSay = `(() => {
+  state.tavola = [{s:3,n:4},{s:1,n:4},{s:0,n:3},{s:2,n:1}];
+  state.hands[0] = [{s:2,n:4}, {s:3,n:10}, {s:1,n:9}];
+  state.deveGiocare = 0; state.over = false;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// The widest line the ladder is allowed to keep: 39 characters, and 335px of
+// them — wider than a 360px phone's seat and wider than the whole of a 320px
+// one. A count is a proxy for a width and a bad one, so the fixture that keeps
+// the ladder honest is the one where the two disagree. A cavallo takes the asso
+// and the fante, or the quattro and the cinque, so it raises.
+const WIDEST_SAY = "Prendi l'asso e il fante con il cavallo";
+const CUT_SAY = "Prendi l'asso e il fante";
+const poseWidestSay = `(() => {
+  state.tavola = [{s:0,n:1},{s:1,n:8},{s:2,n:4},{s:3,n:5}];
+  state.hands[0] = [{s:2,n:9}, {s:3,n:10}, {s:1,n:2}];
+  state.deveGiocare = 0; state.over = false;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// And the rung below that: a capture that cannot be named in the space the
+// budget pays for however it is phrased, so the line says how many and the
+// brass marks say which.
+//
+// **A position the rules reach**, which the first version of this was not: four
+// due dealt to the table, a tre laid on them — a tre takes nothing from four
+// due, so it may be laid — and a cavallo played. That gives four capture sets
+// of four cards each, so the card raises rather than plays, and the full name
+// runs past the count whichever set is proposed. The earlier fixture put two
+// assi and two tre down together, which no deal can produce: only the four
+// dealt cards escape PRESA_OBBLIGATORIA, and every other card on that table
+// could have captured, so none of them could have been laid.
+const UNNAMEABLE_SAY = 'Prendi le 4 carte segnate';
+const poseUnnameable = `(() => {
+  state.tavola = [{s:0,n:2},{s:1,n:2},{s:2,n:2},{s:3,n:2},{s:0,n:3}];
+  state.hands[0] = [{s:1,n:9}, {s:3,n:10}, {s:2,n:8}];
+  state.deveGiocare = 0; state.over = false;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// A card that takes nothing, which is the other way a card arrives: gioca puts
+// it on the table among as many as twelve others, and nothing says which one is
+// new unless the page draws it so.
+const playLay = `(() => {
+  state.tavola = [{s:0,n:10}];
+  state.hands[0] = [{s:1,n:3}, {s:3,n:10}, {s:2,n:8}];
+  state.deveGiocare = 0; state.over = false; state.speed = 600;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// A sweep made by the opponent, which goes the other way. §3.7 calls the
+// direction a deliberate departure and nothing was reading it.
+const playSweepOpp = `(() => {
+  state.tavola = [{s:2,n:4}];
+  state.hands[1] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
+  state.deveGiocare = 1; state.over = false; state.speed = 600;
+  state.selected = null; state.scelta = 0;
+  render();
+  computerPlay();
+})()`;
+
+// Play real cards until the round ends, which is the only way to reach the beat
+// where both hands are empty: gioca() deals the next round itself and reports
+// it, so the state never sits in that beat and the page draws it from the flag.
+// Posing it by emptying state.hands would render a page the game cannot reach
+// and would pass whether or not the page ever draws the real one.
+//
+// speed is set high so the beat does not tick past before it is measured, and
+// each play() reschedules the one timer, so the loop steps the deal by hand.
+const playToBeat = `(() => {
+  epoch++; state.mazziere = null;
+  newDeal(state, rngSeed(11));
+  state.speed = 30;
+  render();
+  for (let i = 0; i < 40 && !state.over; i++){
+    const who = state.deveGiocare;
+    if (who === null) break;
+    const slot = state.hands[who].findIndex(c => c);
+    if (slot < 0) break;
+    // The last card of the round is played at a speed that leaves the sweep
+    // and the beat long enough to measure. Everything before it runs fast.
+    const left = state.hands[0].filter(Boolean).length
+               + state.hands[1].filter(Boolean).length;
+    if (left === 1) state.speed = 1200;
+    const opts = prese(state.tavola, state.hands[who][slot]);
+    play(who, slot, opts[0] || []);
+    if (left === 1) return true;
+  }
+  return false;
+})()`;
+
+// The 36th play, stopped while it is still landing. Nothing ever rendered it,
+// and two defects shipped in it: `gioca` sets `over` on this play, so the
+// opaque result panel — drawn from `over` alone — went up before the card had
+// landed and the three beats ran behind it; and a last card that takes nothing
+// is swept up WITH the leftovers, to whoever captured last, while the page drew
+// it going to whoever played it. One play in every deal, and every assertion
+// green through both.
+//
+// `beat` is cleared each time round because the driver cancels its own pending
+// timers: a round boundary inside the loop sets it and nothing would ever put
+// it back, and every hand would then be drawn empty.
+const playToLast = `(() => {
+  epoch++; state.mazziere = null;
+  newDeal(state, rngSeed(11));
+  state.speed = 30;
+  render();
+  for (let i = 0; i < 40 && !state.over; i++){
+    beat = false;
+    const who = state.deveGiocare;
+    if (who === null) break;
+    const slot = state.hands[who].findIndex(c => c);
+    if (slot < 0) break;
+    const last = state.plays === 35;
+    if (last) state.speed = 1200;
+    const opts = prese(state.tavola, state.hands[who][slot]);
+    play(who, slot, opts[0] || []);
+    if (last) return { who, ultimaPresa: state.ultimaPresa, took: opts[0] ? opts[0].length : 0 };
+  }
+  return null;
+})()`;
+
+// The 36th play WHEN IT TAKES NOTHING, which is the case the seeded deal above
+// does not happen to reach and the case where the last play is unlike every
+// other one: `gioca` pushes the card onto the table and then sweeps the table
+// into `resto`, which goes to whoever captured last. So the card the player
+// just played goes to the OTHER player, and drawing it toward the one who
+// played it says two players took cards from one play.
+//
+// The position is posed and the play is real — the state before a 36th play is
+// one the engine sits in, unlike the beats themselves. `ultimaPresa` is the
+// opponent and the hand card takes nothing: a re against a 2 and a 3 can make
+// no sum and match no value.
+const playLastLeftovers = `(() => {
+  state.tavola = [{s:2,n:2},{s:0,n:3}];
+  state.hands[0] = [{s:1,n:10}, null, null];
+  state.hands[1] = [null, null, null];
+  state.deveGiocare = 0; state.over = false; state.speed = 1200;
+  state.plays = 35; state.ultimaPresa = 1;
+  // The rest of a position 35 plays in: the dealer plays last, so it is the
+  // opponent; and 35 cards are in the piles, not none. Nothing asserts either
+  // today — but a pose that only holds together where the assertions look is
+  // not a position the engine can sit in, which is what CLAUDE.md asks of one.
+  state.mazziere = 1;
+  // The piles are the rest of the deck, built by EXCLUDING what is on the
+  // table and in the hand rather than by slicing 35 off the front — which put
+  // two cards in a pile and on the table at once, and made 35 where a position
+  // with two down and one held calls for 37. Empty piles read as a
+  // placeholder; a wrong 35 reads as a position and invites belief.
+  const out = state.tavola.concat(state.hands[0].filter(Boolean))
+    .map(c => c.s * 11 + c.n);
+  const rest = state.cards.filter(c => !out.includes(c.s * 11 + c.n));
+  state.prese = [rest.slice(0, 18), rest.slice(18)];
+  state.selected = null; state.scelta = 0;
+  render();
+  const n = state.tavola.length + 1;
+  tapped(0);
+  return { cards: n, to: state.ultimaPresa };
+})()`;
+
+// And the same play onto an EMPTY table, which a scopa on the 35th leaves. Then
+// the played card is the only thing swept up, so a page reading "is anything
+// leaving?" off the table's own cards sees nothing, sends the card down the lay
+// path, and indexes a table it is no longer on: the last card of the deal is
+// drawn nowhere at all.
+const playLastOnEmpty = `(() => {
+  state.tavola = [];
+  state.hands[0] = [{s:1,n:10}, null, null];
+  state.hands[1] = [null, null, null];
+  state.deveGiocare = 0; state.over = false; state.speed = 1200;
+  state.plays = 35; state.ultimaPresa = 1;
+  state.mazziere = 1;
+  // The piles are the rest of the deck, built by EXCLUDING what is on the
+  // table and in the hand rather than by slicing 35 off the front — which put
+  // two cards in a pile and on the table at once, and made 35 where a position
+  // with two down and one held calls for 37. Empty piles read as a
+  // placeholder; a wrong 35 reads as a position and invites belief.
+  const out = state.tavola.concat(state.hands[0].filter(Boolean))
+    .map(c => c.s * 11 + c.n);
+  const rest = state.cards.filter(c => !out.includes(c.s * 11 + c.n));
+  state.prese = [rest.slice(0, 18), rest.slice(18)];
+  state.selected = null; state.scelta = 0;
+  render();
+  const n = state.tavola.length + 1;
+  tapped(0);
+  return { cards: n, to: state.ultimaPresa };
+})()`;
+
+// A real sweep: one card on the table and the card that takes it in hand, then
+// the page's own tap. The toast, the empty table and the scopa mark are what
+// gioca() and render() do with it — none of it is posed.
+const playSweep = `(() => {
+  state.tavola = [{s:2,n:2},{s:0,n:2}];
+  state.hands[0] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
+  state.deveGiocare = 0; state.over = false; state.speed = 600;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// A capture is three beats and each is measured: the card lands among the cards
+// it is about to take (speed x LANDS), they all leave together (x SWEEP), and
+// the table is empty with the scopa announced. At the speed the fixtures set,
+// 600, that is 0 → 600 → 900, so each wait below lands in the middle of its
+// beat with about 150ms of margin either side. The toast outlives all of it —
+// it hides 1600ms after it is raised, and does not scale with speed — so the
+// settled state is still announcing the scopa when it is measured.
+//
+// These follow the page's pace and are re-derived when it changes; they were
+// 200/450/1150 against a speed of 1000 and a shorter landing beat.
+const LANDS_MS = 250;
+// The same derivation one speed up: playToLast has a whole deal to drive before
+// the measurement starts, so it plays the 36th card at 1200 and the beats fall
+// at 0 → 1200 → 1800. These are cumulative waits from the play.
+const LAST_LANDS_MS = 600, LAST_FLYING_MS = 900, LAST_SETTLED_MS = 900;
+const SWEEPING_MS = 450;
+const SWEEP_MS = 1050;
+
+/* ---- opening a page -------------------------------------------------------- */
+
+// Every page in this check is opened here, and the reason is the webfont.
+//
+// The page asks Google Fonts for Bodoni Moda and Barlow. Whether that request
+// succeeds decides how wide every string on the table is — and it succeeds on a
+// CI runner and fails on a developer's machine with no network. Iteration 3
+// shipped an assertion calibrated against the fallback metrics: it passed here
+// and failed in CI, where the real font loaded and the string was narrower.
+// A check whose answer depends on the network is not a check.
+//
+// So the font is blocked, always, and that is the worst case as well as the
+// deterministic one: the page has to be correct while the webfont is still on
+// its way, and every player sees that state first.
+async function openPage(browser, viewport) {
+  const page = await browser.newPage({ viewport });
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  return page;
+}
 
 /* ---- what counts as a defect ---------------------------------------------- */
 
-// Runs in the page. Returns a list of strings; empty means clean.
 const audit = () => {
   const out = [];
   const name = el => el.id ? '#' + el.id
@@ -309,7 +480,14 @@ const audit = () => {
   // Exactly one screen. An author `display` rule beats the UA stylesheet's
   // [hidden]{display:none}, which once left every screen stacked on top of one
   // another with an invisible scrim swallowing every click.
-  const open = [...document.querySelectorAll('.view')].filter(v => !v.hidden);
+  //
+  // By what the browser DRAWS, not by the attribute. Reading `v.hidden` asks
+  // the page what it meant rather than what it did — which is the whole of the
+  // defect, since the attribute was always set correctly and the rule that acts
+  // on it was the thing that lost. The break that takes the `!important` off
+  // `[hidden]` survived this assertion for exactly that reason.
+  const open = [...document.querySelectorAll('.view')]
+    .filter(v => getComputedStyle(v).display !== 'none');
   if (open.length !== 1) out.push(`${open.length} screens visible at once`);
 
   if (document.documentElement.scrollWidth > window.innerWidth + 1)
@@ -317,31 +495,72 @@ const audit = () => {
 
   // Sideways scroll is not enough on its own. The table sets `overflow: hidden
   // auto`, so anything too wide is clipped rather than scrollable and the
-  // document width never betrays it — the opponent's third card was being cut
-  // off a phone screen while that assertion passed. Ask the elements directly.
-  // .chips and .decks are the settings sheet's, from iteration 4; they select
-  // nothing yet and cost nothing, and the rule is the same when they arrive.
-  const past = [...document.querySelectorAll('.hand, .trick, .tallone, .plate, .announce, .chips, .decks')]
+  // document width never betrays it — Discola cut the opponent's third card off
+  // a phone screen through nineteen viewports while that assertion passed. Ask
+  // the elements directly. The table row is in this list because it is the one
+  // this game added.
+  // The result panel is in it too: it has `overflow: auto`, so a grid wider
+  // than the screen would scroll INSIDE the panel and never touch the
+  // document's own width — the same way a clipped table cannot scroll sideways.
+  const past = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, '
+    + '.plate, .toast, .say, .sel-name, .result, .result__grid, .r-num')]
     .filter(el => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
     });
-  for (const el of past.slice(0, 3)) {
+  // Every one of them. Capped at three, the element a break was written for
+  // could fall off the end while the rule it belongs to had fired — which is
+  // what forced one EXPECT to be loosened from an element to a phrase. The
+  // list is bounded by the selector above in any case.
+  for (const el of past) {
     const r = el.getBoundingClientRect();
     out.push(`${name(el)} runs off the screen (${Math.round(r.left)}…${Math.round(r.right)} `
       + `vs 0…${window.innerWidth})`);
   }
 
+  // Nothing on the table may sit on a hand card. Against the HAND'S OWN BOX
+  // this passes while the raised card stands on two to four of the cards it is
+  // proposing to take: a transform does not move the box it is applied to out
+  // of its parent, so the hand measures where it always was and the card is
+  // somewhere else entirely. Card against card, or it sees nothing.
+  const hit = (a, b) => a.left < b.right - 1 && a.right > b.left + 1
+                     && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+  const handCards = [...document.querySelectorAll('.hand .card')].map(c => c.getBoundingClientRect());
+  const onHand = [...document.querySelectorAll('.tavola .card')]
+    .filter(c => handCards.some(h => hit(c.getBoundingClientRect(), h)));
+  if (onHand.length)
+    out.push(`${onHand.length} table card(s) overlap a hand card`);
+
+  // A name plate that outgrows the width the budget pays for lands on the cards
+  // beside it. Two ways that happens and they need different eyes: the plate's
+  // box can be squeezed narrower than its content, which only scrollWidth
+  // shows, or the box itself can be wider than its column.
+  for (const plate of document.querySelectorAll('.plate')) {
+    if (plate.scrollWidth > plate.clientWidth + 1)
+      out.push(`${name(plate)} spills ${plate.scrollWidth - plate.clientWidth}px past its own width`);
+    // And past its own height, which is the same question turned ninety
+    // degrees and the one the first version of this rule did not ask: the
+    // plate has a derived height, the mazziere tag is a row of its own, and a
+    // box of 35px measuring 51px of content drew the tag behind the cards at
+    // every portrait viewport with both assertions green.
+    if (plate.scrollHeight > plate.clientHeight + 1)
+      out.push(`${name(plate)} spills ${plate.scrollHeight - plate.clientHeight}px past its own height`);
+  }
+  // The plate's CHILDREN against the cards, not the plate's box: overflowing
+  // content leaves the box and the box stays where it was.
+  for (const kid of document.querySelectorAll('.plate, .plate *')) {
+    const a = kid.getBoundingClientRect();
+    if (!a.width || !a.height) continue;
+    for (const row of document.querySelectorAll('.seat__cards'))
+      if (hit(a, row.getBoundingClientRect())) { out.push(`${name(kid)} lands on the cards`); break; }
+  }
+
   for (const el of document.querySelectorAll('body *')) {
     if (!shown(el)) continue;
-    // A closed <details> still hands out live geometry for what it is hiding,
-    // so without this the rules below measure text nobody is looking at — and
-    // report a defect in a state that cannot be reached.
     if (el.closest('details:not([open])') && !el.closest('summary')) continue;
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
 
-    // Text this element owns directly, not what its children hold.
     const text = [...el.childNodes]
       .filter(n => n.nodeType === 3)
       .map(n => n.textContent.trim()).join(' ').trim();
@@ -350,20 +569,26 @@ const audit = () => {
       const size = parseFloat(cs.fontSize);
       // Two tiers: a short uppercase label can run smaller than a sentence
       // somebody has to read. Body copy sat at 12.5px until it was measured.
-      const floor = text.length > 40 ? 14.5 : 12.5;
+      //
+      // The say line is held to the second tier whatever its length, and that
+      // is the third thing the owner found by playing: it is short because the
+      // budget pays for one line, but it is the only text on the table that
+      // says what the next tap will DO, and it is read rather than glanced at.
+      // Length is a proxy for that and here it points the wrong way.
+      const reads = el.classList.contains('sel-name');
+      const floor = (reads || text.length > 40) ? 14.5 : 12.5;
       if (size < floor - 0.05)
         out.push(`${name(el)} text ${size.toFixed(1)}px, want ${floor} — "${text.slice(0, 32)}"`);
 
-      // Clipped by a container that cannot scroll, so nobody can reach it.
       if (cs.overflowX === 'hidden' && cs.overflowY !== 'auto' && cs.overflowY !== 'scroll'
           && el.scrollWidth > el.clientWidth + 1)
         out.push(`${name(el)} clips its text (${el.scrollWidth} > ${el.clientWidth})`);
 
       // Cut off from above or below by an ancestor that cannot scroll. The rule
       // above cannot see it, because the element that clips is not the element
-      // that holds the text: a declaration inside a strip sized for one line
-      // lost half a line off the top and half off the bottom at every phone
-      // width, and every assertion here passed.
+      // that holds the text: in Tressette a declaration inside a strip sized for
+      // one line lost half a line off the top and half off the bottom at every
+      // phone width, and every assertion passed.
       for (let up = el; up && up !== document.body; up = up.parentElement) {
         const ucs = getComputedStyle(up);
         if (ucs.overflowY !== 'hidden' || ucs.overflowX === 'auto' || ucs.overflowX === 'scroll') continue;
@@ -378,10 +603,8 @@ const audit = () => {
       }
     }
 
-    // Thumb-sized targets. Two exclusions: cards, whose size is the table's
-    // budget and is asserted by the second pass; and links flowing inline in a
-    // sentence, which cannot be 32px tall without wrecking the paragraph they
-    // sit in. Standalone controls have no such excuse.
+    // Thumb-sized targets. Cards are excluded because a card's size is the
+    // table's budget and is asserted by the second pass.
     const inlineLink = el.tagName === 'A' && cs.display.startsWith('inline');
     if ((el.tagName === 'BUTTON' || el.tagName === 'A') && !el.classList.contains('card') && !inlineLink) {
       const small = Math.min(r.width, r.height);
@@ -392,20 +615,103 @@ const audit = () => {
   return out;
 };
 
-// Local runs have no network, so the Google Fonts stylesheet always fails.
-const noise = m => /ERR_CERT_AUTHORITY_INVALID|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED|fonts\.googleapis/.test(m);
+// The Google Fonts stylesheet never loads — openPage blocks it on purpose, and
+// a machine with no network fails it anyway — so neither its request nor the
+// console line about it is a defect. Matched on the URL as well as the text,
+// because an aborted subresource says only "Failed to load resource:
+// net::ERR_FAILED" and names itself nowhere but its location.
+const FONTS = /fonts\.(googleapis|gstatic)\.com/;
+const noise = m => /ERR_CERT_AUTHORITY_INVALID|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED/.test(m)
+                || FONTS.test(m);
+const noisy = m => noise(m.text()) || FONTS.test((m.location() || {}).url || '');
+
+/* ---- getting to each screen ----------------------------------------------- */
+
+// A row that cannot reach its screen is a check that silently passes, so rows
+// arrive with their screens. The mid-deal states are here because §4 iteration
+// 3 is explicit: an assertion only sees the states the check renders, and every
+// one of these exists only in the middle of a deal.
+const SCREENS = [
+  { name: 'start', open: async p => {} },
+  // Both ways in, because a screen reachable from one place and not the other
+  // is half a screen. The rules are the only page here that is READ, so the
+  // audit's body-copy floor is the one that matters on them.
+  { name: 'the rules, from the start sheet', open: async p => {
+      await p.click('#aboutStart');
+    } },
+  { name: 'the rules, from the table', open: async p => {
+      await p.click('#play');
+      await p.click('#about');
+    } },
+  { name: 'table, just dealt', open: async p => { await p.click('#play'); } },
+  { name: 'table, empty middle', open: async p => {
+      await p.click('#play');
+      await p.evaluate(setTavola(0));
+    } },
+  { name: 'table, thirteen cards', open: async p => {
+      await p.click('#play');
+      await p.evaluate(setTavola(13));
+    } },
+  { name: 'table, a capture to choose', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseChoice);
+    } },
+  { name: 'table, a capture named with its suit', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseLongSay);
+    } },
+  { name: 'table, the widest line the say line keeps', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseWidestSay);
+    } },
+  { name: 'table, a capture too long to name', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseUnnameable);
+    } },
+  // A sweep, played rather than posed: the toast is announcing something that
+  // happened, over the empty table it left behind. Posing the toast alone
+  // renders half the state, and the empty middle it sits over is the half that
+  // moves the cards.
+  { name: 'table, a scopa announced', open: async p => {
+      await p.click('#play');
+      await p.evaluate(playSweep);
+      await p.waitForTimeout(SWEEP_MS);
+    } },
+  // Likewise the beat between rounds, which is reached by finishing a round.
+  { name: 'table, hands empty between rounds', open: async p => {
+      await p.click('#play');
+      await p.evaluate(playToBeat);
+      // Not fatal if it never arrives: a page that stops listening for the new
+      // round is a defect for checkStates to report, not a crash that takes the
+      // rest of the check's output with it.
+      await p.waitForFunction('beat === true', null, { timeout: 8000 }).catch(() => {});
+    } },
+  { name: 'table, a pile with three scope', open: async p => {
+      await p.click('#play');
+      await p.evaluate(`(() => {
+        state.scope = [3, 2];
+        state.prese[0] = state.cards.slice(0, 17);
+        state.prese[1] = state.cards.slice(17, 30);
+        render();
+      })()`);
+    } },
+  { name: 'table, the deal over, with the points counted out', open: async p => {
+      await p.click('#play');
+      await p.evaluate(`(() => {
+        state.prese[0] = state.cards.slice(0, 21);
+        state.prese[1] = state.cards.slice(21, 40);
+        state.tavola = []; state.hands[0] = [null,null,null]; state.hands[1] = [null,null,null];
+        state.over = true; state.plays = 36; state.deveGiocare = null;
+        render();
+      })()`);
+    } },
+];
 
 /* ---- pass 0: the document itself ------------------------------------------- */
 
-// A layout assertion cannot catch a missing viewport meta: Playwright's
-// `viewport` option sets the layout viewport directly, and the tag is only
-// consulted under mobile emulation. So the page measures identically with or
-// without it here, while a real phone lays it out at ~980px and scales the
-// result down. These are document facts instead, checked once — cheap, and the
-// only thing that would have caught it.
 async function checkDocument(browser) {
   console.log('\ndocument');
-  const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+  const page = await openPage(browser, { width: 393, height: 852 });
   await page.goto(URL_);
   const bad = await page.evaluate(() => {
     const out = [];
@@ -432,556 +738,1450 @@ async function checkDocument(browser) {
 async function checkScreens(browser) {
   console.log('\nscreens');
   let failed = 0;
-  for (const vname of SCREEN_VIEWPORTS) {
-    const [, width, height] = VIEWPORTS.find(v => v[0] === vname);
+  // Two shapes in the quick grid, and the second is deliberately not a phone:
+  // the phone-shaped media query re-declares every type token, so a break that
+  // drops the base --t-tiny below the floor cannot show up on a phone at all.
+  for (const vname of (QUICK ? ['narrow phone', 'tiny window'] : SCREEN_VIEWPORTS)) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     for (const screen of SCREENS) {
-      const page = await browser.newPage({ viewport: { width, height } });
+      const page = await openPage(browser, { width: w, height: h });
       const errs = [];
-      page.on('pageerror', e => errs.push('script error: ' + e.message));
-      page.on('console', m => { if (m.type() === 'error' && !noise(m.text())) errs.push('console: ' + m.text()); });
-
-      // Load once to clear what an earlier run stored, then again so the page
-      // starts from the state it reads at load.
-      await page.goto(URL_);
-      await page.evaluate(() => localStorage.removeItem('tressette.history'));
+      page.on('pageerror', e => errs.push(String(e)));
+      page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
       await page.goto(URL_);
       await page.addStyleTag({ content: STILL });
-      await page.waitForTimeout(350);
       await screen.open(page);
-      await page.waitForTimeout(350);
-
-      const issues = [
-        ...(await page.evaluate(audit)),
-        ...(screen.check ? await page.evaluate(screen.check) : []),
-        ...errs,
-      ];
-      if (issues.length) failed++;
-      console.log(`  ${issues.length ? 'FAIL' : 'pass'}  ${vname.padEnd(16)} ${screen.name}`);
-      issues.forEach(i => console.log(`        ${i}`));
+      await page.waitForTimeout(60);
+      const bad = await page.evaluate(audit);
+      const all = [...bad, ...errs];
+      if (all.length) {
+        failed++;
+        console.log(`  FAIL  ${screen.name} @ ${vname}`);
+        all.forEach(b => console.log(`        ${b}`));
+      }
       await page.close();
     }
   }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${SCREENS.length} screens x ${QUICK ? 2 : SCREEN_VIEWPORTS.length} viewports`);
   return failed;
 }
 
 /* ---- pass 2: the card table ----------------------------------------------- */
 
+// Runs in the page, with the table already holding `n` cards.
 const measure = () => {
-  const r = s => document.querySelector(s).getBoundingClientRect();
-  const oppHand = r('.hand--opp'), trick = r('.trick'), tallone = r('.tallone');
-  const youHand = r('.hand--you'), table = r('.table'), card = r('.hand--you .card');
-  // Your whole seat, not just your cards: in portrait the name plate is below
-  // the hand, so a hand that clears the fold says nothing about the plate. At
-  // 770x1475 the plate hung 15px past the bottom of the screen while this pass
-  // printed `pass`, because --plates was a constant and this was measured from
-  // the hand.
-  const youSeat = r('.seat--you');
-  // The strip above your hand that names the raised card. It is content, not
-  // space, so it belongs in the boxes below: left out, the room it takes reads
-  // as a gap and every good layout fails the drift assertion.
-  //
-  // It is also the defect that wrote this line. The strip was `hidden` until it
-  // had something to say, so it took no space empty and raising a card pushed
-  // every card below it down 31px — off the bottom of the screen in landscape.
-  // A strip of zero height is that bug, so say so rather than let the numbers
-  // below turn to nonsense measuring a box at the origin.
+  const r = s => { const e = document.querySelector(s); return e ? e.getBoundingClientRect() : null; };
+  const table = r('.table');
+  const oppSeat = r('.seat--opp'), youSeat = r('.seat--you');
+  const middle = r('.middle'), tavola = r('.tavola');
+  // NOT `.hand--you .card`: the first slot is the one a raised card lives in,
+  // and a raised card is scale(1.04) — 4% of a card wide enough to make every
+  // reachable-strip measurement below miss by three pixels.
+  const card = r('.hand--you .card:not([aria-pressed="true"])');
   const say = r('.say');
-  const sayShown = say.height > 0;
 
-  // Landscape puts the trick and the tallone side by side; portrait stacks
-  // them. Sort the content boxes and measure whatever ends up adjacent, so the
-  // numbers mean the same thing in both. Measuring a fixed pair counted the
-  // tallone as empty space in portrait — a metric that failed every good
-  // layout and passed the bad one.
-  const boxes = [oppHand, trick, tallone, ...(sayShown ? [say] : []), youHand].sort((a, b) => a.top - b.top);
+  // A strip of zero height is the defect this line exists for: while the say
+  // line was `hidden` until it had something to say, raising a card pushed every
+  // card below it down 31px — off the bottom of the screen in landscape.
+  const sayShown = say && say.height > 0;
+
+  // The three row boxes, sorted so the numbers mean the same thing in portrait
+  // and in landscape.
+  const boxes = [oppSeat, middle, youSeat].filter(Boolean).sort((a, b) => a.top - b.top);
   const gaps = [];
   for (let i = 1; i < boxes.length; i++) gaps.push(boxes[i].top - boxes[i - 1].bottom);
 
-  // --- the fan (§3.7) ------------------------------------------------------
-  // Ten cards overlap, so each one shows only a strip of itself. Three ways
-  // that goes wrong, all of them silent: the strips collapse and a card cannot
-  // be singled out; the last card runs under the table's edge; a raised card
-  // lifts off the screen.
-  const cards = [...document.querySelectorAll('.hand--you .card')].map(c => c.getBoundingClientRect());
-  const steps = cards.slice(1).map((c, i) => Math.round(c.left - cards[i].left));
-  const pad = parseFloat(getComputedStyle(document.querySelector('.table')).paddingLeft);
+  // --- the table row, §3.7 --------------------------------------------------
+  // The fan lives here now. Three ways it goes wrong, all silent: the steps
+  // collapse and a card cannot be singled out; the last card runs under the
+  // table's edge; the steps are uneven, which means the derivation drifted.
+  // What a thumb can actually reach, asked of the page rather than computed
+  // from the step. Paint order decides which element a tap lands on, and a rule
+  // that lifts one card above its neighbours takes `cw - step` off the strip of
+  // the card after it without changing a single box: the geometry is untouched
+  // and the card is simply not there any more. So walk the row a pixel at a
+  // time and ask who is on top.
+  const reachOf = row => {
+    const cs = [...row.children];
+    const got = cs.map(() => 0);
+    if (!cs.length) return got;
+    const first = cs[0].getBoundingClientRect();
+    const y = Math.round(first.top + first.height / 2);
+    // Off the screen entirely: there is nothing to hit-test, and the assertion
+    // that the row is below the fold is the one with something to say.
+    if (y < 0 || y >= window.innerHeight) return null;
+    const rr = row.getBoundingClientRect();
+    const x0 = Math.max(0, Math.ceil(rr.left));
+    const x1 = Math.min(window.innerWidth - 1, Math.floor(rr.right));
+    for (let x = x0; x <= x1; x++) {
+      const i = cs.indexOf(document.elementFromPoint(x, y));
+      if (i >= 0) got[i]++;
+    }
+    return got;
+  };
 
-  // Dimming has to mean one thing: the follow-suit rule forbids this card. Both
-  // states that test it are forced, because a freshly dealt table shows
-  // neither — the first deal of a session is always yours to lead, so nothing
-  // is forbidden and it is never the opponent's turn. Measured as it was
-  // dealt, this assertion could not fail: every card dimmed while the opponent
-  // thought, ten translucent cards showing through one another down the fan,
-  // and the numbers still agreed.
-  const dimmedNow = () => [...document.querySelectorAll('.hand--you .card')]
-    .filter(c => parseFloat(getComputedStyle(c).opacity) < 1).length;
-  const keep = { turn: state.deveGiocare, primo: state.perPrimo, played: state.played.slice() };
+  const rows = [...document.querySelectorAll('.tavola-row')];
+  const rowStats = rows.map(row => {
+    const cs = [...row.children].map(c => c.getBoundingClientRect());
+    if (cs.length === 0) return null;
+    const steps = cs.slice(1).map((c, i) => Math.round(c.left - cs[i].left));
+    const rr = row.getBoundingClientRect();
+    return {
+      n: cs.length,
+      minStep: steps.length ? Math.min(...steps) : Infinity,
+      stepSpread: steps.length ? Math.max(...steps) - Math.min(...steps) : 0,
+      // The last card whole, and the row inside the table's padding.
+      spillRight: Math.round(Math.max(0, cs[cs.length - 1].right - (rr.right + 1))),
+      spillLeft: Math.round(Math.max(0, rr.left - cs[0].left)),
+      reach: reachOf(row),
+    };
+  }).filter(Boolean);
 
-  state.deveGiocare = ALTO; render();
-  const dimmedWaiting = dimmedNow();
+  const cw = card ? card.width : 0;
 
-  // A card of a suit you hold, led against you: the cards of every other suit
-  // are the ones the rule forbids, and they are the ones that may dim.
-  const suit = state.hands[BASSO].find(c => c).s;
-  state.perPrimo = ALTO; state.deveGiocare = BASSO;
-  state.played = [null, null];
-  state.played[ALTO] = { s: suit, n: 4 };
-  render();
-  const dimmedFollowing = dimmedNow();
-  const forbidden = state.hands[BASSO].filter(c => c && c.s !== suit).length;
+  // Past the screen edge, and the name plates. These live in the audit too, but
+  // the audit runs on a handful of screen shapes and these are questions about
+  // the widest row on the table in a particular deck — so they belong where
+  // every viewport and every deck is rendered. The plates were left out of the
+  // card budget and the three breaks for it survived the whole check, because
+  // the only pass that could see them ran at one portrait phone.
+  const nameOf = e => e.id ? '#' + e.id : '.' + e.className.trim().split(/\s+/)[0];
+  const offScreen = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .say, .sel-name')]
+    .filter(e => {
+      const q = e.getBoundingClientRect();
+      return q.width > 0 && (q.right > window.innerWidth + 1 || q.left < -1);
+    }).map(nameOf);
+  const plateBad = [];
+  for (const plate of document.querySelectorAll('.plate')) {
+    if (plate.scrollWidth > plate.clientWidth + 1)
+      plateBad.push(`${nameOf(plate)} spills ${plate.scrollWidth - plate.clientWidth}px past its own width`);
+    if (plate.scrollHeight > plate.clientHeight + 1)
+      plateBad.push(`${nameOf(plate)} spills ${plate.scrollHeight - plate.clientHeight}px past its own height`);
+  }
+  for (const kid of document.querySelectorAll('.plate, .plate *')) {
+    const a = kid.getBoundingClientRect();
+    if (!a.width || !a.height) continue;
+    for (const row of document.querySelectorAll('.seat__cards')) {
+      const b = row.getBoundingClientRect();
+      if (a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1) {
+        plateBad.push(`${nameOf(kid)} lands on the cards`); break;
+      }
+    }
+  }
 
-  state.deveGiocare = keep.turn; state.perPrimo = keep.primo; state.played = keep.played;
-  render();
-
-  // Raise one, measure it, put it back. The raised card is the whole point of
-  // the two-tap interaction, and it is the one state that can leave the table.
-  const wasSelected = state.selected;
-  state.selected = 0; render();
-  const raised = document.querySelector('.hand--you .card[aria-pressed="true"]').getBoundingClientRect();
-  // Raised is also when the name line has something in it, so this is where to
-  // check that --say is still in step with the type it reserves room for: the
-  // strip clips what does not fit, silently.
-  const nameH = document.querySelector('.sel-name').getBoundingClientRect().height;
-  // Issue #6: the raise has to read as a state, not as a nudge. Two things
-  // make it one, and both are measured here — how far the card comes out of
-  // the fan, and whether the line above the hand says what the next tap does.
-  // At 18% of a card the lift was shorter than the strip the card came out of,
-  // and the line just named the card, so the second tap read as a repeat of
-  // the first.
-  const raisedLift = Math.round(cards[0].top - raised.top);
-  const saysNext = /^Gioca /.test(document.querySelector('.sel-name').textContent);
-  state.selected = wasSelected; render();
+  // Nothing in the middle may land on a hand card — card against card, for the
+  // reason the audit gives: the hand's own box does not follow the card that
+  // leaves it.
+  const handCards = [...document.querySelectorAll('.hand .card')].map(c => c.getBoundingClientRect());
+  const cardsInTavola = [...document.querySelectorAll('.tavola .card')].map(c => c.getBoundingClientRect());
+  const overlapsHand = cardsInTavola.filter(c =>
+    handCards.some(h => c.left < h.right - 1 && c.right > h.left + 1
+                     && c.top < h.bottom - 1 && c.bottom > h.top + 1)).length;
 
   return {
-    dimmedWaiting, dimmedFollowing, forbidden,
-    overlap: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--overlap')),
-    minStep: Math.min(...steps),
-    stepSpread: Math.max(...steps) - Math.min(...steps),
-    fanSpillRight: Math.round(Math.max(0, cards[9].right - (table.right - pad))),
-    fanSpillLeft: Math.round(Math.max(0, (table.left + pad) - cards[0].left)),
-    raisedAbove: Math.round(table.top - raised.top),
-    raisedBelowFold: Math.round(raised.bottom - window.innerHeight),
-    sayClip: Math.round(sayShown ? Math.max(0, nameH - say.height) : 0),
-    raisedLift, saysNext,
-    gapTop: Math.round(trick.top - oppHand.bottom),
-    sayMissing: !sayShown,
-    gapBot: Math.round((sayShown ? say.top : youHand.top) - Math.max(trick.bottom, tallone.bottom)),
-    belowFold: Math.round(youSeat.bottom - window.innerHeight),
-    overflow: Math.round(youSeat.bottom - table.bottom),
-    hScroll: document.documentElement.scrollWidth > window.innerWidth,
-    maxGap: Math.round(Math.max(0, ...gaps)),
-    gapRatio: Math.max(0, ...gaps) / card.height,
-    cw: Math.round(card.width), ch: Math.round(card.height),
+    sayShown,
+    offScreen,
+    plateBad,
+    sayH: say ? Math.round(say.height) : 0,
+    cw: Math.round(cw),
+    rowStats,
+    overlapsHand,
+    // §3.7: one row in landscape, two in portrait once there is more than one
+    // card. Without this the wrap rule is a line of JavaScript nothing reads.
+    rowCount: rows.length,
+    portrait: window.matchMedia('(orientation: portrait)').matches,
+    // Your whole seat, not just your cards: in portrait the plate is below the
+    // hand, and Tressette's hung 15px past the bottom of the screen while the
+    // check printed `pass`, because it measured the hand.
+    youSeatBottom: youSeat ? Math.round(youSeat.bottom) : 0,
+    viewportH: window.innerHeight,
+    // The table has `overflow: hidden auto`, so a budget that comes up short
+    // does not error — it hands the player a scrollbar. Scrolling to reach a
+    // card beats a card hidden under another one, which is why the fallback is
+    // there, but needing it at all means a term of --chrome is missing: it was
+    // --extra-gap, a hand-set .5rem standing in for --step, 6px short at
+    // 1024x1366 and the table scrolled by exactly that.
+    tableScroll: table ? Math.max(0, document.querySelector('.table').scrollHeight
+                                   - document.querySelector('.table').clientHeight) : 0,
+    tavolaInsideTable: tavola && table
+      ? Math.round(Math.max(0, tavola.right - table.right) + Math.max(0, table.left - tavola.left))
+      : 0,
+    gapSpread: gaps.length ? Math.round(Math.max(...gaps) - Math.min(...gaps)) : 0,
+    maxGap: gaps.length ? Math.round(Math.max(...gaps)) : 0,
+    tavolaCount: cardsInTavola.length,
+    engineCount: (state.tavola || []).length,
   };
 };
 
-const tableFaults = r => [
-  r.gapTop < 0 && `trick overlaps the opponent's hand by ${-r.gapTop}px`,
-  r.gapBot < 0 && `trick overlaps your hand by ${-r.gapBot}px`,
-  r.sayMissing && 'the name strip takes no space while it is empty, so filling it moves every card below it',
-  r.dimmedWaiting > 0 &&
-    `${r.dimmedWaiting} cards of your hand are dimmed while the opponent is thinking: ` +
-    'dimming says the rule forbids a card, not that you have to wait',
-  r.dimmedFollowing !== r.forbidden &&
-    `${r.dimmedFollowing} cards are dimmed against a led suit that forbids ${r.forbidden}`,
-  r.sayClip > 0 && `the name of the raised card is clipped by ${r.sayClip}px: --say is out of step with its type`,
-  r.belowFold > 0 && `your seat — hand and name plate — is ${r.belowFold}px below the fold`,
-  r.overflow > 0 && `your seat overflows the table by ${r.overflow}px`,
-  r.hScroll && 'table scrolls sideways',
-  // Both terms are needed. The ratio alone misjudges a viewport so tight the
-  // card sits on its floor, where an ordinary gap is a large share of a small
-  // card; the absolute alone misjudges a big screen, where a wide gap beside a
-  // tall card is breathing room.
-  (r.gapRatio > 0.25 && r.maxGap > 48) &&
-    `rows drift apart: widest gap ${r.maxGap}px, ${r.gapRatio.toFixed(2)} of a card`,
-
-  // §3.7, assertion 1, in two terms, because one cannot do the work.
-  //
-  // The first is arithmetic: the row is built out of negative margins, and a
-  // margin that has drifted from --strip makes a fan that no longer shows what
-  // the budget says it shows. Measured against the page's own token, so it
-  // holds at any --overlap.
-  Math.abs(r.minStep - r.cw * r.overlap) > 1.5 &&
-    `the fan's step is ${r.minStep}px but --strip is ${Math.round(r.cw * r.overlap)}px: ` +
-    `the margins have drifted from the token`,
-
-  // The second is the floor, and it cannot be a pixel count alone: at 980x385
-  // with the spacing inflated the card sits on its 32px clamp floor, where 70%
-  // of it is a 22px strip — as good a fan as a 32px card allows. Nor can it be
-  // a share alone: .45 is the designed share in portrait, so a share floor that
-  // would fail a desktop fan halved from .7 to .42 also fails every good phone.
-  // So: a strip is either wide enough to single out, or it shows at least the
-  // share the design gives its tightest orientation. `--overlap: .08` fails
-  // both; landscape cut from .7 to .42 fails the second, which is the break
-  // that a `min(24px, .4 of a card)` floor let through at every viewport.
-  (r.minStep < 24 && r.minStep < 0.44 * r.cw) &&
-    `the fan has collapsed: cards are ${r.minStep}px apart, ` +
-    `${(r.minStep / r.cw).toFixed(2)} of a card, so one cannot be singled out from the next`,
-  r.stepSpread > 1 && `the fan is uneven: steps differ by ${r.stepSpread}px`,
-
-  // §3.7, assertion 3, which on the right-hand edge is also the rest of
-  // assertion 1: the last card of a fan that runs past the table is the card
-  // that is cut off. One measurement, so one message.
-  r.fanSpillRight > 0 && `the fan runs ${r.fanSpillRight}px past the table's right edge, cutting off the last card of your hand`,
-  r.fanSpillLeft > 0 && `the fan runs ${r.fanSpillLeft}px past the table's left edge`,
-
-  // §3.7, assertion 2: a raised card is what you are about to play, so it has
-  // to be wholly on the table and wholly on screen.
-  r.raisedAbove > 0 && `a raised card lifts ${r.raisedAbove}px above the table`,
-
-  // Issue #6. .3 of a card is not taste: it is the point at which the lift is
-  // longer than the strip the card came out of, so the card reads as out of
-  // the fan rather than nudged within it. At .18, where this started, the two
-  // taps felt like one thing done twice.
-  r.raisedLift < 0.3 * r.ch &&
-    `a raised card lifts ${r.raisedLift}px, ${(r.raisedLift / r.ch).toFixed(2)} of a card: ` +
-    'not far enough to read as raised',
-  !r.saysNext && 'the line above your hand does not say what the next tap will do',
-  r.raisedBelowFold > 0 && `a raised card sits ${r.raisedBelowFold}px below the fold`,
-].filter(Boolean);
+// The tokens --chrome is derived from, made bigger. If anyone replaces the
+// derivation with a constant, the cards stop shrinking to pay for the extra
+// space and the assertions above catch it.
+//
+// Moderate on purpose. Inflating hard enough to drive the card onto its 32px
+// clamp floor tests the clamp, not the derivation: at 980x385 the page then
+// overflows however faithfully --chrome tracked its tokens, and `.table`
+// scrolls, which is the designed fallback rather than a defect. The numbers
+// below are the largest that leave the floor unbound at the tightest viewport,
+// and they are verified to fail a hard-coded --chrome.
+const INFLATE = `:root{
+  --topbar: 56px !important;
+  --pad-block: .95rem !important;
+  --step: .85rem !important;
+  --say: 26px !important;
+  /* And no slack. --slack exists so the budget never lands on exactly zero,
+     which means a term that is SHORT by less than --slack costs nothing and
+     shows nowhere — --plates was 8px short at every portrait viewport and
+     --slack is 8px. Taking it away here is what makes the budget's arithmetic
+     assertable rather than merely comfortable. */
+  --slack: 0px !important;
+}`;
 
 async function checkTable(browser, only, inflate) {
-  console.log(inflate ? '\ntable, inflated spacing' : '\ntable');
+  console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
   let failed = 0;
-  for (const [vname, width, height] of VIEWPORTS) {
-    if (only && !only.includes(vname)) continue;
-    const page = await browser.newPage({ viewport: { width, height } });
-    const rows = [];
-    // The table only exists once a deal is dealt. The deck picker is iteration
-    // 4, so each deck is applied directly for now — applyDeck is the same call
-    // the picker will make, so this exercises the same code path.
-    for (const deck of DECKS) {
-      await page.goto(URL_);
+  let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
+  // 'tiny window' is in the quick grid because it is the shape the width term
+  // is about, and 'shortest window' because it is where the plate is taller
+  // than the card AND the budget has nothing left over: a break that takes a
+  // term out of the budget has to have somewhere to show up.
+  if (QUICK) list = list.filter(v =>
+    ['phone landscape', 'narrow phone', 'Android small', 'laptop',
+     'tiny window'].includes(v[0]));
+
+  for (const [vname, w, h] of list) {
+    // Two decks even in the quick grid: Romagnole's cards are the widest, so it
+    // is the only one where the width term of the budget binds, and a break
+    // that takes a term out of that budget has nowhere else to show.
+    for (const deck of (QUICK ? ['Trevisane', 'Romagnole'] : DECKS)) {
+      for (const n of (QUICK ? [4, 13] : TABLE_SIZES)) {
+        const page = await openPage(browser, { width: w, height: h });
+        const errs = [];
+        page.on('pageerror', e => errs.push(String(e)));
+        page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+        await page.goto(URL_);
+        await page.addStyleTag({ content: STILL });
+        if (inflate) await page.addStyleTag({ content: INFLATE });
+        await page.click('#play');
+        // Off the table. Clicking leaves the pointer where the button was, and
+        // a pointer resting on a card changes what is painted over what — so
+        // every measurement below would carry a hover nobody asked for. Hover
+        // is asserted on purpose in checkChoice instead.
+        await page.mouse.move(0, 0);
+        // The settings sheet that lets a player pick a deck is iteration 4, so
+        // each deck is applied directly — applyDeck is the same call it will
+        // make.
+        await page.evaluate(d => applyDeck(d), deck);
+        await page.evaluate(setTavola(n));
+        await page.waitForTimeout(40);
+
+        const m = await page.evaluate(measure);
+        const bad = [];
+
+        if (!m.sayShown || m.sayH < 10)
+          bad.push(`the say line is ${m.sayH}px tall — it must cost --say whether or not it has something to say`);
+
+        for (const e of m.offScreen)
+          bad.push(`${e} runs off the screen`);
+        bad.push(...m.plateBad);
+
+        if (m.overlapsHand)
+          bad.push(`${m.overlapsHand} table card(s) land on a hand`);
+
+        const wantRows = (m.portrait && n > 1) ? 2 : 1;
+        if (m.rowCount !== wantRows)
+          bad.push(`the middle draws ${m.rowCount} row(s) in `
+            + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
+
+        if (m.tableScroll > 1)
+          bad.push(`the table needs ${m.tableScroll}px of scrolling — a term of --chrome is missing`);
+
+        if (m.youSeatBottom > m.viewportH + 1)
+          bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold `
+            + `(${m.youSeatBottom} vs ${m.viewportH})`);
+
+        if (m.tavolaInsideTable > 1)
+          bad.push(`the table row runs ${m.tavolaInsideTable}px outside the table`);
+
+        if (m.tavolaCount !== m.engineCount)
+          bad.push(`the middle shows ${m.tavolaCount} cards, the engine holds ${m.engineCount}`);
+
+        // The rows must not drift apart: cards hit their cap and the grid hands
+        // the leftover height to the gaps until a third of the table is empty.
+        // Before the per-card lines below, which can be many: a failure that is
+        // about the whole table is the one worth printing first.
+        if (m.gapSpread > Math.max(24, m.cw * 0.5))
+          bad.push(`the rows drift apart — gaps differ by ${m.gapSpread}px`);
+
+        // The fan floors, moved here from Tressette's hand. A strip too narrow
+        // to touch does not error — it just makes a capture unreachable, and a
+        // misplay costs the deal.
+        const floor = Math.min(24, Math.round(m.cw * 0.45));
+        for (const row of m.rowStats) {
+          if (row.n > 1 && row.minStep < floor)
+            bad.push(`a table row steps ${row.minStep}px between cards, want ${floor} `
+              + `(${row.n} cards, ${m.cw}px each)`);
+          if (row.stepSpread > 1)
+            bad.push(`a table row's steps are uneven by ${row.stepSpread}px — the derivation has drifted`);
+          if (row.spillRight > 1 || row.spillLeft > 1)
+            bad.push(`a table row spills ${row.spillRight || row.spillLeft}px past its own box`);
+          // Tressette asserted here that the last card of the fan is a whole
+          // card. That assertion is gone, measured rather than argued away:
+          // its cards are `width: --cw; flex: none` and the row's negative
+          // margins keep the content inside the box, so nothing shrinks them.
+          // `flex: 1 1 auto` on .card — the regression it was written against
+          // — changes not one measurement. An assertion that cannot fail reads
+          // like cover and is not any. What can fail is the spill above.
+
+          // The strip the layout promises and the strip a thumb gets are two
+          // different numbers, and only the second one plays the card. Every
+          // card is reachable across its own step — the last one across a whole
+          // card — unless something is painted over it.
+          // One line per row, not one per card: a row that loses its strips
+          // loses all of them, and thirteen copies of the same finding push the
+          // assertion that explains it off the end of the report.
+          const want = Math.min(row.minStep, m.cw);
+          const reach = row.reach || [];
+          const starved = reach.findIndex(g => g < floor);
+          const robbed = reach.findIndex(g => g >= floor && g < want - 2);
+          if (starved >= 0)
+            bad.push(`table card ${starved} is ${reach[starved]}px wide to a thumb, `
+              + `want ${floor} (${row.n} cards, ${m.cw}px each)`);
+          else if (robbed >= 0)
+            bad.push(`table card ${robbed} loses ${want - reach[robbed]}px of its strip to `
+              + `whatever is painted over it (${reach[robbed]}px reachable of ${want}px)`);
+        }
+
+        const all = [...bad, ...errs];
+        if (all.length) {
+          failed++;
+          console.log(`  FAIL  ${vname} / ${deck} / ${n} cards`);
+          all.forEach(b => console.log(`        ${b}`));
+        }
+        await page.close();
+      }
+    }
+  }
+  const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${list.length} viewports x ${deckN} decks x ${sizeN} table sizes`);
+  return failed;
+}
+
+/* ---- pass 2b: the capture choice and the toast ----------------------------- */
+
+// The states §3.7 adds, measured rather than merely rendered. A capture with a
+// choice in it is the one interaction this game has that neither ancestor did.
+async function checkChoice(browser) {
+  console.log('\nthe capture choice, and the toast');
+  let failed = 0;
+  const list = QUICK ? ['Android small'] : CHOICE_VIEWPORTS;
+  for (const [vi, vname] of list.entries()) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    // A different deck each time round: the decks differ in card ratio, so the
+    // geometry below differs with them, and running one deck here was a gap
+    // rather than a decision.
+    const deck = DECKS[vi % DECKS.length];
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(poseChoice);
+
+    const bad = await page.evaluate(() => {
+      const out = [];
+      const marked = () => [...document.querySelectorAll('.tavola .card')]
+        .map((c, i) => [i, c.dataset.take === 'true'])
+        .filter(([, t]) => t).map(([i]) => i);
+
+      // The card is raised.
+      const raised = document.querySelector('.hand--you .card[aria-pressed="true"]');
+      if (!raised) out.push('a capture with a choice did not raise the card');
+
+      // Exactly the cards of the proposal are marked — not more, not fewer.
+      const want = propostaCorrente();
+      const got = marked();
+      if (JSON.stringify(got) !== JSON.stringify([...want].sort((a, b) => a - b)))
+        out.push(`the table marks ${JSON.stringify(got)}, the proposal is ${JSON.stringify(want)}`);
+      if (got.length === 0) out.push('nothing on the table is marked');
+
+      // The line says what the next tap will do, not merely what the card is.
+      const say = document.querySelector('.sel-name');
+      if (say.hidden) out.push('the say line is hidden while a card is raised');
+      if (!/^Prendi /.test(say.textContent))
+        out.push(`the say line does not say what the tap does: "${say.textContent}"`);
+
+      // Switching the proposal by tapping a table card marks exactly the new
+      // set. This is the second of the two paths §4 requires.
+      const other = proposte().findIndex(s => JSON.stringify(s) !== JSON.stringify(want));
+      if (other < 0) out.push('the posed position offers only one capture — it is not a choice');
+      else {
+        const said = say.textContent;
+        const idx = proposte()[other][0];
+        document.querySelector(`.tavola .card[data-index="${idx}"]`).click();
+        const now = marked();
+        const wantNow = [...propostaCorrente()].sort((a, b) => a - b);
+        if (JSON.stringify(now) !== JSON.stringify(wantNow))
+          out.push(`after tapping a table card the marks are ${JSON.stringify(now)}, want ${JSON.stringify(wantNow)}`);
+        if (JSON.stringify(now) === JSON.stringify([...want].sort((a, b) => a - b)))
+          out.push('tapping a table card did not change the proposal');
+        // Two proposals, one line. The posed position is two sevens on the
+        // table and a seven in hand — the value alone reads "Prendi il sette
+        // con il sette" for both of them, and a line that cannot tell the
+        // player which seven is about to go is not telling them anything.
+        if (say.textContent === said)
+          out.push(`the say line reads the same for both proposals: "${said}"`);
+      }
+      return out;
+    });
+
+    // The toast floats: it takes no space in the flow and is never clipped.
+    await page.evaluate(`toast("Scopa!")`);
+    await page.waitForTimeout(30);
+    const toastBad = await page.evaluate(() => {
+      const out = [];
+      const t = document.querySelector('.toast');
+      if (t.hidden) out.push('the toast did not show');
+      const cs = getComputedStyle(t);
+      if (cs.position !== 'absolute' && cs.position !== 'fixed')
+        out.push(`the toast is ${cs.position} — it is in the flow, and it will move the cards`);
+      const r = t.getBoundingClientRect();
+      if (r.right > window.innerWidth + 1 || r.left < -1)
+        out.push(`the toast runs off the screen (${Math.round(r.left)}…${Math.round(r.right)})`);
+      if (t.scrollHeight > t.clientHeight + 1)
+        out.push(`the toast clips its own text (${t.scrollHeight} > ${t.clientHeight})`);
+      return out;
+    });
+
+    // The same choice on a crowded table. Two things can only go wrong here:
+    // the mark can take the tap that belongs to the card beside it, and the
+    // raised card can stand on the cards it is proposing to capture. Both are
+    // invisible in the diff, neither throws, and each costs a deal.
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.evaluate(poseChoiceCrowded);
+    // And a pointer resting on one of those cards, on purpose. A hover that
+    // lifts a card transforms it, a transform paints it as its own stacking
+    // context, and the card to its right loses the difference — which is the
+    // same defect as marking one, arriving by a different door. Hovering here
+    // is what makes the measurement below see it.
+    const spot = await page.evaluate(() => {
+      // A card the proposal is offering to take, by preference: a pointer on a
+      // marked card is where two rules meet, and the hover ring used to paint
+      // over the mark and say the opposite of what was true.
+      const rows = [...document.querySelectorAll('.tavola-row')];
+      const row = rows[rows.length - 1];
+      const c = document.querySelector('.tavola .card[data-take="true"]')
+             || (row && row.children[Math.min(2, row.children.length - 1)]);
+      if (!c) return null;
+      const r = c.getBoundingClientRect();
+      return { x: Math.round(r.left + 4), y: Math.round(r.top + r.height / 2) };
+    });
+    if (spot) await page.mouse.move(spot.x, spot.y);
+    await page.waitForTimeout(40);
+    const crowdBad = await page.evaluate(() => {
+      const out = [];
+      // From a card on the table, which is never raised and never scaled.
+      const anyCard = document.querySelector('.tavola .card');
+      const cw = anyCard ? anyCard.getBoundingClientRect().width : 0;
+      const floor = Math.min(24, Math.round(cw * 0.45));
+
+      const mark = document.querySelector('.tavola .card[data-take="true"]');
+      if (!mark)
+        out.push('nothing on the crowded table is marked — the position is not a choice');
+      else if (!/rgb\(200, 162, 74\)/.test(getComputedStyle(mark).boxShadow))
+        out.push('the marked card under the pointer is not drawn as marked');
+
+      for (const row of document.querySelectorAll('.tavola-row')) {
+        const cs = [...row.children];
+        if (cs.length < 2) continue;
+        const boxes = cs.map(c => c.getBoundingClientRect());
+        const step = Math.min(...boxes.slice(1).map((b, i) => b.left - boxes[i].left));
+        const want = Math.min(Math.round(step), Math.round(cw));
+        const first = boxes[0];
+        const y = Math.round(first.top + first.height / 2);
+        if (y < 0 || y >= window.innerHeight) continue;
+        const got = cs.map(() => 0);
+        for (let x = Math.max(0, Math.ceil(row.getBoundingClientRect().left));
+             x <= Math.min(window.innerWidth - 1, Math.floor(row.getBoundingClientRect().right)); x++) {
+          const i = cs.indexOf(document.elementFromPoint(x, y));
+          if (i >= 0) got[i]++;
+        }
+        got.forEach((g, i) => {
+          if (g < floor)
+            out.push(`with a capture marked, table card ${i} is ${g}px wide to a thumb, want ${floor}`);
+          else if (g < want - 2)
+            out.push(`with a capture marked, table card ${i} loses ${want - g}px of its strip `
+              + `to whatever is painted over it (${g}px of ${want}px)`);
+        });
+      }
+
+      // And the card you raised is not standing on the table.
+      const hit = (a, b) => a.left < b.right - 1 && a.right > b.left + 1
+                         && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+      const hand = [...document.querySelectorAll('.hand .card')].map(c => c.getBoundingClientRect());
+      const on = [...document.querySelectorAll('.tavola .card')]
+        .filter(c => hand.some(h => hit(c.getBoundingClientRect(), h))).length;
+      if (on) out.push(`the raised card stands on ${on} table card(s)`);
+      return out;
+    });
+
+    // The say line, hit-tested while a card is raised. That the line says the
+    // right words is asserted above; that anything can READ them is a separate
+    // question, and the raised card was drawn over 120px of a 309px line at
+    // 1440x900 from the middle slot — over the suit, which is the reason the
+    // line names one.
+    const sayBad = [];
+    for (const slot of [0, 1]) {
+      await page.reload();
       await page.addStyleTag({ content: STILL });
-      if (inflate) await page.addStyleTag({
-        content: ':root{ --pad-block: 1.5rem; --step: 1.25rem; --slack: 16px; }' });
-      await page.evaluate(d => applyDeck(d), deck);
       await page.click('#play');
-      await page.waitForTimeout(260);
-      rows.push({ deck, ...(await page.evaluate(measure)) });
+      await page.evaluate(d => applyDeck(d), deck);
+      await page.mouse.move(0, 0);
+      await page.evaluate(`(() => {
+        state.tavola = [{s:1,n:7},{s:0,n:7},{s:2,n:4},{s:3,n:3}];
+        state.hands[0] = [{s:2,n:7},{s:3,n:7},{s:1,n:2}];
+        state.deveGiocare = 0; state.over = false; state.selected = null; state.scelta = 0;
+        render(); tapped(${slot});
+      })()`);
+      await page.waitForTimeout(40);
+      sayBad.push(...await page.evaluate(() => {
+        const out = [];
+        const t = document.querySelector('.sel-name');
+        const r = t.getBoundingClientRect();
+        if (!r.width) { out.push('the say line has no box while a card is raised'); return out; }
+        const y = Math.round(r.top + r.height / 2);
+        let covered = 0;
+        for (let x = Math.ceil(r.left); x <= Math.floor(r.right); x++) {
+          const e = document.elementFromPoint(x, y);
+          if (e !== t && !t.contains(e)) covered++;
+        }
+        if (covered > 1)
+          out.push(`${covered}px of the say line is drawn over while a card is raised `
+            + `(${Math.round(r.width)}px wide)`);
+        return out;
+      }));
+    }
+
+    // What the ladder must do, stated as a rule rather than as a string table.
+    //
+    // A string table is the shape of assertion that shipped a check passing
+    // here and failing in CI: which rung wins depends on the width AND on the
+    // type metrics, so naming one per viewport is naming the metrics of
+    // whatever typeface happened to load. It was true of the widest line first,
+    // and it became true of the middle rung the moment the say line stopped
+    // being --t-tiny — 28 characters no longer fit a 320px screen.
+    //
+    // So each position declares what it MAY say: the shown line must be one of
+    // the rungs, one line, inside its box and short enough to be a label.
+    //
+    // And only what it may say. A "may not" list was here as well, naming the
+    // whole capture that is over the cap at two of the three positions — but
+    // the forbidden string was never in the may list either, so the membership
+    // check three lines below fired on it first and the extra rule could not go
+    // red on its own. That is the same property this file cited when it deleted
+    // the character count from the same block.
+    const SEGNATA = 'Prendi la carta segnata';
+    const rungBad = [];
+    for (const [pose, may] of [
+           [poseLongSay,    [LONG_SAY, SEGNATA]],
+           [poseUnnameable, [UNNAMEABLE_SAY]],
+           [poseWidestSay,  [WIDEST_SAY, CUT_SAY]]]) {
+      await page.reload();
+      await page.addStyleTag({ content: STILL });
+      await page.click('#play');
+      await page.evaluate(d => applyDeck(d), deck);
+      await page.mouse.move(0, 0);
+      await page.evaluate(pose);
+      await page.waitForTimeout(40);
+      rungBad.push(...await page.evaluate(rungs => {
+        const out = [];
+        if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
+          out.push(`the position meant to say "${rungs[0]}" played the card instead of raising it`);
+        const el = document.querySelector('.sel-name');
+        const said = el.textContent;
+        if (!rungs.includes(said))
+          out.push(`the say line should name the capture "${rungs[0]}", it says "${said}"`);
+        // Not the character count as well: every rung a position may produce is
+        // inside the cap, so a length check here has a firing set that is a
+        // strict subset of the membership check's and cannot go red on its own.
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        if (r.height > parseFloat(cs.lineHeight) + 1)
+          out.push(`the say line wraps to ${Math.round(r.height)}px of a ${Math.round(parseFloat(cs.lineHeight))}px line: "${said}"`);
+        const box = document.querySelector('.say').getBoundingClientRect();
+        if (r.left < box.left - 1 || r.right > box.right + 1)
+          out.push(`the say line is ${Math.round(r.width)}px in a ${Math.round(box.width)}px box: "${said}"`);
+        return out;
+      }, may));
+    }
+
+    const all = [...bad, ...toastBad, ...crowdBad, ...sayBad, ...rungBad, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${vname} / ${deck}`);
+      all.forEach(b => console.log(`        ${b}`));
     }
     await page.close();
-
-    const bad = rows.flatMap(r => tableFaults(r).map(f => `${r.deck}: ${f}`));
-    if (bad.length) failed++;
-    const margin = Math.min(...rows.map(r => Math.min(r.gapTop, r.gapBot, -r.belowFold)));
-    console.log(`  ${bad.length ? 'FAIL' : 'pass'}  ${vname.padEnd(18)} ` +
-      `${String(width).padStart(4)}x${String(height).padStart(4)}  ` +
-      `card ${String(rows[0].cw).padStart(3)}x${String(rows[0].ch).padStart(3)}  ` +
-      `margin ${String(margin).padStart(4)}px  ` +
-      `gap ${Math.max(...rows.map(r => r.gapRatio)).toFixed(2)}`);
-    bad.forEach(f => console.log(`        ${f}`));
   }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${list.length} viewports, seven positions each`);
+  return failed;
+}
+
+/* ---- pass 2c: the two states only playing can reach ------------------------ */
+
+// The sweep and the beat. Both are moments the deal passes through rather than
+// states it sits in, so neither can be posed: the toast over a table that still
+// has cards on it is not a scopa, and two empty hands are a state the engine
+// refuses to sit in at all — gioca() deals the next round before it returns.
+// The page is told, in `nuovoGiro`, and a page that does not listen simply
+// never draws the beat. Tressette shipped a finished trick that way.
+async function checkStates(browser) {
+  console.log('\nthe sweep, and the beat between rounds');
+  let failed = 0;
+  const list = QUICK ? ['Android small'] : SCREEN_VIEWPORTS;
+  for (const [vi, vname] of list.entries()) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    // A different deck each time round, as in checkChoice: one deck here was a
+    // gap rather than a decision.
+    const deck = DECKS[vi % DECKS.length];
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+
+    await page.evaluate(playSweep);
+    await page.waitForTimeout(LANDS_MS);
+    // Beat one: the card that was played is ON THE TABLE, among the two it is
+    // about to take, and nothing is leaving yet. Without this beat a capturing
+    // card is never drawn anywhere — gioca moves it from a hand to a pile — so
+    // the player watches cards leave and has to work out what took them. It is
+    // the defect the owner found by playing the preview.
+    const lands = await page.evaluate(() => {
+      const out = [];
+      const shown = document.querySelectorAll('.tavola .card').length;
+      if (shown !== 3)
+        out.push(`the card that was played was not laid on the table: the middle shows ${shown}, want 3`);
+      const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+      if (played !== 1) out.push(`${played} card(s) drawn as the one just played, want 1`);
+      const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
+      if (going) out.push(`${going} card(s) are already leaving before the card that takes them has landed`);
+      return out;
+    });
+
+    await page.waitForTimeout(SWEEPING_MS);
+    // Beat two: all three leave together — the two that were taken and the one
+    // that took them.
+    const flying = await page.evaluate(() => {
+      const out = [];
+      const shown = document.querySelectorAll('.tavola .card').length;
+      if (shown !== 3)
+        out.push(`the capture was not drawn leaving the table: the middle shows ${shown} card(s)`);
+      const down = document.querySelectorAll('.tavola .card--won-down').length;
+      const up = document.querySelectorAll('.tavola .card--won-up').length;
+      if (down + up !== 3) out.push(`${down + up} card(s) marked as leaving, want 3`);
+      // Down, because you took it, and ALL of them: a sweep that sends the
+      // cards one way and the card that took them the other says two players
+      // captured, and counting "is anything going down" cannot see it.
+      if (up) out.push(`the capture is sweeping the wrong way: ${up} of ${down + up} card(s) going up`);
+      return out;
+    });
+
+    // The other direction. A sweep toward the wrong player says the other
+    // player captured, and until now only one of the two was ever drawn.
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(playSweepOpp);
+    await page.waitForTimeout(LANDS_MS);
+    // The opponent's card, on the table, where the player can see it. This is
+    // the one that matters: you know what you played.
+    const oppLands = await page.evaluate(() => {
+      const out = [];
+      const played = document.querySelector('.tavola .card[data-played="true"]');
+      if (!played) out.push("the opponent's card was never drawn on the table");
+      return out;
+    });
+    await page.waitForTimeout(SWEEPING_MS);
+    const flyingOpp = await page.evaluate(() => {
+      const out = [];
+      const down = document.querySelectorAll('.tavola .card--won-down').length;
+      const up = document.querySelectorAll('.tavola .card--won-up').length;
+      if (down + up !== 2) out.push(`${down + up} card(s) marked as leaving on the opponent's capture, want 2`);
+      if (down) out.push(`the opponent's capture is sweeping the wrong way: ${down} of ${down + up} card(s) going down`);
+      // And your hand is plainly not ready while the table is busy. It is your
+      // turn the moment their capture resolves, so the cards look live — and
+      // `tapped` refuses while the sweep runs. A card that takes a tap and does
+      // nothing is worse than one that looks refused.
+      const live = [...document.querySelectorAll('.hand--you .card')]
+        .filter((c, i) => state.hands[0][i] && !c.disabled).length;
+      if (live) out.push(`${live} card(s) in your hand are still tappable during the sweep`);
+      return out;
+    });
+
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(playLay);
+    await page.waitForTimeout(LANDS_MS);
+    const laidBad = await page.evaluate(() => {
+      const out = [];
+      const shown = document.querySelectorAll('.tavola .card').length;
+      if (shown !== 2) out.push(`a card was laid and the middle shows ${shown}, want 2`);
+      const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+      if (played !== 1) out.push(`${played} card(s) drawn as the one just played after a lay, want 1`);
+      if (document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length)
+        out.push('a card that took nothing is sweeping off the table');
+      return out;
+    });
+
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(playSweep);
+    await page.waitForTimeout(SWEEP_MS);
+    const sweep = await page.evaluate(() => {
+      const out = [];
+      const t = document.querySelector('.toast');
+      if (t.hidden) out.push('a sweep was played and nothing announced it');
+      else if (!/scopa/i.test(t.textContent)) out.push(`the toast says "${t.textContent}"`);
+      // Not `state.tavola.length` — that is the engine's business and
+      // tools/engine.test.mjs owns it. And not "nothing still carries the
+      // sweep class": the class is written from `sweeping` on every render, so
+      // it cannot outlive it, and an assertion that cannot fail reads like
+      // cover and is not any. What can fail is the table not catching up.
+      const shown = document.querySelectorAll('.tavola .card').length;
+      if (shown) out.push(`the middle still draws ${shown} card(s) after the sweep`);
+      const marks = document.querySelectorAll('#scopeYou .scopa-mark').length;
+      if (marks !== state.scope[0]) out.push(`${marks} scopa mark(s) drawn, the engine counted ${state.scope[0]}`);
+
+      // The middle keeps its row while it is empty, or the whole table
+      // re-centres on the beat when the player is looking hardest.
+      const tav = document.querySelector('.tavola').getBoundingClientRect();
+      const card = document.querySelector('.hand--you .card').getBoundingClientRect();
+      if (tav.height < card.height - 1)
+        out.push(`the empty middle collapsed to ${Math.round(tav.height)}px, a card is ${Math.round(card.height)}px`);
+      return out;
+    });
+
+    // The 36th play. Everything above measures a play in the middle of a deal,
+    // and the last one is not one of those: `gioca` sets `over` on it and
+    // sweeps the leftovers up with it, so it is the one play where what covers
+    // the table and where the cards go are both decided differently. Nothing
+    // rendered it, and both went wrong.
+    const last = await page.evaluate(playToLast);
+    const ending = [];
+    if (!last) ending.push('the driver never reached the last play of the deal');
+    else {
+      await page.waitForTimeout(LAST_LANDS_MS);
+      ending.push(...await page.evaluate(() => {
+        const out = [];
+        // The panel is opaque and covers the whole table. Up from the first
+        // frame, the card that ends the deal lands and sweeps behind it.
+        if (!document.getElementById('result').hidden)
+          out.push('the points are counted out over the last play, before it has been drawn');
+        const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+        if (played !== 1)
+          out.push(`${played} card(s) drawn as the one that ended the deal, want 1`);
+        const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
+        if (going) out.push(`${going} card(s) are already leaving on the last play before it has landed`);
+        return out;
+      }));
+      await page.waitForTimeout(LAST_FLYING_MS);
+      ending.push(...await page.evaluate(info => {
+        const out = [];
+        if (!document.getElementById('result').hidden)
+          out.push('the points are counted out over the last play while it is still sweeping');
+        const down = document.querySelectorAll('.tavola .card--won-down').length;
+        const up = document.querySelectorAll('.tavola .card--won-up').length;
+        const shown = document.querySelectorAll('.tavola .card').length;
+        if (down + up !== shown)
+          out.push(`the last play leaves ${down + up} of ${shown} card(s) on the table — `
+            + `after the 36th card nothing stays on it`);
+        // ONE way. A card that takes nothing on the last play is swept up with
+        // the leftovers, to whoever captured last — drawing it toward the
+        // player who played it says two players took cards from one play.
+        const wantDown = (info.took ? info.who : info.ultimaPresa) === 0;
+        const wrong = wantDown ? up : down;
+        if (wrong)
+          out.push(`the last play sends ${wrong} of ${down + up} card(s) the wrong way: `
+            + `they all go to player ${info.took ? info.who : info.ultimaPresa}`);
+        return out;
+      }, last));
+      await page.waitForTimeout(LAST_SETTLED_MS);
+      ending.push(...await page.evaluate(() => {
+        const out = [];
+        // And then it does show, or holding it back would be a way to lose it.
+        if (document.getElementById('result').hidden)
+          out.push('the last play was drawn and the points were never counted out');
+        const shown = document.querySelectorAll('.tavola .card').length;
+        if (shown) out.push(`the middle still draws ${shown} card(s) after the deal is over`);
+        return out;
+      }));
+    }
+
+    // The 36th play that takes NOTHING, twice: onto a table with cards on it
+    // and onto an empty one. A driven deal reaches whichever ending its seed
+    // reaches — this one captures — so these two are posed up to the play and
+    // then played. Both breaks written for the lines below survived until the
+    // check rendered them, which is the rule in one sentence.
+    // Both expectations are DERIVED from what the pose reports — the table it
+    // left plus the card that joins it, and the player it says took last —
+    // rather than written beside it. Twenty lines up, the driven block does the
+    // same with `info`. Hard-coded, they go quietly wrong the moment a pose is
+    // edited, while still passing; and I had them wrong once already, having
+    // forgotten that the played card joins the row it is drawn on.
+    for (const [what, pose] of [['with leftovers under it', playLastLeftovers],
+                                ['onto an empty table',     playLastOnEmpty]]) {
+      await page.reload();
+      await page.addStyleTag({ content: STILL });
+      await page.click('#play');
+      await page.evaluate(d => applyDeck(d), deck);
+      await page.mouse.move(0, 0);
+      const posed = await page.evaluate(pose);
+      await page.waitForTimeout(LAST_LANDS_MS);
+      ending.push(...await page.evaluate(([label, p]) => {
+        const out = [];
+        const shown = document.querySelectorAll('.tavola .card').length;
+        if (shown !== p.cards)
+          out.push(`the last card ${label} is drawn on a table of ${shown}, want ${p.cards}`);
+        const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+        if (played !== 1)
+          out.push(`${played} card(s) drawn as the last card ${label}, want 1`);
+        return out;
+      }, [what, posed]));
+      await page.waitForTimeout(LAST_FLYING_MS);
+      ending.push(...await page.evaluate(([label, p]) => {
+        const out = [];
+        const down = document.querySelectorAll('.tavola .card--won-down').length;
+        const up = document.querySelectorAll('.tavola .card--won-up').length;
+        if (down + up !== p.cards)
+          out.push(`${down + up} of ${p.cards} card(s) leaving on the last card ${label}`);
+        // All of them to whoever took last — the leftovers AND the card that
+        // was just played, which is what makes this play unlike every other.
+        const wrong = p.to === 0 ? up : down;
+        if (wrong) out.push(`the last card ${label} sends ${wrong} card(s) the wrong way: `
+          + `it takes nothing, so it goes to player ${p.to} with the leftovers`);
+        return out;
+      }, [what, posed]));
+    }
+
+    const reached = await page.evaluate(playToBeat);
+    // The window between the play that empties both hands and the beat, which
+    // is a state of its own and was never rendered. `gioca` deals the next
+    // round before it returns, so by the time the page hears about the play the
+    // state already holds three new cards a side — while the card that ended
+    // the round is still landing. Drawn there, a hand appears, deals in, blanks
+    // for the beat and deals in AGAIN: the flicker the deal-in was written to
+    // remove, in a worse form, and measured at 1.35s of it.
+    if (reached) ending.push(...await page.evaluate(() => {
+      const out = [];
+      const drawn = who => [...document.querySelectorAll(who)]
+        .filter(c => c.dataset.empty !== 'true').length;
+      if (drawn('.hand--you .card') || drawn('.hand--opp .card'))
+        out.push(`the card that ended the round is still landing and the next round is `
+          + `already drawn: ${drawn('.hand--you .card')}/${drawn('.hand--opp .card')} in hand`);
+      return out;
+    }));
+    // Sampled once the TABLE has settled, not at the play. At the play `beat`
+    // is true either way and the rule below cannot fail; after `then` has run
+    // it is true only if the beat is being held, which is the whole of what
+    // BEAT buys. `sweeping === null && laid < 0` is exactly "the table has
+    // caught up", and `endBeat` is BEAT away from there.
+    if (reached) await page.waitForFunction('sweeping === null && laid < 0', null,
+      { timeout: 8000 }).catch(() => {});
+    const between = await page.evaluate(() => {
+      const out = [];
+      const drawn = who => [...document.querySelectorAll(who)]
+        .filter(c => c.dataset.empty !== 'true').length;
+      const held = w => state.hands[w].filter(Boolean).length;
+      // Not "did the page enter the beat" — that had a firing set strictly
+      // inside the window assertion's and could not go red on its own, which
+      // is the property this file used to delete two other rules. What BEAT is
+      // for is holding the empty hands there after the table has settled, and
+      // nothing asserted that at all: since the hands are empty for LANDS +
+      // SWEEP anyway, `BEAT = 0` changed nothing any rule could see.
+      if (!beat) { out.push('the round ended and the page did not hold the beat'); return out; }
+      if (held(0) !== 3 || held(1) !== 3)
+        out.push(`the next round was not dealt: ${held(0)}/${held(1)} in hand`);
+      if (drawn('.hand--you .card') || drawn('.hand--opp .card'))
+        out.push(`the beat draws ${drawn('.hand--you .card')}/${drawn('.hand--opp .card')} cards, `
+          + `it is the moment both hands are empty`);
+      // And the empty hand still costs a card row. Not the hand's height —
+      // three slot elements hold that up whatever the rule says — but the slots
+      // themselves: hide them and the hand collapses, and every card on the
+      // table moves between the last play of a round and the first of the next.
+      const card = document.querySelector('.tavola .card');
+      const ch = card ? card.getBoundingClientRect().height : 0;
+      const slots = [...document.querySelectorAll('.hand--you .card')]
+        .filter(c => c.getBoundingClientRect().height > ch - 1).length;
+      if (ch && slots !== 3)
+        out.push(`the empty hand keeps ${slots} card-sized slot(s), want 3 — it collapsed`);
+      return out;
+    });
+
+    // And then the new hand arrives. It must be DEALT rather than appear: three
+    // outlines becoming three cards between one frame and the next reads as a
+    // flicker, which is what the owner saw. The animation itself cannot be
+    // asserted here — this check runs with motion off, on purpose — but the
+    // mark the page puts on a card it has just dealt can be, and a hand that is
+    // never marked is a hand that was never dealt in.
+    await page.waitForFunction('beat === false', null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(60);
+    between.push(...await page.evaluate(() => {
+      const out = [];
+      const hands = [...document.querySelectorAll('.hand .card')];
+      const drawn = hands.filter(c => c.dataset.empty !== 'true');
+      if (drawn.length !== 6)
+        out.push(`the new round drew ${drawn.length} cards, want 6`);
+      const marked = drawn.filter(c => c.dataset.dealt === 'true').length;
+      if (marked !== drawn.length)
+        out.push(`${drawn.length - marked} of ${drawn.length} cards in the new hand `
+          + `were not drawn as dealt — they appeared`);
+      return out;
+    }));
+    if (!reached) between.push('the driver never reached the end of a round');
+
+    // And the FIRST hand of a session, which no pass could see. This check
+    // blocks the webfont, so `document.fonts.ready` resolves at once and the
+    // boot render always leaves the slots in a state `dealt` can work from; on
+    // a real phone with the font still on its way it does not, and the first
+    // hand a player ever sees APPEARS. Measured that way: {"drawn":6,"dealt":0}
+    // against a settled-font control of {"drawn":6,"dealt":6}.
+    //
+    // So the rule is asserted on `buildHands` itself, called here with no
+    // render after it — every slot it makes must be drawn empty, because that
+    // is the state `dealt` compares against. Testing the outcome instead would
+    // measure the boot render rather than the function. Last in the loop: it
+    // replaces the hand elements.
+    const firstDeal = await page.evaluate(() => {
+      const out = [];
+      buildHands();
+      const slots = [...document.querySelectorAll('.hand .card')];
+      const unset = slots.filter(c => c.dataset.empty !== 'true').length;
+      if (unset) out.push(`${unset} of ${slots.length} hand slot(s) start neither empty nor `
+        + `full — the first hand of a session appears rather than being dealt`);
+      return out;
+    });
+
+    const all = [...lands, ...flying, ...oppLands, ...flyingOpp, ...laidBad,
+                 ...sweep, ...ending, ...between, ...firstDeal, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${vname} / ${deck}`);
+      // Every one of them. This pass makes eight groups of assertions and up to
+      // thirteen lines can precede the newest; truncating at six reported a
+      // MISMATCH for an assertion that had fired and was simply off the end of
+      // the list, which is what forced one EXPECT to be loosened a commit ago.
+      all.forEach(b => console.log(`        ${b}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${list.length} viewports`);
+  return failed;
+}
+
+/* ---- pass 2d: turning the phone over ---------------------------------------- */
+
+// A change of viewport is a state, and it is the one state the whole grid above
+// cannot render: every case here loads the page at a size and measures it once.
+// Two things about this table are decided in script rather than in the sheet —
+// whether the middle row wraps, which is an orientation, and which rung the say
+// line can hold, which is a width — and before iteration 3's fourth round
+// neither was read again after the first paint. Measured then, thirteen cards
+// down and no reload: rotating 980x385 to portrait left one row of thirteen
+// with a 22.6px strip, under the floor; rotating 360x800 to landscape left two
+// rows against a budget that paid for one, 82px of scrolling and your own seat
+// 75px below the fold; and a say line raised at 600x853 and resized to 320 kept
+// its rung and stood 38px tall in a 23px box.
+async function checkRotation(browser) {
+  console.log('\nturning the phone over');
+  let failed = 0;
+  // Both halves of every pair are shapes the game can actually hold. Rotating
+  // 500x425 gives 425x500, which is not one: a portrait table is four card rows
+  // and the chrome around them, and below about 570px of height the card is on
+  // its clamp floor and the table hands back a scrollbar however faithfully the
+  // budget tracks its tokens. That is the designed fallback, not a defect, and
+  // asserting against it here would be asserting the clamp.
+  const TURNS = QUICK ? [[[980, 385], [385, 980]]]
+                      : [[[980, 385], [385, 980]], [[360, 800], [800, 360]],
+                         [[1024, 1366], [1366, 1024]], [[430, 932], [932, 430]]];
+  for (const [i, [from, to]] of TURNS.entries()) {
+    const page = await openPage(browser, { width: from[0], height: from[1] });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    // A different deck each time round, as everywhere else: these four shapes
+    // are in no other grid, so one deck here is a gap rather than a decision.
+    const deck = DECKS[i % DECKS.length];
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.mouse.move(0, 0);
+    await page.evaluate(setTavola(13));
+    await page.waitForTimeout(40);
+
+    // Over it goes and back again, without reloading and with the thirteen
+    // cards still down. Both ways, because the two directions are different
+    // questions: one asks whether the row learns to wrap, the other whether it
+    // learns to stop. Everything measured below is on a page that has been
+    // running since the other orientation.
+    const bad = [];
+    for (const size of [to, from]) {
+      await page.setViewportSize({ width: size[0], height: size[1] });
+      await page.waitForTimeout(80);
+
+      const m = await page.evaluate(measure);
+      const at = `after turning to ${size.join('x')}`;
+      for (const e of m.offScreen) bad.push(`${at}, ${e} runs off the screen`);
+      bad.push(...m.plateBad.map(b => `${at}, ${b}`));
+      if (m.tableScroll > 1)
+        bad.push(`${at}, the table needs ${m.tableScroll}px of scrolling`);
+      if (m.youSeatBottom > m.viewportH + 1)
+        bad.push(`${at}, your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
+      if (m.overlapsHand)
+        bad.push(`${at}, ${m.overlapsHand} table card(s) land on a hand`);
+      if (m.tavolaInsideTable > 1)
+        bad.push(`${at}, the table row runs ${m.tavolaInsideTable}px outside the table`);
+      if (m.tavolaCount !== m.engineCount)
+        bad.push(`${at}, the middle shows ${m.tavolaCount} cards, the engine holds ${m.engineCount}`);
+      const wantRows = m.portrait ? 2 : 1;
+      if (m.rowCount !== wantRows)
+        bad.push(`${at}, the middle draws ${m.rowCount} row(s) in `
+          + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
+      const floor = Math.min(24, Math.round(m.cw * 0.45));
+      for (const row of m.rowStats) {
+        if (row.n > 1 && row.minStep < floor)
+          bad.push(`${at}, a table row steps ${row.minStep}px between cards, want ${floor}`);
+        if (row.spillRight > 1 || row.spillLeft > 1)
+          bad.push(`${at}, a table row spills ${row.spillRight || row.spillLeft}px past its own box`);
+        const starved = (row.reach || []).findIndex(g => g < floor);
+        if (starved >= 0)
+          bad.push(`${at}, table card ${starved} is ${row.reach[starved]}px wide to a thumb, want ${floor}`);
+      }
+    }
+
+    // And the say line, which picks its rung by measuring: raised at one width,
+    // read at another.
+    await page.setViewportSize({ width: from[0], height: from[1] });
+    await page.evaluate(poseWidestSay);
+    await page.waitForTimeout(40);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.waitForTimeout(80);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const el = document.querySelector('.sel-name');
+      // The rail. Without it this half passes by rendering nothing: the
+      // opponent's first play is scheduled for state.speed and `tapped` refuses
+      // while the table sweeps, so a slow run would measure an empty line and
+      // say `pass`.
+      if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
+        out.push('nothing was raised, so the say line after turning was never measured');
+      if (el.hidden) return out;
+      const r = el.getBoundingClientRect();
+      const box = document.querySelector('.say').getBoundingClientRect();
+      if (r.height > parseFloat(getComputedStyle(el).lineHeight) + 1)
+        out.push(`after turning, the say line wraps to ${Math.round(r.height)}px `
+          + `in a ${Math.round(box.height)}px box: "${el.textContent}"`);
+      if (r.left < box.left - 1 || r.right > box.right + 1)
+        out.push(`after turning, the say line is ${Math.round(r.width)}px in a ${Math.round(box.width)}px box`);
+      return out;
+    }));
+
+    const all = [...bad, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${from.join('x')} turned to ${to.join('x')} / ${deck}`);
+      all.forEach(b => console.log(`        ${b}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${TURNS.length} shapes turned over and back`);
+  return failed;
+}
+
+/* ---- pass 2e: the rules ----------------------------------------------------- */
+
+// The one screen on this page that is read rather than glanced at, and the one
+// that has to come back to where it was opened from: a back button that always
+// goes to the start sheet abandons the deal of anyone who opened the rules to
+// check what a scopa is worth mid-hand.
+async function checkRules(browser) {
+  console.log('\nthe rules');
+  let failed = 0;
+  for (const vname of (QUICK ? ['narrow phone'] : SCREEN_VIEWPORTS)) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    const bad = [];
+
+    // Both languages, and enough of each to be the rules rather than a note.
+    await page.click('#aboutStart');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      // By SECTION, because that is where the language lives: a half of this
+      // page that is not marked as its language is a half screen readers and
+      // hyphenation read as the other one.
+      const text = lang => {
+        const sec = document.querySelector(`#viewRules section[lang="${lang}"]`);
+        return sec ? [...sec.querySelectorAll('p, h2')]
+          .map(e => e.textContent.replace(/\s+/g, ' ').trim()) : [];
+      };
+      for (const lang of ['it', 'en']) {
+        const blocks = text(lang);
+        const words = blocks.join(' ').split(' ').filter(Boolean).length;
+        if (blocks.length < 5)
+          out.push(`the rules have ${blocks.length} block(s) in ${lang}, want at least 5`);
+        if (words < 200)
+          out.push(`the rules run to ${words} words in ${lang}, which is a note and not the rules`);
+        // The five points and the one that is easiest to leave out.
+        for (const must of ['scopa', 'primiera', 'settebello'])
+          if (!blocks.join(' ').toLowerCase().includes(must))
+            out.push(`the rules in ${lang} never mention the ${must}`);
+      }
+      return out;
+    }));
+
+    // Back to the start sheet, because that is where it was opened from.
+    await page.click('#rulesBack');
+    if (await page.evaluate(() => document.getElementById('viewStart').hidden))
+      bad.push('the rules were opened from the start sheet and did not go back to it');
+
+    // And back to the TABLE when that is where it was opened from, with the
+    // deal still there.
+    //
+    // The deal has to be PUT IN MOTION and the rules left open long enough for
+    // it to move, or "reading the rules changed the hand" cannot go red: the
+    // first version of this clicked in and straight back out, no timer ever
+    // fired, and the assertion passed a page where the opponent answered, the
+    // capture swept and both were gone before the player pressed Back. A card
+    // is played, the rules are opened on the beat that follows, and the wait is
+    // longer than the whole of a capture at this speed.
+    await page.click('#play');
+    const before = await page.evaluate(() => {
+      // A card is played so that the table is IN MOTION when the rules open —
+      // the opponent's answer is on the clock. Without that there is no timer
+      // to hold, and the assertion below passes a page that would have played
+      // the whole exchange behind the screen. The first version of this row
+      // clicked in and straight back out and could not go red at all.
+      state.speed = 300;
+      tapped(0);
+      if (state.selected !== null) tapped(0);   // a capture with a choice raises first
+      return { plays: state.plays, tavola: state.tavola.length };
+    });
+    await page.click('#about');
+    if (await page.evaluate(() => document.getElementById('viewRules').hidden))
+      bad.push('the rules did not open from the table');
+    // Longer than a whole capture at this speed — LANDS + SWEEP + NEXT is 1.9 x
+    // speed — so a table that has not been stopped will have moved.
+    await page.waitForTimeout(1500);
+    await page.click('#rulesBack');
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (document.getElementById('viewTable').hidden)
+        out.push('the rules were opened from the table and went back to the start sheet');
+      // The deal is where it was left. Not the hand: gioca takes the played
+      // card out of it synchronously, so a hand is unchanged by a deal running
+      // on behind the screen, and an assertion on it says nothing.
+      if (state.plays !== was.plays)
+        out.push(`the deal played on behind the rules: ${was.plays} plays became ${state.plays}`);
+      if (state.tavola.length !== was.tavola)
+        out.push(`the table changed behind the rules: ${was.tavola} cards became ${state.tavola.length}`);
+      return out;
+    }, before));
+
+    const all = [...bad, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${vname}`);
+      all.forEach(b => console.log(`        ${b}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${QUICK ? 1 : SCREEN_VIEWPORTS.length} viewports, both ways in`);
   return failed;
 }
 
 /* ---- pass 3: a whole deal, through the table ------------------------------- */
 
-// Iteration 3 is done when a full deal can be played against the opponent, and that
-// is a wiring claim the two passes above cannot make: they measure a table that
-// has just been dealt. This plays one deal the way a player does — tap the
-// strip to raise a card, tap the raised card to play it, twenty times — and
-// fails if the deal does not reach a result or if anything throws on the way.
+// The two passes above measure a table that has just been dealt. This is the
+// only one that fails when the page and the engine come apart — and it reads
+// the table as well as driving it, which is the whole of Tressette's issue #7:
+// a pass that played twenty cards and never looked at the hand between them.
 async function checkDeal(browser) {
   console.log('\na whole deal');
-  const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
-  const thrown = [];
-  page.on('pageerror', e => thrown.push(String(e)));
+  const page = await openPage(browser, { width: 430, height: 932 });
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e)));
+  page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
   await page.goto(URL_);
+  await page.addStyleTag({ content: STILL });
   await page.click('#play');
+  await page.mouse.move(0, 0);
+  // A fixed deal, so a failure is reproducible — and **seed 16 rather than any
+  // seed**, because §4's "Done when" needs a capture chosen by each path and an
+  // ambiguous capture is not common: seed 7 played thirty-six cards without
+  // offering one, and the assertion at the bottom said so.
+  //
+  // Searched for with a simulation of the driver below rather than guessed at,
+  // and that mattered: a seed picked by a simpler simulation offered three
+  // choices on paper and one in the page, because switching a proposal changes
+  // which cards are captured and the deal diverges from there.
+  //
+  // `mazziere` is cleared first, and that is not a detail: newDeal ALTERNATES
+  // the dealer from whatever the state already holds, and #play has already
+  // dealt one. Seeding the rng alone therefore does not reproduce a cold start
+  // — the dealer differs, so the lead differs, so the whole deal differs. The
+  // seed searched for offline offered two capture choices and the page offered
+  // none, and this was why.
+  await page.evaluate(`(() => { epoch++; state.mazziere = null;
+    newDeal(state, rngSeed(16)); state.speed = 1; render();
+    if (state.deveGiocare === 1) computerPlay(); })()`);
 
-  // Both trick slots showing a card at once. The engine clears a trick the
-  // instant it resolves, so a table that renders straight from the engine
-  // blanks both cards the moment the second one lands and sweeps two empty
-  // boxes: the player never sees what the trick was. That shipped in this
-  // iteration and nothing else here could see it, because the other two passes
-  // only ever render a table that has just been dealt.
-  // Your own card, on the table, the moment you play it. Not "eventually": a
-  // play that lands before the sweep has run used to cancel it, and the table
-  // went on painting the *previous* trick until the opponent answered — about
-  // half a second, sixteen plays in twenty. Anything that waits for this waits
-  // that out and calls it a pass, so this one does not wait at all.
-  const yourCardShows = card => page.evaluate(c => {
-    const n = document.querySelector('#slotYou');
-    return n.dataset.empty === 'false'
-        && n.style.getPropertyValue('--col') === String(c.n - 1)
-        && n.style.getPropertyValue('--row') === String(c.s);
-  }, card);
+  const bad = [];
+  let plays = 0, chosenByTap = 0, chosenByAccept = 0, scopeSeen = 0;
 
-  // Both slots at once, which only the answer to a lead has to wait for.
-  const bothShown = () => page.waitForFunction(
-    () => [...document.querySelectorAll('.trick .card')].every(n => n.dataset.empty === 'false'),
-    null, { timeout: 4000 });
+  // Driving can throw — a slot that should hold a card and draws none is not
+  // clickable, and Playwright waits for it and then gives up. That is a defect
+  // the loop has already recorded, so it has to survive to be printed: an
+  // exception here used to take the whole check's output with it and the
+  // mutation harness saw a failure with nothing in it.
+  try {
+  for (let guard = 0; guard < 120 && plays < 36; guard++) {
+    await page.waitForTimeout(25);
+    const st = await page.evaluate(() => ({
+      over: state.over, turn: state.deveGiocare, plays: state.plays, beat,
+      sweeping: !!sweeping,
+      tavola: state.tavola.length,
+      domTavola: document.querySelectorAll('.tavola .card').length,
+      badgeYou: document.querySelector('#countYou').textContent,
+      badgeOpp: document.querySelector('#countOpp').textContent,
+      badgeDeck: document.querySelector('#countMazzo').textContent,
+      preseYou: state.prese[0].length, preseOpp: state.prese[1].length,
+      deck: state.cards.length - state.next,
+      scope: state.scope.slice(),
+      marksYou: document.querySelectorAll('#scopeYou .scopa-mark').length,
+      marksOpp: document.querySelectorAll('#scopeOpp .scopa-mark').length,
+      hand: [...document.querySelectorAll('.hand--you .card')]
+        .map(c => ({ empty: c.dataset.empty, disabled: c.disabled })),
+      slots: state.hands[0].map(c => !!c),
+    }));
 
-  const issues = [];
-
-  // One legal card, tapped the way a player taps it. Returns a message when
-  // something goes wrong and nothing when it does not, so the stages below can
-  // play a card without repeating any of this.
-  const playOne = async () => {
-    // Who leads alternates from deal to deal, so a new deal may open with the
-    // opponent: wait for the turn rather than assuming it.
-    try {
-      await page.waitForFunction(() => !state.over && state.deveGiocare === BASSO,
-                                 null, { timeout: 8000 });
-    } catch { return 'your turn never came'; }
-    const move = await page.evaluate(() => {
-      const led = state.perPrimo === BASSO ? null : state.played[state.perPrimo];
-      const legal = mosseLegali(state.hands[BASSO], led);
-      return legal.length ? { slot: legal[0], card: state.hands[BASSO][legal[0]] } : null;
+    // --- read the table, every play ---------------------------------------
+    // Except mid-sweep, when the middle is deliberately still showing the
+    // table the capture was made from — checkStates is where that is asserted.
+    if (!st.sweeping && st.domTavola !== st.tavola)
+      bad.push(`play ${st.plays}: the middle shows ${st.domTavola} cards, the engine holds ${st.tavola}`);
+    if (st.badgeYou !== String(st.preseYou) || st.badgeOpp !== String(st.preseOpp))
+      bad.push(`play ${st.plays}: badges say ${st.badgeYou}/${st.badgeOpp}, the piles hold ${st.preseYou}/${st.preseOpp}`);
+    if (st.badgeDeck !== String(st.deck))
+      bad.push(`play ${st.plays}: the deck badge says ${st.badgeDeck}, the deck holds ${st.deck}`);
+    if (st.marksYou !== st.scope[0] || st.marksOpp !== st.scope[1])
+      bad.push(`play ${st.plays}: ${st.marksYou}/${st.marksOpp} scopa marks, the engine counted ${st.scope[0]}/${st.scope[1]}`);
+    // Every card you hold is shown, and every slot you do not is empty —
+    // except in the beat between rounds, which is the one moment the page draws
+    // empty hands over a state that already holds the next three. checkStates
+    // is where that is asserted; here it would be a race, because the beat is
+    // half a millisecond long at this speed.
+    if (!st.beat) st.hand.forEach((node, i) => {
+      if (st.slots[i] && node.empty === 'true')
+        bad.push(`play ${st.plays}: slot ${i} holds a card and shows none`);
+      if (!st.slots[i] && node.empty === 'false')
+        bad.push(`play ${st.plays}: slot ${i} is empty and shows a card`);
     });
-    if (!move) return 'no legal card to play';
-    const card = page.locator('.hand--you .card').nth(move.slot);
-    try {
-      await card.click({ position: { x: 6, y: 20 }, timeout: 4000 });
-      const box = await card.boundingBox();
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    } catch { return `card ${move.slot} could not be tapped`; }
-    return null;
-  };
+    scopeSeen = Math.max(scopeSeen, st.scope[0] + st.scope[1]);
 
-  let plays = 0;
-  let keyTried = false;
-  for (let i = 0; i < 600 && plays < 20; i++) {
-    await page.waitForTimeout(90);
-    // The first legal card. Which one it is does not matter; that a legal one
-    // can be reached and played through the fan does.
+    if (st.over) break;
+    if (st.beat || st.sweeping) continue;   // the table is busy; the hand is not tappable
+    if (st.turn !== 0) continue;   // the opponent is thinking
+
+    // --- drive it ----------------------------------------------------------
+    // Prefer a card that offers a choice, so both paths through the capture
+    // state are exercised in one deal. Playing whatever card came first met no
+    // choice at all in thirty-six plays and the assertion below reported it —
+    // which is the assertion working, and the driver not.
     const move = await page.evaluate(() => {
-      if (state.over || state.deveGiocare !== BASSO) return null;
-      const led = state.perPrimo === BASSO ? null : state.played[state.perPrimo];
-      const legal = mosseLegali(state.hands[BASSO], led);
-      const held = state.hands[BASSO].map((c, i) => c && i).filter(i => i !== null && i !== false);
-      return legal.length
-        ? { slot: legal[0], answering: state.perPrimo !== BASSO,
-            card: state.hands[BASSO][legal[0]],
-            illegal: held.find(i => !legal.includes(i)) ?? null }
-        : null;
+      let best = -1, bestN = -1;
+      for (let i = 0; i < state.hands[0].length; i++){
+        if (!state.hands[0][i]) continue;
+        const n = prese(state.tavola, state.hands[0][i]).length;
+        if (n > bestN){ bestN = n; best = i; }
+      }
+      return { slot: best, choices: bestN };
     });
-    if (move === null) continue;
+    if (move.slot < 0) { await page.waitForTimeout(40); continue; }
 
-    // A card the rule forbids, through the keyboard, once per deal. The pointer
-    // cannot reach one — it is a disabled button — so this is the only path
-    // that could raise a forbidden card and throw on the second press.
-    if (!keyTried && move.illegal !== null) {
-      keyTried = true;
-      const key = move.illegal === 9 ? '0' : String(move.illegal + 1);
-      await page.keyboard.press(key);
-      await page.keyboard.press(key);
-      const raised = await page.evaluate(i => document.querySelectorAll('.hand--you .card')[i]
-                                                .getAttribute('aria-pressed'), move.illegal);
-      if (raised === 'true') issues.push('a key raised a card the follow-suit rule forbids');
-    }
+    const card = await page.$(`.hand--you .card[data-slot="${move.slot}"]`);
+    await card.click();
 
-    const card = page.locator('.hand--you .card').nth(move.slot);
-    // 6px in from its left edge: everything right of the strip belongs to the
-    // next card, so that is where a player's thumb has to land.
-    try {
-      await card.click({ position: { x: 6, y: 20 }, timeout: 4000 });
-      const box = await card.boundingBox();    // it has lifted; the whole face is free now
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    } catch {
-      issues.push(`card ${move.slot} of your hand could not be tapped: nothing reaches its strip`);
-      break;
+    if (move.choices > 1) {
+      // A choice: the card is raised now. The first is taken by accepting the
+      // proposal the table offers, the next by tapping a table card to switch
+      // it — so both paths §3.7 describes are exercised in one deal, as §4's
+      // "Done when" requires.
+      if (chosenByAccept > chosenByTap) {
+        const idx = await page.evaluate(() => {
+          const opts = proposte();
+          const other = opts.findIndex(s => JSON.stringify(s) !== JSON.stringify(propostaCorrente()));
+          return other < 0 ? -1 : opts[other][0];
+        });
+        if (idx >= 0) {
+          await page.click(`.tavola .card[data-index="${idx}"]`);
+          chosenByTap++;
+        }
+      } else {
+        chosenByAccept++;   // accept the proposal exactly as the table offers it
+      }
+      await page.click(`.hand--you .card[data-slot="${move.slot}"]`);
     }
     plays++;
-
-    // Issue #7: every card you still hold has to be reachable where it looks
-    // reachable. The hand keeps its holes all deal, each slot overlaps the one
-    // before it, and an empty slot is a box that swallows a tap — so a card
-    // with played slots to its right looked entirely free and could only be
-    // touched on its leftmost strip. Checked from the middle of the part of
-    // each card that no later held card covers, which is where a player aims.
-    const unreachable = await page.evaluate(() => {
-      const cards = [...document.querySelectorAll('.hand--you .card')];
-      const bad = [];
-      cards.forEach((c, i) => {
-        if (c.dataset.empty === 'true') return;
-        const r = c.getBoundingClientRect();
-        const next = cards.slice(i + 1).find(n => n.dataset.empty === 'false');
-        const right = next ? Math.min(next.getBoundingClientRect().left, r.right) : r.right;
-        const hit = document.elementFromPoint((r.left + right) / 2, r.top + r.height / 2);
-        if (hit !== c && !c.contains(hit))
-          bad.push(`${i} (${hit ? hit.id || hit.className : 'nothing'} is in front of it)`);
-      });
-      return bad;
-    });
-    for (const u of unreachable.slice(0, 2))
-      issues.push(`a card you hold cannot be tapped where it looks free: slot ${u}`);
-    if (unreachable.length) break;
-
-    if (!await yourCardShows(move.card)) {
-      issues.push('the card you played was not on the table the moment you played it: ' +
-                  'the trick before it is still there');
-      break;
-    }
-    try { await bothShown(); }
-    catch {
-      issues.push(move.answering
-        ? 'the trick you completed was cleared before both cards could be seen'
-        : "the opponent's answer was never shown beside your card");
-      break;
-    }
+  }
+  } catch (e) {
+    bad.push(`the deal could not be driven to the end: ${String(e).split('\n')[0].slice(0, 100)}`);
   }
 
-  // A deal that could not be played out says nothing about what comes after it,
-  // and every stage below needs a finished one: run them only if the twenty
-  // cards went down, and report the first real failure instead of a cascade of
-  // clicks at buttons that are not there.
-  if (plays < 20) {
-    issues.push(`only ${plays} of 20 cards could be played`);
-    thrown.forEach(t => issues.push(`the page threw: ${t}`));
-    await page.close();
-    console.log(`  FAIL  ${plays} cards played against Franco, then the deal stopped`);
-    issues.forEach(i => console.log(`        ${i}`));
-    return 1;
-  }
-
-  {
-    try {
-      await page.waitForFunction(
-        () => state.over && !document.querySelector('#scrim').hidden &&
-              /Hai vinto|Hai perso|Pareggio/.test(document.querySelector('#resultTitle').textContent),
-        null, { timeout: 15000 });
-    } catch { issues.push('the deal never reached its result dialog'); }
-  }
-
-  const end = await page.evaluate(() => ({
-    tricks: state.tricks, over: state.over,
-    line: [document.querySelector('#resultTitle').textContent,
-           document.querySelector('#resultYou').textContent + '\u2013' +
-           document.querySelector('#resultOpp').textContent].join(' '),
-    you: Number(document.querySelector('#resultYou').textContent),
-    them: Number(document.querySelector('#resultOpp').textContent),
-    score: scoreDeal(state),
-    // §4's "Done when": the deal shows up in history with the right score.
-    history: JSON.parse(localStorage.getItem('tressette.history') || '[]'),
-    opponent: state.opponent,
-  }));
-  if (end.tricks !== 20) issues.push(`${end.tricks} tricks played, not 20`);
-  if (end.you !== end.score[0] || end.them !== end.score[1])
-    issues.push(`the dialog says ${end.you}\u2013${end.them}, the deal scored ${end.score.join('\u2013')}`);
-  const [logged] = end.history;
-  if (!logged) issues.push('the deal was not written to the history');
-  else if (logged.y !== end.you || logged.a !== end.them || logged.o !== end.opponent)
-    issues.push(`the history says ${logged.o} ${logged.y}\u2013${logged.a}, ` +
-                `the dialog says ${end.opponent} ${end.you}\u2013${end.them}`);
-
-  // And the other half of §4's "Done when": a deal abandoned through the
-  // confirm is not recorded, and the two buttons that abandon one leave you
-  // where their labels say. The history count has to be read again afterwards —
-  // an abandoned deal that quietly logs itself would look exactly like one that
-  // did not.
-  //
-  // The new-hand button is the one that had this wrong: it discarded the deal,
-  // went to the start sheet, and *then* dealt a new hand, which ran behind the
-  // start sheet with the opponent leading into a table nobody could see. An
-  // assertion that asked for the start sheet here passed on that bug.
-  await page.click('#playAgain', { timeout: 4000 });
-  await page.waitForTimeout(200);
-
-  // A trick first, and then the discard has to happen while the sweep is
-  // actually on the cards: its two classes animate `both`, so one left behind
-  // paints every later trick transparent for the whole of the next deal. The
-  // window is the 420ms the sweep lasts — waiting for the classes rather than
-  // for a trick is what puts the discard inside it.
-  const first = await playOne();
-  if (first) issues.push(first);
-  try {
-    await page.waitForFunction(
-      () => document.querySelector('#slotYou').className.includes('card--won'),
-      null, { timeout: 8000 });
-  } catch { issues.push('no trick was ever swept off the table'); }
-
-  try { await page.click('#again', { timeout: 4000 }); }
-  catch { issues.push('the new-hand button could not be clicked'); }
-  const asked = await page.evaluate(() => !document.querySelector('#confirmScrim').hidden);
-  if (!asked) issues.push('the new-hand button did not ask before throwing a deal away');
-
-  // Through the dialog if it is there, through discard() if it is not, so a
-  // page that never asks still reaches the assertions below.
-  if (asked) await page.click('#confirmYes', { timeout: 4000 }); else await page.evaluate(() => discard());
-  await page.waitForTimeout(400);
-
-  const after = await page.evaluate(() => ({
-    screen, tricks: state.tricks, dealt: state.dealt,
-    logged: JSON.parse(localStorage.getItem('tressette.history') || '[]').length,
-  }));
-  if (after.screen !== 'table') issues.push(`the new-hand button landed on ${after.screen}, not the table`);
-  if (!after.dealt || after.tricks !== 0) issues.push('the new-hand button did not deal a new hand');
-  if (after.logged !== end.history.length)
-    issues.push(`the abandoned deal was written to the history (${end.history.length} \u2192 ${after.logged})`);
-
-  // The new deal's trick, before anything is played into it. Measured here and
-  // not after a play, because playing flushes the sweep too: the leak is on
-  // screen from the deal until the first card lands on it, and a check that
-  // plays first watches the page repair itself and calls that a pass.
-  await page.waitForTimeout(500);       // the sweep's own animation is .45s
-  const swept = await page.evaluate(() => {
-    const o = getComputedStyle(document.querySelector('#slotYou'));
-    return { opacity: Number(o.opacity), transform: o.transform,
-             classes: document.querySelector('#slotYou').className };
+  const end = await page.evaluate(() => {
+    const r = scoreDeal(state);
+    const grid = document.getElementById('resultGrid');
+    const val = sel => [...grid.querySelectorAll(sel)].map(n => n.querySelector('.r-val').textContent);
+    // The points each column is awarded, read off the markers the player sees.
+    const pts = who => [...grid.querySelectorAll('.r-num:not(.r-total)')]
+      .filter((_, i) => i % 2 === who)
+      .reduce((sum, n) => sum + (parseInt(n.querySelector('.r-pt').textContent.slice(1), 10) || 0), 0);
+    return {
+      over: state.over, plays: state.plays,
+      domTavola: document.querySelectorAll('.tavola .card').length,
+      tavola: state.tavola.length,
+      piles: state.prese[0].length + state.prese[1].length,
+      say: document.querySelector('.sel-name').textContent,
+      punti: r.punti,
+      resultShown: !document.getElementById('result').hidden,
+      labels: [...grid.querySelectorAll('.r-label')].map(n => n.textContent),
+      // carte, denari, settebello, primiera, scope, totale — six rows of two
+      nums: val('.r-num'),
+      marked: [pts(0), pts(1)],
+      rule: (document.querySelector('.result__rule') || {}).textContent || '',
+      carte: [String(state.prese[0].length), String(state.prese[1].length)],
+      denari: [0, 1].map(w => String(state.prese[w].filter(c => c.s === DENARI).length)),
+      // The one row whose number is not a count of anything the player can
+      // see — and so the one most worth reading back. A missing suit is no
+      // point at all, which the engine says with null and the page draws as a
+      // dash rather than a zero.
+      prim: [0, 1].map(w => {
+        const p = primieraTotale(state.prese[w]);
+        return p === null || p === undefined ? '—' : String(p);
+      }),
+      sette: [0, 1].map(w => String(state.prese[w].some(isSettebello) ? 1 : 0)),
+      scope: state.scope.map(String),
+    };
   });
-  if (swept.opacity < 1 || swept.transform !== 'none')
-    issues.push(`the abandoned deal left its sweep on the table: the new deal's trick ` +
-                `draws at opacity ${swept.opacity}, transform ${swept.transform} (${swept.classes})`);
 
-  const second = await playOne();
-  if (second) issues.push(second);
+  if (!end.over) bad.push(`the deal did not finish: ${end.plays} plays`);
+  if (end.plays !== 36) bad.push(`${end.plays} plays, want 36`);
+  // §3.7 row six: the table is empty in the DOM after the leftovers go.
+  if (end.domTavola !== 0 || end.tavola !== 0)
+    bad.push(`the table still shows ${end.domTavola} cards after the last play`);
+  if (end.piles !== 40) bad.push(`${end.piles} cards in the piles, want 40`);
+  // And the score the page shows is what scoreDeal returned.
+  const want = `Fine: ${end.punti[0]} a ${end.punti[1]}`;
+  if (end.say !== want) bad.push(`the page says "${end.say}", scoreDeal returned "${want}"`);
 
-  // With a dialog up, the card keys are not the player's — and `Enter` least of
-  // all, because it is what you press to answer a dialog whose safe button has
-  // the focus. It has to be your turn for this to prove anything: `tapped`
-  // refuses when it is not, so a stage that asks while the opponent is thinking
-  // passes whether the guard is there or not.
-  try {
-    await page.waitForFunction(() => !state.over && state.deveGiocare === BASSO
-                                     && !document.querySelector('#slotYou').className.includes('card--won'),
-                               null, { timeout: 8000 });
-    await page.click('#again', { timeout: 4000 });
-    const playedBefore = await page.evaluate(() => JSON.stringify(state.played));
-    await page.keyboard.press('3');
-    await page.keyboard.press('Enter');
-    const raised = await page.evaluate(() => state.selected);
-    const moved = await page.evaluate(b => JSON.stringify(state.played) !== b, playedBefore);
-    if (moved) issues.push('a card was played through the abandon dialog');
-    if (raised !== null) issues.push('a card was raised through the abandon dialog');
-    // Enter answered the dialog, which is the safe button; make sure of it.
-    if (await page.evaluate(() => !document.querySelector('#confirmScrim').hidden))
-      await page.click('#confirmNo');
-  } catch { issues.push('the abandon dialog could not be opened on a turn of your own'); }
+  // The breakdown, which is the only thing that says WHY the score is what it
+  // is. A total with no working is a number the player has to take on trust.
+  if (!end.resultShown) bad.push('the deal ended and the points were never counted out');
+  const wantLabels = ['carte', 'denari', 'settebello', 'primiera', 'scope', 'totale'];
+  if (JSON.stringify(end.labels) !== JSON.stringify(wantLabels))
+    bad.push(`the breakdown lists ${JSON.stringify(end.labels)}, want ${JSON.stringify(wantLabels)}`);
+  // The arithmetic is on the page rather than in the reader's head: the
+  // markers down each column are what the total is made of, so they have to
+  // add up to it.
+  if (end.marked[0] !== end.punti[0] || end.marked[1] !== end.punti[1])
+    bad.push(`the points marked on the rows add to ${end.marked[0]}/${end.marked[1]}, `
+      + `the total says ${end.punti[0]}/${end.punti[1]}`);
+  if (!/scopa/i.test(end.rule))
+    bad.push(`the breakdown does not say what the total is made of: "${end.rule}"`);
 
-  // "Cambia avversario" is the one that does go to the start sheet.
-  try {
-    await page.click('#btnSettings', { timeout: 4000 });
-    await page.click('#changeOpponent', { timeout: 4000 });
-    if (await page.evaluate(() => !document.querySelector('#confirmScrim').hidden))
-      await page.click('#confirmYes', { timeout: 4000 });
-    await page.waitForTimeout(300);
-    const left = await page.evaluate(() => ({ screen, dealt: state.dealt }));
-    if (left.screen !== 'start') issues.push(`changing opponent landed on ${left.screen}, not the start sheet`);
-    if (left.dealt) issues.push('changing opponent left the deal in play');
-  } catch {
-    issues.push('the settings sheet could not be reached from the table to change opponent');
+  if (end.nums.length !== 12)
+    bad.push(`the breakdown has ${end.nums.length} numbers, want 12 — six rows of two`);
+  else {
+    if (end.nums[0] !== end.carte[0] || end.nums[1] !== end.carte[1])
+      bad.push(`the breakdown counts ${end.nums[0]}/${end.nums[1]} cards, the piles hold `
+        + `${end.carte[0]}/${end.carte[1]}`);
+    // Every one of the twelve, not the four that happened to be easy. Two of
+    // them — denari and primiera — were read and never asserted, and a page
+    // that showed the wrong player's denari count and the wrong player's
+    // primiera total was green through all nine passes. The marker sum cannot
+    // stand in for this: the markers come from scoreDeal too, so a wrong count
+    // beside a right marker adds up perfectly.
+    if (end.nums[2] !== end.denari[0] || end.nums[3] !== end.denari[1])
+      bad.push(`the breakdown counts ${end.nums[2]}/${end.nums[3]} denari, the piles hold `
+        + `${end.denari[0]}/${end.denari[1]}`);
+    if (end.nums[6] !== end.prim[0] || end.nums[7] !== end.prim[1])
+      bad.push(`the breakdown totals ${end.nums[6]}/${end.nums[7]} of primiera, the piles make `
+        + `${end.prim[0]}/${end.prim[1]}`);
+    if (end.nums[4] !== end.sette[0] || end.nums[5] !== end.sette[1])
+      bad.push(`the breakdown counts ${end.nums[4]}/${end.nums[5]} settebello, the piles hold `
+        + `${end.sette[0]}/${end.sette[1]}`);
+    if (end.nums[8] !== end.scope[0] || end.nums[9] !== end.scope[1])
+      bad.push(`the breakdown counts ${end.nums[8]}/${end.nums[9]} scope, the engine counted `
+        + `${end.scope[0]}/${end.scope[1]}`);
+    if (end.nums[10] !== String(end.punti[0]) || end.nums[11] !== String(end.punti[1]))
+      bad.push(`the breakdown totals ${end.nums[10]}/${end.nums[11]}, scoreDeal returned `
+        + `${end.punti[0]}/${end.punti[1]}`);
   }
+  if (!chosenByTap) bad.push('no capture was chosen by tapping a table card');
+  if (!chosenByAccept) bad.push('no capture was chosen by accepting the proposal');
 
-  thrown.forEach(t => issues.push(`the page threw: ${t}`));
+  const all = [...bad, ...errs];
+  console.log(`  ${all.length ? 'FAIL' : 'pass'}  one deal, ${plays} of your plays, `
+    + `${chosenByTap} capture(s) chosen by tapping, ${chosenByAccept} by accepting, ${scopeSeen} scopa(e)`);
+  all.forEach(b => console.log(`        ${b}`));
   await page.close();
-
-  console.log(`  ${issues.length ? 'FAIL' : 'pass'}  ${plays} cards played against ` +
-              `Franco, ${end.tricks} tricks — ${end.line || 'no result'}, ` +
-              `then one thrown away and one walked out of`);
-  issues.forEach(i => console.log(`        ${i}`));
-  return issues.length ? 1 : 0;
+  return all.length ? 1 : 0;
 }
 
 /* ---- run ------------------------------------------------------------------ */
 
 const browser = await chromium.launch({ ...(CHROME && { executablePath: CHROME }), args: ['--no-sandbox'] });
+// Printed, because every measurement below is this browser's. check.yml pins
+// playwright-core for the same reason the fonts are blocked: two runs that do
+// not agree about the environment are not two runs of the same check.
+console.log(`chromium ${browser.version()}`);
 let failed = 0;
 failed += await checkDocument(browser);
 failed += await checkScreens(browser);
 failed += await checkTable(browser, null, false);
 failed += await checkTable(browser, TIGHT, true);
+failed += await checkChoice(browser);
+failed += await checkStates(browser);
+failed += await checkRotation(browser);
+failed += await checkRules(browser);
 failed += await checkDeal(browser);
 await browser.close();
 
