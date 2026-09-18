@@ -25,7 +25,12 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const ENGINE = fileURLToPath(new URL("../public/engine.js", import.meta.url));
-const TESTS = fileURLToPath(new URL("./engine.test.mjs", import.meta.url));
+// Both suites: the rules and the opponent. A trap that cannot fail is the same
+// defect as a rule test that cannot fail, and §4 iteration 2 records that four
+// of Tressette's traps were written against positions where the bug they named
+// could not appear.
+const TESTS = [fileURLToPath(new URL("./engine.test.mjs", import.meta.url)),
+               fileURLToPath(new URL("./opponent.test.mjs", import.meta.url))];
 const TEXT = readFileSync(ENGINE, "utf8");
 
 // Each break is [name, find, replace] and optionally a fourth entry: the
@@ -98,7 +103,25 @@ const EXPECT = {
   "a new deal keeps the old ultimaPresa": "a new deal on a finished one starts from nothing",
   "a new deal does not say it is dealt": "a new deal on a finished one starts from nothing",
   "the cards are dealt to the opponent first": "the cards are dealt in order: three to you, three to them, four up",
+  "the settebello term is dropped from worth": "with two sevens on the table, it takes the settebello",
+  "the tempo term is dropped": "the golden fixture still plays out exactly as recorded",
+  "the tempo term recurses instead of stopping at one ply": "the tempo term stops at one ply",
+  "the tempo term looks at their real hand": "the tempo term cannot tell their hand from the deck",
+  "the tempo term guesses at a round boundary it cannot see past": "the tempo term guesses at nothing it cannot see",
   "the score hands out a live reference to the scope": "the score reports a copy of the scope, not the state's own array",
+  "worth ignores the suit, so a denaro is just a card": "offered the same card in two suits, it takes the denaro",
+  "worth ignores primiera entirely": "the golden fixture still plays out exactly as recorded",
+  "worth counts a card I already beat in that suit": "the golden fixture still plays out exactly as recorded",
+  "the scopa risk term is dropped": "it lays the card that leaves the table hardest to sweep",
+  "the gift term is dropped": "the golden fixture still plays out exactly as recorded",
+  "the card laid down is left out of the table it leaves": "the golden fixture still plays out exactly as recorded",
+  "ties go to the highest slot": "the golden fixture still plays out exactly as recorded",
+  "the search never runs": "the search declines a capture the formula takes, and wins four more cards",
+  "the search maximises the opponent's points": "the search plays for its own points, not theirs",
+  "the search lets the opponent help me": "the search expects the opponent to play against it, not to help",
+  "the search ties to the highest slot": "the golden fixture still plays out exactly as recorded",
+  "fuori counts my own hand as unseen": "the golden fixture still plays out exactly as recorded",
+  "pHold always says they hold it": "the golden fixture still plays out exactly as recorded",
 };
 
 const BREAKS = [
@@ -157,6 +180,21 @@ const BREAKS = [
   ["a scopa is counted on the last card of the deal",
    "if (state.tavola.length === 0 && (SCOPA_ULTIMA || !ultima) && !perAsso){",
    "if (state.tavola.length === 0 && !perAsso){"],
+  ["the settebello term is dropped from worth",
+   "  if (isSettebello(c)) w += P.SETTEBELLO_BONUS;",
+   "  if (false) w += P.SETTEBELLO_BONUS;"],
+  ["the tempo term is dropped",
+   "      score += P.TEMPO_BONUS * tempoShare(state, me, m, hidden, P);",
+   "      score += 0;"],
+  ["the tempo term looks at their real hand",
+   "    st.hands[altro(me)] = ordina(pick.map(c => ({ ...c })));",
+   "    void pick;"],
+  ["the tempo term recurses instead of stopping at one ply",
+   "    const reply = compGioca(st, P, 1);  // depth 1: their reply prices no tempo",
+   "    const reply = compGioca(st, P, 0);"],
+  ["the tempo term guesses at a round boundary it cannot see past",
+   "  if (mine <= 1 && h <= 1) return 0;",
+   "  if (false) return 0;"],
   ["an asso sweep stops scoring in the game as played",
    "    const perAsso = ASSO_PIGLIA_TUTTO && card.n === 1;",
    "    const perAsso = card.n === 1;"],
@@ -244,6 +282,47 @@ const BREAKS = [
    "  if (punti[BASSO] === punti[ALTO]) return null;",
    "  if (false) return null;"],
 
+  // --- the opponent --------------------------------------------------------
+  ["worth ignores the suit, so a denaro is just a card",
+   "  if (c.s === DENARI) w += P.DENARI_WEIGHT;",
+   "  if (false) w += P.DENARI_WEIGHT;"],
+  ["worth ignores primiera entirely",
+   "  if (gain > 0) w += gain * P.PRIMIERA_WEIGHT;",
+   "  if (false) w += gain * P.PRIMIERA_WEIGHT;"],
+  ["worth counts a card I already beat in that suit",
+   "  const gain = primiera(c.n) - bestMine[c.s];",
+   "  const gain = primiera(c.n);"],
+  ["the scopa risk term is dropped",
+   "    score -= P.SCOPA_RISK_PENALTY * pHold(U, ctx.outstanding[somma], h);",
+   "    score -= 0;"],
+  ["the gift term is dropped",
+   "    score -= P.GIFT_FACTOR * worth(c, ctx.bestMine, P) * pHold(U, ctx.outstanding[valore(c.n)], h);",
+   "    score -= 0;"],
+  ["the card laid down is left out of the table it leaves",
+   "  if (!mossa.presa.length) resta.push(card);",
+   "  if (false) resta.push(card);"],
+  ["ties go to the highest slot",
+   "    if (score > bestScore){ bestScore = score; best = m; }",
+   "    if (score >= bestScore){ bestScore = score; best = m; }"],
+  ["the search never runs",
+   "const CODA_FROM = 5;",
+   "const CODA_FROM = 6;"],
+  ["the search maximises the opponent's points",
+   "    return punti[me] - punti[altro(me)];",
+   "    return punti[altro(me)] - punti[me];"],
+  ["the search lets the opponent help me",
+   "    if (best === null || (who === me ? v > best : v < best)) best = v;",
+   "    if (best === null || v > best) best = v;"],
+  ["the search ties to the highest slot",
+   "    if (v > bestValue){ bestValue = v; best = m; }",
+   "    if (v >= bestValue){ bestValue = v; best = m; }"],
+  ["fuori counts my own hand as unseen",
+   "  for (const c of state.hands[me]) if (c) mark(c);",
+   "  for (const c of []) if (c) mark(c);"],
+  ["pHold always says they hold it",
+   "  if (k <= 0 || h <= 0) return 0;",
+   "  if (k <= 0 || h <= 0) return 0;\n  return 1;"],
+
   // --- the generator -------------------------------------------------------
   ["the rng warm-up is dropped",
    "  for (let i = 0; i < 8; i++) next();",
@@ -297,7 +376,7 @@ let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [],
 // means nothing.
 let BASELINE = 0;
 try {
-  const out = String(execFileSync(process.execPath, ["--test", TESTS], { stdio: "pipe" }));
+  const out = String(execFileSync(process.execPath, ["--test", ...TESTS], { stdio: "pipe", maxBuffer: 64 * 1024 * 1024 }));
   // How many tests the suite really has, so the "did it run at all?" check
   // below is a fact rather than a magic number.
   BASELINE = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
@@ -322,13 +401,18 @@ for (const [name, find, replace, why] of chosen){
   try {
     // A break can stop the deal from ending — "a new deal keeps the old plays
     // count" leaves a second deal that never reaches 36 — and a harness that
-    // hangs reports nothing at all. The suite takes under a second, so a
-    // minute is a hang.
+    // hangs reports nothing at all. A real hang lands in INVALID rather than in
+    // caught, deliberately: nothing ran, so nothing noticed anything. It still
+    // exits red.
     //
-    // A hang lands in INVALID, not in caught, and that is deliberate: nothing
-    // ran, so nothing noticed anything. It still exits red.
-    execFileSync(process.execPath, ["--test", TESTS],
-      { stdio: "pipe", timeout: 60000,
+    // Ten minutes, not one. A break can be caught *slowly*: removing the tempo
+    // term's depth guard does not recurse for ever, it recurses exponentially,
+    // and the suite still fails on the test that names it — after 6m36s. At a
+    // one-minute budget that arrived here as "the suite did not run", which
+    // was a harness defect reporting a caught break as an unrunnable one. One
+    // slow break costs this tool a few minutes and it is run by hand.
+    execFileSync(process.execPath, ["--test", ...TESTS],
+      { stdio: "pipe", timeout: 600000, maxBuffer: 64 * 1024 * 1024,
         env: { ...process.env, SCOPETTA_ENGINE: file } });
   } catch (e) {
     failed = true;
@@ -356,7 +440,7 @@ for (const [name, find, replace, why] of chosen){
   // the test file's own path, or the suite reporting far fewer tests than it
   // has. Checked, because the obvious guard — no failures at all — does not
   // fire on this case: a syntax-error probe reached UNDECLARED instead.
-  if (failed && (failures.length === 0 || failures.includes(TESTS) || ran < BASELINE / 2)){
+  if (failed && (failures.length === 0 || TESTS.some(t => failures.includes(t)) || ran < BASELINE / 2)){
     invalid.push([name, `the suite did not run — ${ran} test(s) reported`]);
     console.log(`INVALID  ${name} — the suite did not run, so nothing caught anything`);
     continue;

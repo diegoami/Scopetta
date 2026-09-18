@@ -8,8 +8,12 @@ above, the house's named opponents, who share one formula and differ only in
 their weights, and a UI check calibrated against the defects that actually
 ship.
 
-**Status: nothing is built.** This document is the plan. It becomes `SPEC.md`
-once the game exists, the way Discola's and Tressette's did.
+**Status: iterations 0, 1 and 2 are merged** — the scaffold, the rules with
+their tests, and the opponent with its harness, its traps and its golden
+fixture. `public/index.html` is still a title and the font links; the table is
+iteration 3. This document is the plan, and it becomes `SPEC.md` once the game
+exists, the way Discola's and Tressette's did. Where an iteration measured
+something the plan had guessed, the plan says so at the place it guessed.
 
 Tressette is the ancestor this game forks from, not Discola: Tressette already
 has the engine in its own file, the check with four passes, CI with two jobs,
@@ -346,7 +350,6 @@ engine gives the opponent nothing the human could not count.
 ```
 worth(c) = CARTE_WEIGHT
          + (denari ? DENARI_WEIGHT : 0)
-         + (settebello ? SETTEBELLO_BONUS : 0)
          + max(0, primiera(c) − bestMine(suit(c))) × PRIMIERA_WEIGHT
 ```
 
@@ -358,7 +361,7 @@ is right, because without it I cannot take the point at all.
 empty — and then the table it leaves, `tavola′`:
 
 ```
-capture:   score  = Σ worth(t) for t in S ∪ {c}  + (S == tavola ? SCOPA_BONUS : 0)
+capture:   score  = Σ worth(t) for t in S ∪ {c}
 lay down:  score  = 0
 then, on tavola′:
   if 0 < Σ valore(tavola′) ≤ 10:  score −= SCOPA_RISK_PENALTY × pHold(Σ valore(tavola′))
@@ -373,19 +376,75 @@ approximates their capture by a pair, not by a sum; a sum needs two or more
 of their three cards to be exactly the right ones, and is the search's
 business, not the formula's.
 
-**The weights, v1.** Seven. Discola had twelve and Tressette eleven because
-their formulas had that many terms; this one has seven, and a weight is not
-invented to reach a count.
+**The weights: seven, and not the seven this plan drafted.** The draft had
+CARTE, DENARI, SETTEBELLO, PRIMIERA, SCOPA, SCOPA_RISK and GIFT. Iteration 2
+laddered all seven, cut two, and then added one the plan had only hypothesised —
+so the count is a coincidence and the membership is not.
 
 | Weight | What it does |
 |---|---|
 | CARTE_WEIGHT | a card is a card, toward the carte point |
 | DENARI_WEIGHT | a denaro is worth more, toward the denari point |
-| SETTEBELLO_BONUS | the settebello is a point on its own |
+| SETTEBELLO_BONUS | the settebello is a point on its own, and one card |
 | PRIMIERA_WEIGHT | a 7 or a 6 in a suit I am weak in, toward the primiera point |
-| SCOPA_BONUS | a scopa is a point |
 | SCOPA_RISK_PENALTY | leaving a table they can sweep, by the chance they hold the card |
 | GIFT_FACTOR | leaving cards they can pair, by their worth and the chance they hold the value |
+| TEMPO_BONUS | keeping a sweep alive for my own next turn — §4's tempo question, answered yes |
+
+`SCOPA_BONUS` is gone, **and the reason is a measurement rather than an
+argument** — the argument was wrong twice over. It read: a sweep takes every
+card on the table, so it maximises the captured term, leaves nothing for the
+gift term, and wins the argmax without help. On the shipped engine Franco
+declines a legal sweep in **47 of 1,534** decisions that offer one, 3.06% over
+2,000 deals; on the five-weight engine it was 0.77%, so the two terms added
+since made a claim that was already false four times more so. It was restated
+in this section and in `CLAUDE.md` without being re-checked, which is the §7.5
+defect this iteration spent a round fixing elsewhere.
+
+What holds is the measurement. Restoring `SCOPA_BONUS` on the engine that ships
+and comparing paired on the same deals is worth **−0.10% (z = −1.21)** and
+**−0.02% (z = −0.23)** of score rate on the two held-out ranges. It buys
+nothing, so it stays out.
+
+**One thing for the owner to watch at the table**, per §4's instruction to play
+it before moving on: declining an available sweep went from about one play in
+130 to one in 33. The paired numbers say it costs no points and §3.4's fourth
+trap still passes, so this is a question about whether it *reads* wrong, which
+only a player can answer.
+
+**What the ladder measured**, `node tools/selfplay.mjs --ladder-all 3000`, over
+6,000 deals, counting only the decisions the weights make — more than one legal
+play, before the search takes over:
+
+| Weight | most it moves | at value |
+|---|---|---|
+| GIFT_FACTOR | 22.03% | 0 |
+| PRIMIERA_WEIGHT | 14.66% | 0 |
+| CARTE_WEIGHT | 9.48% | 0 |
+| DENARI_WEIGHT | 8.07% | 0 |
+| SCOPA_RISK_PENALTY | 5.80% | 24 |
+| TEMPO_BONUS | 3.00% | 25 |
+| SETTEBELLO_BONUS | **0.45%** | 0 |
+
+**§4's 1% rule has an exception, and iteration 2 found it the hard way.**
+`SETTEBELLO_BONUS` moves 0.45% of decisions and the rule says remove it. It was
+removed, on the reasoning that "the settebello is already the highest card
+`worth` knows" — and that reasoning is **false**. `bestMine` is per suit, so
+once a decent denaro is in the pile the settebello's primiera gain collapses
+while a seven of a bare suit keeps its whole 21: with a 6 of denari taken,
+`worth(7 denari)` is 4.2 and `worth(7 bastoni)` is 9.4, and the engine declines
+the point. §3.4's own first trap failed, and passed only because it was written
+with an empty pile.
+
+So the rule is a proxy for *cannot change the outcome*, and the proxy fails
+when a point is concentrated in a single card: few plays, high stakes each.
+Measured paired — `SEED_FROM=20001 node tools/selfplay.mjs --paired
+SETTEBELLO_BONUS=0 1200` — the term is worth **+0.27% (z = 1.72)** and
+**+0.52% (z = 2.72)** of score rate on the two held-out ranges. An unpaired
+comparison cannot see that: two vectors differing on 0.1% of plays differ on
+about 1.3% of deals, so almost all the noise is shared and cancels only under
+pairing. **A weight under the bar is a question, not a verdict**, and the
+question is whether the plays it moves are ones that decide a point.
 
 **What Tressette learned about weights, applied before tuning rather than
 after.** Seven of Tressette's eleven weights could not move a play at any
@@ -395,7 +454,7 @@ review of that iteration overturned the conclusion: the ladder had never
 priced the one weight iteration 2 had set to zero, and that weight bought
 half again the difference for no win rate at all. Two levers, not one, and a
 player in each of the four corners they make. So here iteration 2 measures,
-for each of the seven — including any a tuning pass has set to zero — how
+for each of the seven drafted — including any a tuning pass has set to zero — how
 many plays it moves across its range *before* anyone writes a dossier, and
 the difference metric counts only the decisions the weights actually make:
 positions with more than one legal play, before the search takes over.
@@ -473,6 +532,96 @@ win rate, mean points per deal, draws, and the noise floor. Greedy-take here:
 make a scopa if it can, else the capture with the most cards, ties to the
 most denari, else lay the card of least worth. It never looks at what it
 leaves, which is the habit a real opponent has to beat.
+
+**What the bars are.** Measured at iteration 2, by
+`SEED_FROM=<n> node tools/selfplay.mjs --probe 1500` — 1,500 seeds mirrored, so
+3,000 deals per row. Franco's weights are `CARTE_WEIGHT=1 DENARI_WEIGHT=2
+SETTEBELLO_BONUS=6 PRIMIERA_WEIGHT=0.4 SCOPA_RISK_PENALTY=6 GIFT_FACTOR=0.5
+TEMPO_BONUS=5`. A draw is common in Scopa — one deal in eight — so the rate is
+wins plus half the draws.
+
+| | seeds 1+ | seeds 5001+ | seeds 20001+ |
+|---|---|---|---|
+| Franco vs greedy-take | 61.3% ± 1.7 | 59.7% ± 1.8 | 59.8% ± 1.8 |
+| Franco vs random-legal | 78.0% ± 1.5 | 79.6% ± 1.4 | 78.9% ± 1.5 |
+| greedy-take vs random-legal | 71.3% ± 1.6 | 70.7% ± 1.6 | 71.5% ± 1.6 |
+
+**The floors**, a regression guard and nothing else, set two points under the
+weakest **held-out** figure: **57.7% against greedy-take and 76.9% against
+random-legal**. Iteration 5 holds every fixed player and every roll of Piero to
+them, on both held-out ranges. (Not the seeds-1+ row: those seeds have been
+tuned against and reported on, so they are the one range a floor must not be
+drawn from.)
+
+**Two identical players score exactly 50.0%, and that is an identity rather
+than a measurement.** `match` plays every seed from both seats, so two
+deterministic identical policies produce the same deal twice and one wins
+exactly one of each mirrored pair: `wins === losses` always, whatever the
+engine does. It is worth keeping as a symmetry check on the harness — it would
+catch a seat that was not really mirrored — but it is not a noise floor, and
+the ± beside it is the binomial formula applied to p = 0.5 rather than anything
+observed. The real noise floor is the ± on each row above.
+
+**The tuning bought nothing, and that is the measurement.** Coordinate ascent
+against greedy-take on 400 seeds moved Franco and gained 1.25 points — on the
+seeds it tuned on. On seeds 5001+ and 20001+ the tuned vector was inside the
+noise floor both times, and paired on the same deals it is +0.12% (z = 0.35)
+and +0.55% (z = 1.47): nothing. Run again on 1,500 seeds, ascent moved
+**nothing at all**. Franco keeps the drafted vector, and a figure quoted from
+the tuning range would have been a point and a quarter of fiction.
+
+**The fifth round does not fit, measured.** `node tools/selfplay.mjs --fifth
+200`: the first decision of the fifth round costs a worst case near **1900ms**
+over all 84 possible hands and **1150ms** over a sample of fifty, against
+§3.4's budget of a worst case near 70ms. Neither is within an order of
+magnitude, so `CODA_FROM` stays at 5 and the weights keep the range they were
+laddered over. What is timed is a **lower bound** on §3.4's estimate — 84 hands
+under the deck order this line actually has, not 84 × the 20 ways the last six
+could fall — which only makes the conclusion safer.
+
+**The tempo question is answered yes, and the formula gained a term for it.**
+§4 asks whether the opponent lays low cards into a table it could have swept
+next turn had it waited, and says a 2-ply term is the candidate if the harness
+says yes. `node tools/selfplay.mjs --tempo 400`, **before** the term existed:
+some play would have left Franco a sweep on its next turn in 5.85% of decisions
+with a real choice, and it gave that chance up in **49.0% of them**.
+
+With the term, the same command on the engine that ships: 5.99% of decisions
+offer the chance and it gives up **40.7%** of them. That is the evidence that
+matters — the term does the thing it was added to do, measured on the
+behaviour rather than inferred from a score. In points it is worth **+0.81%
+(z = 2.07)** and **+1.73% (z = 4.43)** of score rate on the two held-out
+ranges, paired: `SEED_FROM=20001 node tools/selfplay.mjs --paired
+TEMPO_BONUS=0 1200`. (At the harness default of 1500 the same command gives
++0.77% and +1.33%; the effect is a few tenths either side of these, not two
+decimals of it.) Three things are worth recording about how it is
+built, because two of them are traps:
+
+- **It may not look at their hand.** A 2-ply term that copies the state and
+  replies with their real cards is worth +1.9% to +3.4% — and is cheating, in a
+  game whose §3.4 exists to give the opponent nothing a human could not count.
+  Most of the apparent gain lives in the cheat.
+- **A proxy with no opponent model is worth nothing.** "Does a card I still
+  hold sweep what this play leaves" measures z = −0.15 to +0.86. The gain comes
+  from the reply, not from the table.
+- So the honest version **guesses**: it draws `TEMPO_SAMPLES` = 6 plausible
+  hands from `fuori`, plays each one ply, and scores the fraction in which it is
+  left holding a sweep. The samples are a deterministic spread rather than a
+  random draw, because a fixture that depends on an rng the page does not share
+  is not a fixture. And it refuses to guess past a round boundary, where the
+  next hand is in a deck it may not read.
+- **Six is a cost choice, not a quality one.** Sixteen samples measures
+  +0.85% (z = 2.12) and +2.02% (z = 4.63) against six's +0.81% and +1.73% —
+  better on the far range, not "barely better" as an earlier draft of this
+  section claimed without a command to back it. Six is kept because it is
+  cheaper and the gain is already there; sixteen is the move if the term ever
+  needs to be stronger. The gain also survives every sampler tried — four
+  different spreads are positive on both ranges — so the term is not an artefact
+  of this particular lattice, but its **magnitude** does depend on which six
+  hands are guessed, and the honest range is +0.3 to +0.9 and +1.2 to +2.0.
+
+Cost: a worst single decision of **2.55ms** over 150 deals, against the same
+70ms budget.
 
 **The bars are measured, not written, and the table is the claim.**
 Tressette's plan set 95% and 70% from intuition and both were wrong; its
@@ -554,7 +703,8 @@ settings ──Cambia avversario──► confirm ─► start
   denari taken and whether the settebello is in. A transient toast for
   "Scopa!", floating, out of the budget, as Tressette's declarations are.
 - **settings** — deck, felt, rhythm, show points, sound, change opponent,
-  and the weights disclosure: seven, with a note that the sixth round uses
+  and the weights disclosure: seven — the count iteration 2's ladder left, which
+  is not the seven this plan drafted — with a note that the sixth round uses
   none of them.
 - **history** — tally, record against each opponent, the last hundred
   smazzate.
@@ -783,7 +933,7 @@ The formula in §3.4 with one profile; `tools/selfplay.mjs` forked from
 Tressette's with Scopa's two baselines; the trap suite; the sixth-round
 search. Then the questions, each answered by a number in the pull request:
 
-- **Which weights move plays.** `--ladder` each of the seven across its range
+- **Which weights move plays.** `--ladder` each of the seven drafted across its range
   — any the tuning has set to zero included, which is the hole Tressette's
   ladder had — and count the plays that change over 6,000 deals, over the
   decisions the weights make. Under 1% at any value: the weight goes, before
@@ -902,7 +1052,7 @@ on both seed ranges, no pair is further apart than 65% head to head, each
 name is a measured distance from every other, and the count of names is the
 count of corners, written into §0 with the dossier telling the truth about
 each. The fixture grows with the roster: twenty deals per fixed player and
-every weight of the whole roster, Piero's rolled seven included.
+every weight of the whole roster, Piero's rolled five included.
 
 ### 6 — Ship (½ day)
 
@@ -1113,7 +1263,7 @@ and the next iteration that forks checks for movement first.
 |---|---|---|---|
 | decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `ed445bd` | iteration 0 |
 | CSS and table markup | Tressette | to be recorded | iteration 3 |
-| selfplay harness | Tressette | to be recorded | iteration 2 |
+| selfplay harness | Tressette | `dec1c74` | iteration 2 |
 
 Iteration 0 checked for movement before forking, as the paragraph above says
 to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
