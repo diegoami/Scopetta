@@ -74,15 +74,6 @@
 //     EXPECTs name the two phrasings that fire first;
 //   - `the position meant to say "X" played the card instead of raising it`
 //     with `a capture with a choice plays instead of raising`;
-//   - `the round ended and the page never entered the beat` with `the next
-//     round is drawn while the last card is still landing`, whose EXPECT names
-//     the window assertion. Giving `beat` ONE owner made these one rule and one
-//     line: the flag is set on the play that empties both hands, so the only
-//     way to falsify "the page entered the beat" is not to set it, and not
-//     setting it draws the next round during the landing beat. Held apart, they
-//     were two lines in two functions — and that is exactly what let the break
-//     for the beat stop tripping the assertion written for it, since whatever
-//     skipped the clearing left the flag set and the page hung instead;
 //   - `N card(s) are already leaving before the card that takes them has landed`
 //     with `nothing is drawn as the card that has just landed`, whose EXPECT
 //     names the last play's phrasing, `N card(s) are already leaving on the
@@ -122,12 +113,15 @@ const EXPECT = {
   // --- the screens ----------------------------------------------------------
   "[hidden] stops beating the display rule": "screens visible at once",
   "the icon bar is made wider than the screen": "scrolls sideways",
-  // The rule is "nothing runs off the screen", and it is one rule. Naming the
-  // element instead pinned it to whichever one happened to go off the edge
-  // first: growing --t-say made the say line the widest thing in the seat, the
-  // report truncates at five, and .seat__cards dropped off the end of a list
-  // that was still the same assertion saying the same thing.
-  "the plates are left out of the card budget": "runs off the screen",
+  // Named again, but on a DIFFERENT element, and the reason matters. This was
+  // loosened to the bare phrase on a diagnosis that the report's cap had hidden
+  // `.seat__cards`; with nothing truncating any more it is still not reported,
+  // so the cap was not the cause — growing --t-say moved which elements leave
+  // the screen at all. What the missing `--seat-extra` term pays for is the two
+  // name plates, and the player's own is what goes off the edge, so that is
+  // what the entry names: one assertion, one element, tied to this defect
+  // rather than to any overflow anywhere.
+  "the plates are left out of the card budget": "#plateYou runs off",
   "the plates are squeezed instead of budgeted": "lands on the cards",
   "the plate is laid out as a flex row again": "past its own width",
   "the plate pays for one row again": "lands on the cards",
@@ -213,6 +207,8 @@ const EXPECT = {
   "a card that takes nothing is drawn leaving": "sweeping off the table",
 
   "the hand is only dealt in on the first deal": "were not drawn as dealt",
+  "the first hand of a session is not dealt in": "start neither empty nor full",
+  "the beat is entered and not held": "did not hold the beat",
 
   // --- the last play of the deal, and the window before a beat --------------
   "the points are counted out over the last play": "before it has been drawn",
@@ -542,6 +538,21 @@ const BREAKS = [
   ["the hand is only dealt in on the first deal",
    "  if (was !== \"true\" || node.dataset.empty !== \"false\") return;",
    "  if (was !== \"true\" || node.dataset.empty !== \"false\" || state.giro > 0) return;"],
+
+  // The owner's own defect, on the first hand of a session. A slot with no
+  // data-empty is neither empty nor full, and `dealt` refuses both — so the
+  // first hand was dealt in only because something had rendered the table
+  // before Gioca, and the only thing that does is document.fonts.ready. The
+  // assertion is on buildHands rather than on the outcome, because the outcome
+  // measures the boot render.
+  ["the first hand of a session is not dealt in",
+   "    d.dataset.empty = \"true\";", ""],
+  // BEAT does something, and until this pass nothing said so: the hands are
+  // already empty for LANDS + SWEEP, so a beat that is entered and released in
+  // the same tick was invisible.
+  ["the beat is entered and not held",
+   "    if (beat) later(endBeat, state.speed * BEAT);",
+   "    if (beat) endBeat();"],
 
   // --- the window between a round's last play and the beat -----------------
   ["the next round is drawn while the last card is still landing",

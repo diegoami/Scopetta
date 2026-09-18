@@ -1340,8 +1340,11 @@ for (const id of ["table","tavola","oppHand","youHand","pileOpp","pileYou","mazz
 // five round deals, and nothing else — no flag to set and none to forget.
 function dealt(node, was){
   if (was !== "true" || node.dataset.empty !== "false") return;
-  node.removeAttribute("data-dealt");
-  void node.offsetWidth;            // or the animation does not start again
+  // No removeAttribute and no forced reflow to restart the animation: the mark
+  // comes off in `faceOf` when the slot is drawn empty, which is the render
+  // before this one by the definition of `was`. They were here when the mark
+  // outlived the card, and once it stopped doing that they were a synchronous
+  // layout per dealt card in exchange for nothing.
   node.dataset.dealt = "true";
 }
 
@@ -1374,10 +1377,20 @@ function backOf(node){
 // §2.2, a card that moves under the thumb between one glance and the next is a
 // misplay — so a button is a slot, and `data-slot` is read at click time rather
 // than closed over.
+// Every slot starts EMPTY, and says so. Without `data-empty` on it a slot is
+// neither empty nor full to `dealt`, which refuses both — so the first hand of
+// a session was dealt in only if something had rendered the table before Gioca
+// was pressed, and the only thing that does is `document.fonts.ready`. On a
+// cold load on a phone, which is the ordinary first visit, the fonts are still
+// on their way and the first hand the player ever sees APPEARS. That is the
+// owner's own defect, on the one deal it is most likely to be noticed, and the
+// check cannot see it: it blocks the webfont, so `fonts.ready` resolves at once
+// and the boot render always wins.
 function buildHands(){
   el.oppHand.replaceChildren(...Array.from({ length: 3 }, () => {
     const d = document.createElement("div");
     d.className = "card";
+    d.dataset.empty = "true";
     return d;
   }));
   el.youHand.replaceChildren(...Array.from({ length: 3 }, (_, i) => {
@@ -1386,6 +1399,7 @@ function buildHands(){
     b.className = "card";
     b.dataset.slot = String(i);
     b.setAttribute("aria-pressed", "false");
+    b.dataset.empty = "true";
     b.addEventListener("click", () => tapped(Number(b.dataset.slot)));
     return b;
   }));

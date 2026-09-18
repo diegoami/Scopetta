@@ -160,6 +160,26 @@ counted a stale mark as a fresh one. The deal-in could be switched off for
 rounds two to six, which is every round the beat pass actually measures, and the
 whole check still passed. `faceOf` clears it with the card now.
 
+**And the first of anything is a state too.** The first hand of a session was
+dealt in only because something had rendered the table before Gioca was pressed
+— and the only thing that does is `document.fonts.ready`. On a cold load with
+the font still on its way, the first hand a player ever sees *appears*:
+measured, `{"drawn":6,"dealt":0}` against a settled-font control of
+`{"drawn":6,"dealt":6}`. The check could not see it from either side, because
+it blocks the webfont so `fonts.ready` resolves at once, and because no pass
+looked at the first deal at all — only at a round boundary. **A slot now starts
+with `data-empty="true"` rather than with nothing**, and the rule is asserted on
+`buildHands` itself rather than on the outcome, because the outcome measures the
+boot render and not the function.
+
+**And an assertion has to be about what the thing is FOR.** "The page entered
+the beat" had a firing set strictly inside the window assertion's and could
+never go red on its own — and, worse, nothing anywhere said `BEAT` did
+anything: the hands are already empty for `LANDS + SWEEP`, so setting it to
+zero changed nothing any rule could see. What `BEAT` buys is *holding* the empty
+hands after the table has settled, so that is what is measured, sampled once
+`sweeping` and `laid` are clear rather than at the play.
+
 **And a state the seed does not reach has to be posed.** A driven deal reaches
 whichever ending its seed reaches: the deal the check drives ends in a capture,
 so the two endings where the last card takes *nothing* — onto leftovers, and

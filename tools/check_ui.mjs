@@ -368,7 +368,15 @@ const playLastLeftovers = `(() => {
   // today — but a pose that only holds together where the assertions look is
   // not a position the engine can sit in, which is what CLAUDE.md asks of one.
   state.mazziere = 1;
-  state.prese = [state.cards.slice(0, 18), state.cards.slice(18, 35)];
+  // The piles are the rest of the deck, built by EXCLUDING what is on the
+  // table and in the hand rather than by slicing 35 off the front — which put
+  // two cards in a pile and on the table at once, and made 35 where a position
+  // with two down and one held calls for 37. Empty piles read as a
+  // placeholder; a wrong 35 reads as a position and invites belief.
+  const out = state.tavola.concat(state.hands[0].filter(Boolean))
+    .map(c => c.s * 11 + c.n);
+  const rest = state.cards.filter(c => !out.includes(c.s * 11 + c.n));
+  state.prese = [rest.slice(0, 18), rest.slice(18)];
   state.selected = null; state.scelta = 0;
   render();
   const n = state.tavola.length + 1;
@@ -388,7 +396,15 @@ const playLastOnEmpty = `(() => {
   state.deveGiocare = 0; state.over = false; state.speed = 1200;
   state.plays = 35; state.ultimaPresa = 1;
   state.mazziere = 1;
-  state.prese = [state.cards.slice(0, 18), state.cards.slice(18, 35)];
+  // The piles are the rest of the deck, built by EXCLUDING what is on the
+  // table and in the hand rather than by slicing 35 off the front — which put
+  // two cards in a pile and on the table at once, and made 35 where a position
+  // with two down and one held calls for 37. Empty piles read as a
+  // placeholder; a wrong 35 reads as a position and invites belief.
+  const out = state.tavola.concat(state.hands[0].filter(Boolean))
+    .map(c => c.s * 11 + c.n);
+  const rest = state.cards.filter(c => !out.includes(c.s * 11 + c.n));
+  state.prese = [rest.slice(0, 18), rest.slice(18)];
   state.selected = null; state.scelta = 0;
   render();
   const n = state.tavola.length + 1;
@@ -492,7 +508,11 @@ const audit = () => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
     });
-  for (const el of past.slice(0, 3)) {
+  // Every one of them. Capped at three, the element a break was written for
+  // could fall off the end while the rule it belongs to had fired — which is
+  // what forced one EXPECT to be loosened from an element to a phrase. The
+  // list is bounded by the selector above in any case.
+  for (const el of past) {
     const r = el.getBoundingClientRect();
     out.push(`${name(el)} runs off the screen (${Math.round(r.left)}…${Math.round(r.right)} `
       + `vs 0…${window.innerWidth})`);
@@ -737,7 +757,7 @@ async function checkScreens(browser) {
       if (all.length) {
         failed++;
         console.log(`  FAIL  ${screen.name} @ ${vname}`);
-        all.slice(0, 8).forEach(b => console.log(`        ${b}`));
+        all.forEach(b => console.log(`        ${b}`));
       }
       await page.close();
     }
@@ -961,9 +981,9 @@ async function checkTable(browser, only, inflate) {
         if (!m.sayShown || m.sayH < 10)
           bad.push(`the say line is ${m.sayH}px tall — it must cost --say whether or not it has something to say`);
 
-        for (const e of m.offScreen.slice(0, 3))
+        for (const e of m.offScreen)
           bad.push(`${e} runs off the screen`);
-        bad.push(...m.plateBad.slice(0, 2));
+        bad.push(...m.plateBad);
 
         if (m.overlapsHand)
           bad.push(`${m.overlapsHand} table card(s) land on a hand`);
@@ -1036,7 +1056,7 @@ async function checkTable(browser, only, inflate) {
         if (all.length) {
           failed++;
           console.log(`  FAIL  ${vname} / ${deck} / ${n} cards`);
-          all.slice(0, 8).forEach(b => console.log(`        ${b}`));
+          all.forEach(b => console.log(`        ${b}`));
         }
         await page.close();
       }
@@ -1307,7 +1327,7 @@ async function checkChoice(browser) {
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${vname} / ${deck}`);
-      all.slice(0, 5).forEach(b => console.log(`        ${b}`));
+      all.forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }
@@ -1582,14 +1602,25 @@ async function checkStates(browser) {
           + `already drawn: ${drawn('.hand--you .card')}/${drawn('.hand--opp .card')} in hand`);
       return out;
     }));
-    if (reached) await page.waitForFunction('beat === true', null, { timeout: 8000 })
-      .catch(() => {});
+    // Sampled once the TABLE has settled, not at the play. At the play `beat`
+    // is true either way and the rule below cannot fail; after `then` has run
+    // it is true only if the beat is being held, which is the whole of what
+    // BEAT buys. `sweeping === null && laid < 0` is exactly "the table has
+    // caught up", and `endBeat` is BEAT away from there.
+    if (reached) await page.waitForFunction('sweeping === null && laid < 0', null,
+      { timeout: 8000 }).catch(() => {});
     const between = await page.evaluate(() => {
       const out = [];
       const drawn = who => [...document.querySelectorAll(who)]
         .filter(c => c.dataset.empty !== 'true').length;
       const held = w => state.hands[w].filter(Boolean).length;
-      if (!beat) { out.push('the round ended and the page never entered the beat'); return out; }
+      // Not "did the page enter the beat" — that had a firing set strictly
+      // inside the window assertion's and could not go red on its own, which
+      // is the property this file used to delete two other rules. What BEAT is
+      // for is holding the empty hands there after the table has settled, and
+      // nothing asserted that at all: since the hands are empty for LANDS +
+      // SWEEP anyway, `BEAT = 0` changed nothing any rule could see.
+      if (!beat) { out.push('the round ended and the page did not hold the beat'); return out; }
       if (held(0) !== 3 || held(1) !== 3)
         out.push(`the next round was not dealt: ${held(0)}/${held(1)} in hand`);
       if (drawn('.hand--you .card') || drawn('.hand--opp .card'))
@@ -1630,8 +1661,30 @@ async function checkStates(browser) {
     }));
     if (!reached) between.push('the driver never reached the end of a round');
 
+    // And the FIRST hand of a session, which no pass could see. This check
+    // blocks the webfont, so `document.fonts.ready` resolves at once and the
+    // boot render always leaves the slots in a state `dealt` can work from; on
+    // a real phone with the font still on its way it does not, and the first
+    // hand a player ever sees APPEARS. Measured that way: {"drawn":6,"dealt":0}
+    // against a settled-font control of {"drawn":6,"dealt":6}.
+    //
+    // So the rule is asserted on `buildHands` itself, called here with no
+    // render after it — every slot it makes must be drawn empty, because that
+    // is the state `dealt` compares against. Testing the outcome instead would
+    // measure the boot render rather than the function. Last in the loop: it
+    // replaces the hand elements.
+    const firstDeal = await page.evaluate(() => {
+      const out = [];
+      buildHands();
+      const slots = [...document.querySelectorAll('.hand .card')];
+      const unset = slots.filter(c => c.dataset.empty !== 'true').length;
+      if (unset) out.push(`${unset} of ${slots.length} hand slot(s) start neither empty nor `
+        + `full — the first hand of a session appears rather than being dealt`);
+      return out;
+    });
+
     const all = [...lands, ...flying, ...oppLands, ...flyingOpp, ...laidBad,
-                 ...sweep, ...ending, ...between, ...errs];
+                 ...sweep, ...ending, ...between, ...firstDeal, ...errs];
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${vname} / ${deck}`);
@@ -1700,8 +1753,8 @@ async function checkRotation(browser) {
 
       const m = await page.evaluate(measure);
       const at = `after turning to ${size.join('x')}`;
-      for (const e of m.offScreen.slice(0, 2)) bad.push(`${at}, ${e} runs off the screen`);
-      bad.push(...m.plateBad.slice(0, 2).map(b => `${at}, ${b}`));
+      for (const e of m.offScreen) bad.push(`${at}, ${e} runs off the screen`);
+      bad.push(...m.plateBad.map(b => `${at}, ${b}`));
       if (m.tableScroll > 1)
         bad.push(`${at}, the table needs ${m.tableScroll}px of scrolling`);
       if (m.youSeatBottom > m.viewportH + 1)
@@ -1759,7 +1812,7 @@ async function checkRotation(browser) {
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${from.join('x')} turned to ${to.join('x')} / ${deck}`);
-      all.slice(0, 6).forEach(b => console.log(`        ${b}`));
+      all.forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }
@@ -1866,7 +1919,7 @@ async function checkRules(browser) {
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${vname}`);
-      all.slice(0, 5).forEach(b => console.log(`        ${b}`));
+      all.forEach(b => console.log(`        ${b}`));
     }
     await page.close();
   }
@@ -2108,7 +2161,7 @@ async function checkDeal(browser) {
   const all = [...bad, ...errs];
   console.log(`  ${all.length ? 'FAIL' : 'pass'}  one deal, ${plays} of your plays, `
     + `${chosenByTap} capture(s) chosen by tapping, ${chosenByAccept} by accepting, ${scopeSeen} scopa(e)`);
-  all.slice(0, 6).forEach(b => console.log(`        ${b}`));
+  all.forEach(b => console.log(`        ${b}`));
   await page.close();
   return all.length ? 1 : 0;
 }
