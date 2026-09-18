@@ -78,10 +78,11 @@ consulted under mobile emulation — the page measures identically with or witho
 it.
 
 **Screens pass** — every screen, and **every state that exists only in the
-middle of a deal**, at six real device shapes: the start sheet; the table just
-dealt; the table with an empty middle; the table with thirteen cards; a capture
-waiting to be chosen; a scopa announced; both hands empty for the beat between
-rounds; a pile with three scope showing; and the deal over. Asserts exactly one
+middle of a deal**, at seven real device shapes: the start sheet; the rules,
+opened from the start sheet and again from the table; the table just dealt; the
+table with an empty middle; the table with thirteen cards; a capture waiting to
+be chosen; a scopa announced; both hands empty for the beat between rounds; a
+pile with three scope showing; and the deal over. Asserts exactly one
 screen is visible, no sideways scroll, nothing past the screen edge, no table
 card on a hand card, no name plate on the cards or wider than its own box, no
 text below its size floor, no text clipped by a container that cannot scroll, no
@@ -92,7 +93,7 @@ a check that silently passes. **Two of them are played rather than posed** — t
 sweep and the beat between rounds — because neither is a state the engine will
 sit in; see the pass below.
 
-**Table pass** — the card table at all twenty-six viewports in all five decks,
+**Table pass** — the card table at all twenty-five viewports in all five decks,
 **with the middle row holding 0, 4, 8 and 13 cards**. Asserts that no table card
 lands on a card in either hand, that your whole seat is above the fold, that the
 middle stays inside the table and draws one row in landscape and two in
@@ -165,13 +166,29 @@ listen for `resize` is a page the whole grid agrees with. It rotates four shapes
 both ways with thirteen cards down, and raises a card at one width to read it at
 another.
 
-**The deal over, with the points counted out** — carte with the four suits it is
-made of, denari, settebello, primiera with its totals, scope, and the total,
-each row carrying what it is worth. The deal pass reads every number back
-against `scoreDeal` and the piles, **and adds the row markers up to check they
-come to the total**: a breakdown that agrees with itself and not with the engine
-is worse than none, and arithmetic shown on the page is a claim the page has to
-keep.
+**The deal over, with the points counted out** — carte, denari, settebello,
+primiera with its totals, scope, and the total, each row a pair of counts and
+what they are worth. The deal pass reads every number back against `scoreDeal`
+and the piles, **and adds the row markers up to check they come to the total**:
+a breakdown that agrees with itself and not with the engine is worse than none,
+and arithmetic shown on the page is a claim the page has to keep.
+
+The five rows are the five points and nothing else. Carte was briefly broken
+down by suit; three of the four suits can never score, and the fourth is the
+denari row again. A number the reader has to discard is not working shown, it
+is another number.
+
+**The rules** — the one screen here that is read rather than glanced at, and
+the one that has to come back to where it came from. Asserts that each of
+`section[lang="it"]` and `section[lang="en"]` is the rules rather than a note
+(at least five blocks and two hundred words, naming the scopa, the primiera and
+the settebello), and that Back returns to the table when the table opened it,
+with the hand unchanged — a Back that always lands on the start sheet abandons
+the deal of anyone who opened the rules to check what a scopa is worth mid-hand.
+The language lives on the `section`, not on each paragraph: half a page not
+marked as its own language is half a page screen readers and hyphenation read
+as the other one — and, less loftily, an assertion that looks for one `lang`
+attribute anywhere passes a page whose English is tagged Italian.
 
 **A card arriving** — the beat the owner found missing by playing the preview.
 A capturing card never touches `state.tavola`, so a middle row that draws the

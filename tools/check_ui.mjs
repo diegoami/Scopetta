@@ -516,6 +516,16 @@ const noisy = m => noise(m.text()) || FONTS.test((m.location() || {}).url || '')
 // one of these exists only in the middle of a deal.
 const SCREENS = [
   { name: 'start', open: async p => {} },
+  // Both ways in, because a screen reachable from one place and not the other
+  // is half a screen. The rules are the only page here that is READ, so the
+  // audit's body-copy floor is the one that matters on them.
+  { name: 'the rules, from the start sheet', open: async p => {
+      await p.click('#aboutStart');
+    } },
+  { name: 'the rules, from the table', open: async p => {
+      await p.click('#play');
+      await p.click('#about');
+    } },
   { name: 'table, just dealt', open: async p => { await p.click('#play'); } },
   { name: 'table, empty middle', open: async p => {
       await p.click('#play');
@@ -1537,6 +1547,87 @@ async function checkRotation(browser) {
   return failed;
 }
 
+/* ---- pass 2e: the rules ----------------------------------------------------- */
+
+// The one screen on this page that is read rather than glanced at, and the one
+// that has to come back to where it was opened from: a back button that always
+// goes to the start sheet abandons the deal of anyone who opened the rules to
+// check what a scopa is worth mid-hand.
+async function checkRules(browser) {
+  console.log('\nthe rules');
+  let failed = 0;
+  for (const vname of (QUICK ? ['narrow phone'] : SCREEN_VIEWPORTS)) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    const bad = [];
+
+    // Both languages, and enough of each to be the rules rather than a note.
+    await page.click('#aboutStart');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      // By SECTION, because that is where the language lives: a half of this
+      // page that is not marked as its language is a half screen readers and
+      // hyphenation read as the other one.
+      const text = lang => {
+        const sec = document.querySelector(`#viewRules section[lang="${lang}"]`);
+        return sec ? [...sec.querySelectorAll('p, h2')]
+          .map(e => e.textContent.replace(/\s+/g, ' ').trim()) : [];
+      };
+      for (const lang of ['it', 'en']) {
+        const blocks = text(lang);
+        const words = blocks.join(' ').split(' ').filter(Boolean).length;
+        if (blocks.length < 5)
+          out.push(`the rules have ${blocks.length} block(s) in ${lang}, want at least 5`);
+        if (words < 200)
+          out.push(`the rules run to ${words} words in ${lang}, which is a note and not the rules`);
+        // The five points and the one that is easiest to leave out.
+        for (const must of ['scopa', 'primiera', 'settebello'])
+          if (!blocks.join(' ').toLowerCase().includes(must))
+            out.push(`the rules in ${lang} never mention the ${must}`);
+      }
+      return out;
+    }));
+
+    // Back to the start sheet, because that is where it was opened from.
+    await page.click('#rulesBack');
+    if (await page.evaluate(() => document.getElementById('viewStart').hidden))
+      bad.push('the rules were opened from the start sheet and did not go back to it');
+
+    // And back to the TABLE when that is where it was opened from, with the
+    // deal still there.
+    await page.click('#play');
+    const before = await page.evaluate(() => state.hands[0].map(c => c && c.n + ':' + c.s).join(','));
+    await page.click('#about');
+    if (await page.evaluate(() => document.getElementById('viewRules').hidden))
+      bad.push('the rules did not open from the table');
+    await page.click('#rulesBack');
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (document.getElementById('viewTable').hidden)
+        out.push('the rules were opened from the table and went back to the start sheet');
+      const now = state.hands[0].map(c => c && c.n + ':' + c.s).join(',');
+      if (now !== was) out.push(`reading the rules changed the hand: ${was} became ${now}`);
+      return out;
+    }, before));
+
+    const all = [...bad, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${vname}`);
+      all.slice(0, 5).forEach(b => console.log(`        ${b}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${QUICK ? 1 : SCREEN_VIEWPORTS.length} viewports, both ways in`);
+  return failed;
+}
+
 /* ---- pass 3: a whole deal, through the table ------------------------------- */
 
 // The two passes above measure a table that has just been dealt. This is the
@@ -1680,10 +1771,9 @@ async function checkDeal(browser) {
     const grid = document.getElementById('resultGrid');
     const val = sel => [...grid.querySelectorAll(sel)].map(n => n.querySelector('.r-val').textContent);
     // The points each column is awarded, read off the markers the player sees.
-    const pts = who => [...grid.querySelectorAll('.r-num:not(.r-sub):not(.r-total)')]
+    const pts = who => [...grid.querySelectorAll('.r-num:not(.r-total)')]
       .filter((_, i) => i % 2 === who)
       .reduce((sum, n) => sum + (parseInt(n.querySelector('.r-pt').textContent.slice(1), 10) || 0), 0);
-    const bySuit = w => [0, 1, 2, 3].map(s => state.prese[w].filter(c => c.s === s).length);
     return {
       over: state.over, plays: state.plays,
       domTavola: document.querySelectorAll('.tavola .card').length,
@@ -1692,15 +1782,13 @@ async function checkDeal(browser) {
       say: document.querySelector('.sel-name').textContent,
       punti: r.punti,
       resultShown: !document.getElementById('result').hidden,
-      labels: [...grid.querySelectorAll('.r-label:not(.r-sub)')].map(n => n.textContent),
-      subLabels: [...grid.querySelectorAll('.r-label.r-sub')].map(n => n.textContent),
+      labels: [...grid.querySelectorAll('.r-label')].map(n => n.textContent),
       // carte, denari, settebello, primiera, scope, totale — six rows of two
-      nums: val('.r-num:not(.r-sub)'),
-      subNums: val('.r-num.r-sub'),
+      nums: val('.r-num'),
       marked: [pts(0), pts(1)],
       rule: (document.querySelector('.result__rule') || {}).textContent || '',
       carte: [String(state.prese[0].length), String(state.prese[1].length)],
-      suits: [bySuit(0), bySuit(1)],
+      sette: [0, 1].map(w => String(state.prese[w].some(isSettebello) ? 1 : 0)),
       scope: state.scope.map(String),
     };
   });
@@ -1721,15 +1809,7 @@ async function checkDeal(browser) {
   const wantLabels = ['carte', 'denari', 'settebello', 'primiera', 'scope', 'totale'];
   if (JSON.stringify(end.labels) !== JSON.stringify(wantLabels))
     bad.push(`the breakdown lists ${JSON.stringify(end.labels)}, want ${JSON.stringify(wantLabels)}`);
-  // Carte is forty cards and the suits are what it is made of.
-  const wantSubs = ['denari', 'coppe', 'spade', 'bastoni'];
-  if (JSON.stringify(end.subLabels) !== JSON.stringify(wantSubs))
-    bad.push(`the working under carte lists ${JSON.stringify(end.subLabels)}, want ${JSON.stringify(wantSubs)}`);
-  const wantSuits = [0, 1, 2, 3].flatMap(su => [String(end.suits[0][su]), String(end.suits[1][su])]);
-  if (JSON.stringify(end.subNums) !== JSON.stringify(wantSuits))
-    bad.push(`the working under carte counts ${JSON.stringify(end.subNums)}, the piles hold ${JSON.stringify(wantSuits)}`);
-
-  // And the arithmetic is on the page rather than in the reader's head: the
+  // The arithmetic is on the page rather than in the reader's head: the
   // markers down each column are what the total is made of, so they have to
   // add up to it.
   if (end.marked[0] !== end.punti[0] || end.marked[1] !== end.punti[1])
@@ -1744,6 +1824,9 @@ async function checkDeal(browser) {
     if (end.nums[0] !== end.carte[0] || end.nums[1] !== end.carte[1])
       bad.push(`the breakdown counts ${end.nums[0]}/${end.nums[1]} cards, the piles hold `
         + `${end.carte[0]}/${end.carte[1]}`);
+    if (end.nums[4] !== end.sette[0] || end.nums[5] !== end.sette[1])
+      bad.push(`the breakdown counts ${end.nums[4]}/${end.nums[5]} settebello, the piles hold `
+        + `${end.sette[0]}/${end.sette[1]}`);
     if (end.nums[8] !== end.scope[0] || end.nums[9] !== end.scope[1])
       bad.push(`the breakdown counts ${end.nums[8]}/${end.nums[9]} scope, the engine counted `
         + `${end.scope[0]}/${end.scope[1]}`);
@@ -1777,6 +1860,7 @@ failed += await checkTable(browser, TIGHT, true);
 failed += await checkChoice(browser);
 failed += await checkStates(browser);
 failed += await checkRotation(browser);
+failed += await checkRules(browser);
 failed += await checkDeal(browser);
 await browser.close();
 

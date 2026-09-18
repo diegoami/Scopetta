@@ -709,7 +709,18 @@ settings ──Cambia avversario──► confirm ─► start
 - **history** — tally, record against each opponent, the last hundred
   smazzate.
 - **about** — what the game is, which Scopa it plays (§2, every constant
-  named), where the cards come from.
+  named), where the cards come from. **Brought forward to iteration 3, as
+  `#viewRules`, with the rules themselves in it** — the owner asked for the
+  rules in both languages and for the about screen to show them, and a screen
+  that is only reachable from the table is half a screen, so it opens from the
+  start sheet too and Back returns to whichever opened it. Italian and English
+  are a `section[lang]` each, which is where the language belongs: half a page
+  carrying the other half's `lang` is what a screen reader and a hyphenator
+  read. What is still iteration 4's is the rest of the screen — the constants
+  of §2 named one by one, and the provenance of the cards. `RULES.md` and
+  `REGOLE.md` are iteration 4's still, and this screen is their short form, not
+  a substitute: a rule stated twice in two places drifts, so the long documents
+  cite the screen's wording rather than restating it.
 - **confirm** — guards abandoning a deal in progress.
 - **result** — end of the deal: five lines (carte 23–17, denari 6–4,
   settebello, primiera 78–63, scope 1–0), the two totals, a one-line note,

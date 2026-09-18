@@ -760,8 +760,7 @@ button.card:disabled{ cursor: default; }
   text-align: right;
 }
 .result__grid > [data-won="true"]{ color: var(--brass); font-weight: 700; }
-/* The working under a point, rather than a point: smaller, quieter, indented
-   by its own label so the eye can see at a glance which rows add up to which. */
+/* A count and what it is worth, side by side. */
 .result__grid > .r-num{
   display: flex;
   justify-content: flex-end;
@@ -786,8 +785,6 @@ button.card:disabled{ cursor: default; }
   line-height: 1.35;
   color: var(--ivory-dim);
 }
-.result__grid > .r-sub{ font-size: var(--t-tiny); color: var(--ivory-dim); }
-.result__grid > .r-label.r-sub{ padding-left: 1.2em; }
 .result__grid > .r-total{
   margin-top: .35rem;
   padding-top: .4rem;
@@ -795,6 +792,33 @@ button.card:disabled{ cursor: default; }
   font-size: var(--t-name);
   color: var(--brass);
 }
+
+/* ---- prose: the rules ------------------------------------------------------ */
+
+/* A sheet that scrolls, because rules are rules and cannot be budgeted. The
+   measure is capped so a line on a desktop is not forty words wide, and the
+   type is --t-body rather than a label size: this is the one screen somebody
+   reads rather than glances at. */
+.prose{
+  width: min(46rem, 100%);
+  justify-items: stretch;
+  gap: 0;
+  text-align: left;
+  font-size: var(--t-body);
+  line-height: 1.55;
+}
+.prose h2{
+  margin: 1.4em 0 .5em;
+  font-family: var(--font-display);
+  font-size: var(--t-name);
+  font-weight: 600;
+  line-height: 1.15;
+}
+.prose h2:first-child{ margin-top: 0; }
+.prose p{ margin: 0 0 .9em; }
+.prose strong{ color: var(--brass); font-weight: 600; }
+.prose a{ color: var(--brass); }
+.prose__foot{ margin: 1.2em 0 0; font-size: var(--t-label); }
 
 /* ---- the start sheet ------------------------------------------------------ */
 
@@ -931,6 +955,9 @@ button.card:disabled{ cursor: default; }
       <button class="tool" id="again" type="button" title="Nuova smazzata" aria-label="Nuova smazzata">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.7 3.3"/><path d="M20 5.5V11h-5.5"/></svg>
       </button>
+      <button class="tool" id="about" type="button" title="Regole" aria-label="Regole">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>
+      </button>
     </nav>
   </header>
 
@@ -1004,9 +1031,127 @@ button.card:disabled{ cursor: default; }
   </main>
 </div>
 
+<!-- ============================ the rules ============================ -->
+
+<!-- Both languages, one after the other, because the game is played in Italian
+     and read by people who are not. No toggle: a control that hides half the
+     page is a state the check has to render and a reader has to find, and the
+     two together are shorter than most rulebooks. -->
+<div class="view" id="viewRules" hidden>
+  <header class="topbar">
+    <button class="tool" id="rulesBack" type="button" title="Indietro" aria-label="Indietro">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="wordmark">Regole</span>
+    <span class="tools" aria-hidden="true"></span>
+  </header>
+  <div class="sheet-body">
+    <div class="sheet-inner prose">
+      <section lang="it">
+        <h2>Scopa a due</h2>
+
+        <p>Quaranta carte, quattro semi: denari, coppe, spade, bastoni.
+        Il mazziere dà <strong>tre carte a testa e quattro scoperte sul
+        tavolo</strong>. Quando entrambi restano senza carte ne dà altre tre per
+        uno, e nient&rsquo;altro al tavolo: sei giri, trentasei carte giocate. Se
+        fra le quattro del tavolo ci sono tre o quattro re si rifà la
+        smazzata.</p>
+
+        <p>Si gioca una carta per volta. Se sul tavolo c&rsquo;è una
+        carta <strong>dello stesso valore</strong> si prende quella, e solo
+        quella — anche se una somma sarebbe possibile. Altrimenti, se un gruppo
+        di carte <strong>somma al valore</strong> della carta giocata, si prende
+        quel gruppo. Se non si prende nulla la carta resta sul tavolo. Prendere è
+        obbligatorio: una carta che può prendere prende. Si può sempre scegliere
+        di giocare un&rsquo;altra carta che non prende niente.</p>
+
+        <p>Una presa che <strong>svuota il tavolo</strong> è una
+        <strong>scopa</strong> e vale un punto, tranne quando è fatta con
+        l&rsquo;ultima carta della smazzata. Dopo la trentaseiesima carta quel
+        che resta sul tavolo va a chi ha preso per ultimo, e non è una scopa.</p>
+
+        <p>Alla fine si contano cinque cose: <strong>carte</strong> (più
+        di venti), <strong>denari</strong> (più di cinque), il
+        <strong>settebello</strong> (il sette di denari), la
+        <strong>primiera</strong>, e <strong>una scopa un punto</strong>. Un
+        pareggio su carte, denari o primiera non dà il punto a nessuno.</p>
+
+        <p>La <strong>primiera</strong> è la somma della carta migliore
+        di ogni seme, con questi valori: sette 21, sei 18, asso 16, cinque 15,
+        quattro 14, tre 13, due 12, figure 10. Chi non ha carte di un seme non
+        può prendere il punto.</p>
+
+        <p>Al tavolo: <strong>un tocco gioca la carta</strong>. Se la
+        regola lascia una scelta di presa, il primo tocco alza la carta e segna
+        in ottone le carte che prenderebbe; un tocco su una carta del tavolo
+        cambia la presa proposta, e il secondo tocco sulla carta alzata la gioca.
+        Con la tastiera: <strong>1</strong>–<strong>3</strong> scelgono la carta,
+        <strong>spazio</strong> cambia la presa, <strong>Invio</strong> gioca e
+        <strong>Esc</strong> rimette giù.</p>
+      </section>
+
+      <section lang="en">
+        <h2>Scopa for two</h2>
+
+        <p>Forty cards in four suits: denari, coppe, spade, bastoni. The
+        dealer gives <strong>three cards each and four face up on the
+        table</strong>. When both hands are empty they give three more each, and
+        nothing more to the table: six rounds, thirty-six cards played. If three
+        or four kings are among the four on the table, the deal is done
+        again.</p>
+
+        <p>One card at a time. If the table holds a card of the
+        <strong>same value</strong>, that card is taken and only that one — even
+        when a sum would also work. Otherwise, if a set of cards <strong>adds up
+        to the value</strong> played, that set is taken. If nothing can be taken
+        the card stays on the table. Taking is compulsory: a card that can take,
+        takes. You are always free to play a different card that takes
+        nothing.</p>
+
+        <p>A capture that <strong>empties the table</strong> is a
+        <strong>scopa</strong> and scores a point — except when it is made with
+        the last card of the deal. After the thirty-sixth card, whatever is left
+        on the table goes to whoever captured last, and that is not a scopa.</p>
+
+        <p>Five things are counted at the end:
+        <strong>cards</strong> (more than twenty), <strong>denari</strong> (more
+        than five), the <strong>settebello</strong> (the seven of denari), the
+        <strong>primiera</strong>, and <strong>one point per scopa</strong>. A tie
+        on cards, denari or primiera gives that point to nobody.</p>
+
+        <p>The <strong>primiera</strong> is the sum of your best card in
+        each suit, counted this way: seven 21, six 18, ace 16, five 15, four 14,
+        three 13, two 12, face cards 10. A player missing a suit cannot take the
+        point.</p>
+
+        <p>At the table: <strong>one tap plays a card</strong>. When the
+        rule leaves a choice of capture, the first tap raises the card and marks
+        in brass what it would take; a tap on a table card switches the proposal,
+        and a second tap on the raised card plays it. By keyboard:
+        <strong>1</strong>–<strong>3</strong> pick a card, <strong>space</strong>
+        cycles the capture, <strong>Enter</strong> plays and
+        <strong>Esc</strong> puts it back.</p>
+      </section>
+
+      <p class="prose__foot">
+        <a href="https://github.com/diegoami/Scopetta">Sorgente di questo gioco</a> &middot;
+        <a href="https://github.com/diegoami/Tressette">Tressette</a> &middot;
+        <a href="https://github.com/diegoami/discola-web">Discola, la briscola del 1997</a>
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- ============================ start ============================ -->
 <div class="view" id="viewStart">
-  <header class="topbar"><span class="wordmark">Scopetta</span></header>
+  <header class="topbar">
+    <span class="wordmark">Scopetta</span>
+    <nav class="tools">
+      <button class="tool" id="aboutStart" type="button" title="Regole" aria-label="Regole">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>
+      </button>
+    </nav>
+  </header>
   <div class="sheet-body">
     <div class="sheet-inner">
       <h1 class="hero-title">Scopetta</h1>
@@ -1048,8 +1193,9 @@ function applyDeck(name){
 
 // Past this a string stops being a label and becomes something somebody reads:
 // the check holds anything longer to the floor it holds body copy to, and the
-// say line is set at --t-tiny, which is 12.5px on a phone. It is a readability
-// bound and nothing else — where the line WRAPS is a width, and measured.
+// say line is set at --t-say, which is 15px on a phone — over the floor, but
+// only because the line is short. It is a readability bound and nothing else —
+// where the line WRAPS is a width, and measured.
 const LABEL_CHARS = 39;
 
 const NOMI = ["asso", "due", "tre", "quattro", "cinque", "sei", "sette",
@@ -1146,7 +1292,7 @@ const el = {};
 for (const id of ["table","tavola","oppHand","youHand","pileOpp","pileYou","mazzo",
   "countOpp","countYou","countMazzo","scopeOpp","scopeYou","oppName","oppDeal","youDeal",
   "plateOpp","plateYou","selName","toast","viewTable","viewStart","play","again",
-  "result","resultGrid","resultAgain"])
+  "result","resultGrid","resultAgain","viewRules","about","aboutStart","rulesBack"])
   el[id] = document.getElementById(id);
 
 // A slot that had nothing and now has a card has just been dealt. Comparing
@@ -1273,36 +1419,37 @@ function renderResult(){
 
   const r = scoreDeal(state);
   const piles = state.prese;
-  const bySuit = (w, s) => piles[w].filter(c => c.s === s).length;
-  const den = w => bySuit(w, DENARI);
-  const has = w => piles[w].some(isSettebello);
-  const si = yes => yes ? "sì" : "—";
+  const den = w => piles[w].filter(c => c.s === DENARI).length;
+  // One card, so one or none: a number, like every other row. The column reads
+  // as a column that way, and "sì" said nothing a 1 does not.
+  const has = w => piles[w].some(isSettebello) ? 1 : 0;
   // A primiera with a suit missing scores nothing, and the engine says so by
-  // returning null rather than a total. "—" is that, not a zero.
+  // returning null rather than a total. A dash is that — not a zero, which
+  // would be a total nobody has.
   const prim = w => primieraTotale(piles[w]) ?? "—";
 
-  // label, yours, theirs, who took the point (null for scope, which is counted
-  // rather than contested, and for a point nobody took), and whether the row is
-  // working rather than a point.
+  // label, yours, theirs, who took the point — null where nobody took it, and
+  // "scope" for the row that is counted rather than contested.
   //
-  // Carte is a count of forty cards and the four suits are what it is made of,
-  // so they go under it: "carte 21–19" says who won and the suits say how. The
-  // denari row appears twice on purpose — once as a quarter of the carte, once
-  // as a point of its own — because those are two different facts about the
-  // same six cards.
+  // Five rows and no working under any of them. Carte briefly had the four
+  // suits beneath it and they earned nothing: three of the four can never
+  // score, the fourth repeats the denari row two lines down, and carte —
+  // eighteen against twenty-two — was the one row nobody needed help with. The
+  // rows that did need help are the total, which the markers answer, and
+  // primiera, which shows its totals because a point decided by an arithmetic
+  // nobody can see is the one worth spelling out.
+  //
   // Each row carries what it is WORTH as well as what it counts, because a
   // column of counts and a total underneath does not say how one becomes the
   // other. One point to whoever takes each of the four, and one for every
   // scopa: the markers down the right of each column are the sum, and the
   // line under the table says the rule in words once.
   const rows = [
-    ["carte",      piles[BASSO].length, piles[ALTO].length, r.carte, false],
-    ...SEMI.map((nome, suit) =>
-    [nome,         bySuit(BASSO, suit), bySuit(ALTO, suit), null, true]),
-    ["denari",     den(BASSO), den(ALTO), r.denari, false],
-    ["settebello", si(has(BASSO)), si(has(ALTO)), r.settebello, false],
-    ["primiera",   prim(BASSO), prim(ALTO), r.primiera, false],
-    ["scope",      r.scope[BASSO], r.scope[ALTO], "scope", false],
+    ["carte",      piles[BASSO].length, piles[ALTO].length, r.carte],
+    ["denari",     den(BASSO), den(ALTO), r.denari],
+    ["settebello", has(BASSO), has(ALTO), r.settebello],
+    ["primiera",   prim(BASSO), prim(ALTO), r.primiera],
+    ["scope",      r.scope[BASSO], r.scope[ALTO], "scope"],
   ];
 
   const label = (text, cls) => {
@@ -1328,12 +1475,11 @@ function renderResult(){
   };
 
   const out = [label("", "r-head"), label("Tu", "r-head"), label(state.opponent, "r-head")];
-  for (const [name, mine, theirs, won, sub] of rows){
-    const tag = sub ? " r-sub" : "";
+  for (const [name, mine, theirs, won] of rows){
     const pts = who => won === "scope" ? r.scope[who] : (won === who ? 1 : 0);
-    out.push(label(name, "r-label" + tag));
-    out.push(num(mine, "r-num" + tag, sub ? 0 : pts(BASSO)));
-    out.push(num(theirs, "r-num" + tag, sub ? 0 : pts(ALTO)));
+    out.push(label(name, "r-label"));
+    out.push(num(mine, "r-num", pts(BASSO)));
+    out.push(num(theirs, "r-num", pts(ALTO)));
   }
   const win = r.punti[BASSO] === r.punti[ALTO] ? null
             : r.punti[BASSO] > r.punti[ALTO] ? BASSO : ALTO;
@@ -1617,7 +1763,13 @@ function blip(cut){
 
 /* --- screens ---------------------------------------------------------------- */
 
-const VIEWS = { table: el.viewTable, start: el.viewStart };
+const VIEWS = { table: el.viewTable, start: el.viewStart, rules: el.viewRules };
+
+// Where the back button goes. The rules can be opened from the table or from
+// the start sheet, and it returns to whichever it came from — a back button
+// that always goes to the same place abandons a deal for anyone who opened the
+// rules mid-hand.
+let cameFrom = "start";
 
 function show(name){
   for (const [k, node] of Object.entries(VIEWS)) node.hidden = k !== name;
@@ -1669,6 +1821,14 @@ window.addEventListener("resize", () => {
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => render());
 
 /* --- go --------------------------------------------------------------------- */
+
+const openRules = () => {
+  cameFrom = el.viewTable.hidden ? "start" : "table";
+  show("rules");
+};
+el.about.addEventListener("click", openRules);
+el.aboutStart.addEventListener("click", openRules);
+el.rulesBack.addEventListener("click", () => show(cameFrom));
 
 el.play.addEventListener("click", () => { show("table"); newDealHere(); });
 el.again.addEventListener("click", () => newDealHere());

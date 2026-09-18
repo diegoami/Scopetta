@@ -125,6 +125,19 @@ assertions that would have caught the clipped deck were all written and all
 green. When a rule is about the widest thing on the screen, the grid needs the
 narrowest screen the rule has to hold on.
 
+**And a way into a screen is a state.** The rules screen is reachable from the
+start sheet and from the table, and Back has to return to whichever opened it —
+a Back that always lands on the start sheet abandons the deal of anyone who
+opened the rules mid-hand. A screen the check only ever enters by one door is
+half-checked, so both doors are in `SCREENS` and both are walked back.
+
+**And an assertion about a page's language belongs on the element that carries
+it.** "The rules are in both languages" asserted as *a `lang` attribute exists
+somewhere* passes a page whose English paragraphs are tagged Italian — the break
+written for it survived, because deleting one `lang="en"` left six English
+paragraphs behind. Each language is a `section[lang]` now and each section is
+measured on its own, which is also what a screen reader and a hyphenator read.
+
 **And a new assertion is made to fail before it is made to pass.** Write it
 against a deliberately broken page first and watch it go red, because an
 assertion written against already-correct code encodes what the code happens to
