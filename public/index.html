@@ -983,6 +983,18 @@ const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.han
 // Tressette's reason, and the same fix. `dir` maps an index in `cards` to the
 // player it is going to, which is not always the player who just played: the
 // leftovers on the last play go to whoever captured last.
+// The table's pace, as fractions of state.speed, in one place because it is a
+// single judgement rather than six. LANDS is the one that matters: it is how
+// long the card that was just played sits on the table before anything happens
+// to it, and it is the whole of being able to see what the opponent did. The
+// owner played it at half this and asked for at least two beats.
+//
+// SWEEP is motion rather than a pause, and it is not shorter than the .42s the
+// keyframes take at the default speed, or the cards vanish mid-flight. NEXT is
+// the wait before the opponent answers — shorter than the others, because by
+// then the table has already paused once and moved once.
+const LANDS = 1.0, SWEEP = 0.5, NEXT = 0.4, BEAT = 0.5;
+
 let sweeping = null;
 // The card just laid down, while it is still the newest thing on the table.
 // A lay puts a card among as many as twelve others and nothing says which one
@@ -1283,7 +1295,7 @@ function play(who, slot, presa){
     if (r.nuovoGiro){
       beat = true;
       render();
-      later(() => { beat = false; render(); resume(); }, state.speed * 0.5);
+      later(() => { beat = false; render(); resume(); }, state.speed * BEAT);
       return;
     }
     render();
@@ -1296,7 +1308,7 @@ function play(who, slot, presa){
   if (!swept){
     laid = state.tavola.length - 1;
     render();
-    later(then, state.speed * 0.5);
+    later(then, state.speed * LANDS);
     return;
   }
 
@@ -1314,13 +1326,13 @@ function play(who, slot, presa){
   later(() => {
     sweeping = { cards, dir, played: landed };
     render();
-    later(then, state.speed * 0.45);
-  }, state.speed * 0.5);
+    later(then, state.speed * SWEEP);
+  }, state.speed * LANDS);
 }
 
 function resume(){
-  if (state.over){ later(() => finish(), state.speed * 0.6); return; }
-  if (state.deveGiocare === ALTO) later(() => computerPlay(), state.speed * 0.6);
+  if (state.over){ later(() => finish(), state.speed * NEXT); return; }
+  if (state.deveGiocare === ALTO) later(() => computerPlay(), state.speed * NEXT);
 }
 
 function computerPlay(){

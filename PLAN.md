@@ -947,6 +947,17 @@ as twelve others. **Found by the owner, playing the preview, after five review
 rounds had not** — the check now renders all three beats of a capture and both
 ways a card can arrive.
 
+**The pace is the owner's, and it is one judgement in one place.** `LANDS`,
+`SWEEP`, `NEXT` and `BEAT` are fractions of `state.speed` declared together, so
+the table's rhythm can be read and changed without hunting through six
+`later()` calls. The owner played the first version and asked for at least two
+beats on the card that was just played: `LANDS` is 1.0 rather than 0.5, which
+is 900ms at the default speed, and `NEXT` came down from 0.6 to 0.4 to pay for
+it — by the time the opponent answers, the table has already paused once and
+moved once. A capture plays out in 1.71s where it took 1.40s, and the part that
+grew is the part you are meant to look at. `SWEEP` is not allowed below the
+420ms the keyframes take at the default speed, or the cards vanish mid-flight.
+
 **The sweep.** Captured cards leave the table toward whoever took them,
 Tressette's animation forked with the rest of the sheet, and it is the only
 thing on the page that says *which* cards a capture took — without it the

@@ -254,7 +254,7 @@ const poseUnnameable = `(() => {
 const playLay = `(() => {
   state.tavola = [{s:0,n:10}];
   state.hands[0] = [{s:1,n:3}, {s:3,n:10}, {s:2,n:8}];
-  state.deveGiocare = 0; state.over = false; state.speed = 1000;
+  state.deveGiocare = 0; state.over = false; state.speed = 600;
   state.selected = null; state.scelta = 0;
   render();
   tapped(0);
@@ -265,7 +265,7 @@ const playLay = `(() => {
 const playSweepOpp = `(() => {
   state.tavola = [{s:2,n:4}];
   state.hands[1] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
-  state.deveGiocare = 1; state.over = false; state.speed = 1000;
+  state.deveGiocare = 1; state.over = false; state.speed = 600;
   state.selected = null; state.scelta = 0;
   render();
   computerPlay();
@@ -293,7 +293,7 @@ const playToBeat = `(() => {
     // and the beat long enough to measure. Everything before it runs fast.
     const left = state.hands[0].filter(Boolean).length
                + state.hands[1].filter(Boolean).length;
-    if (left === 1) state.speed = 4000;
+    if (left === 1) state.speed = 2500;
     const opts = prese(state.tavola, state.hands[who][slot]);
     play(who, slot, opts[0] || []);
     if (left === 1) return true;
@@ -307,22 +307,25 @@ const playToBeat = `(() => {
 const playSweep = `(() => {
   state.tavola = [{s:2,n:2},{s:0,n:2}];
   state.hands[0] = [{s:0,n:4}, {s:3,n:10}, {s:1,n:2}];
-  state.deveGiocare = 0; state.over = false; state.speed = 1000;
+  state.deveGiocare = 0; state.over = false; state.speed = 600;
   state.selected = null; state.scelta = 0;
   render();
   tapped(0);
 })()`;
 
 // A capture is three beats and each is measured: the card lands among the cards
-// it is about to take (speed x 0.5), they all leave together (x 0.45), and the
-// table is empty with the scopa announced. At speed 1000 that is 0→500→950, so
-// the waits below sit inside each. The toast outlives all of it — it hides
-// 1600ms after it is raised — so the settled state is still announcing.
-const LANDS_MS = 200;
+// it is about to take (speed x LANDS), they all leave together (x SWEEP), and
+// the table is empty with the scopa announced. At the speed the fixtures set,
+// 600, that is 0 → 600 → 900, so each wait below lands in the middle of its
+// beat with about 150ms of margin either side. The toast outlives all of it —
+// it hides 1600ms after it is raised, and does not scale with speed — so the
+// settled state is still announcing the scopa when it is measured.
+//
+// These follow the page's pace and are re-derived when it changes; they were
+// 200/450/1150 against a speed of 1000 and a shorter landing beat.
+const LANDS_MS = 250;
 const SWEEPING_MS = 450;
-// The whole of it — landing and sweeping — plus a margin, and still inside the
-// toast's 1600ms.
-const SWEEP_MS = 1150;
+const SWEEP_MS = 1050;
 
 /* ---- opening a page -------------------------------------------------------- */
 
