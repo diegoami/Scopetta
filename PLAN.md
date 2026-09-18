@@ -958,6 +958,32 @@ moved once. A capture plays out in 1.71s where it took 1.40s, and the part that
 grew is the part you are meant to look at. `SWEEP` is not allowed below the
 420ms the keyframes take at the default speed, or the cards vanish mid-flight.
 
+**The result is counted out, and that is iteration 4's dialog arriving early.**
+§3.7 had the deal's score land in the say line until iteration 4 gave it a
+dialog; the owner played iteration 3 and asked for the breakdown, so the five
+points are laid out with the counts beside them — carte 21–19, denari 6–4,
+settebello, primiera, scope, and the total — over the table and out of the
+budget, like the toast, because five rows of counting cannot be a fixed number
+of pixels. The counts are read from the piles rather than from `scoreDeal`,
+which says only who won each point: a score with no working is a number the
+player has to take on trust. What iteration 4 still owes it is the partita
+behind it, the sheets, and the confirm scrim.
+
+**The say line has a size of its own, `--t-say`, and it is not `--t-tiny`.** It
+was, and at 12.5px on a phone it was the smallest type on the table while being
+the only text that says what the next tap will do. The budget follows it —
+`--say` is derived from `--t-say` — so making it readable is paid for in the
+card size rather than by pushing a row off the bottom, and the check holds it to
+the floor it holds body copy to whatever its length. The six pixels it cost took
+1100x320 out of the viewport grid: the card is on its clamp floor there and the
+shape is simply below what three rows of cards and four of chrome can hold.
+
+**A new hand is dealt, not shown.** Measured across a round boundary at 40ms
+intervals, three outlines became three cards in a single sample — a flicker
+rather than a deal. A slot that had nothing and now has a card restarts a short
+deal-in; comparing before with after is what makes it general, catching the
+first deal and the five round deals and nothing else.
+
 **The sweep.** Captured cards leave the table toward whoever took them,
 Tressette's animation forked with the rest of the sheet, and it is the only
 thing on the page that says *which* cards a capture took — without it the

@@ -165,6 +165,11 @@ listen for `resize` is a page the whole grid agrees with. It rotates four shapes
 both ways with thirteen cards down, and raises a card at one width to read it at
 another.
 
+**The deal over, with the points counted out** — carte, denari, settebello,
+primiera, scope and the total, with the counts beside them. The deal pass reads
+every number back against `scoreDeal` and the piles: a breakdown that agrees
+with itself and not with the engine is worse than none.
+
 **A card arriving** — the beat the owner found missing by playing the preview.
 A capturing card never touches `state.tavola`, so a middle row that draws the
 state draws it nowhere and the opponent's play cannot be seen at all. The check
@@ -236,6 +241,9 @@ was committed:
 | the plate spills past its own width, or lands on the cards | the seat row is plate, five cards, plate, and the budget paid for the cards only: the table grew to fit and clipped the deck off the right edge, with no sideways scroll to show for it |
 | the middle draws N rows | the wrap rule was a line of JavaScript no assertion read |
 | the beat / the sweep | states the engine will not sit in, so a posed version passes whether or not the page can reach the real one |
+| N of M cards in the new hand were not drawn as dealt | three outlines became three cards between one frame and the next, which reads as a flicker rather than as a deal. The animation itself is not asserted — this check runs with motion off — only the mark the page puts on a card it has just dealt |
+| the say line at 12.5px | it is the shortest text on the table and the only text that says what the next tap will *do*, so it is held to the floor body copy is held to whatever its length: length is a proxy for "is this read", and here it points the wrong way |
+| the deal ended and the points were never counted out | a total with no working is a number the player has to take on trust |
 | the card that was played was not laid on the table | `gioca` takes a capturing card from a hand to a pile, so the table never draws it and the opponent's play is invisible — the one defect in this iteration that a player found before the check did |
 | the capture is sweeping the wrong way: N of M | counting "is anything going the right way" cannot see a capture that sends the cards one way and the card that took them the other |
 | the plate spills past its own height | the mazziere tag became a row of its own when the plate became a grid, and a box derived for one line of type drew it behind the cards at every portrait viewport — with both plate assertions green, because both asked about width |

@@ -78,7 +78,7 @@
      card below it down 31px, past the fold in landscape. Reserving the space
      costs those pixels honestly, in the budget. A capture is named in a few
      words — "Prendi il 4 e il 3 con il 7" — so one line of --t-tiny holds it. */
-  --say: calc(var(--t-tiny) * 1.5 + 4px);
+  --say: calc(var(--t-say) * 1.5 + 4px);
   --chrome: calc(var(--topbar) + 2*var(--pad-block) + 2*var(--step)
                  + 2*var(--tavola-pad) + var(--extra-gap) + var(--plates)
                  + var(--say) + var(--slack));
@@ -146,6 +146,14 @@
   --t-cta:   1.22rem;
   --t-btn:   .95rem;
   --t-tiny:  .8rem;
+  /* The say line has a size of its own, and it is not --t-tiny. It was, and at
+     12.5px on a phone it is the smallest type on the table — while being the
+     one line the player has to READ rather than glance at, since it is what
+     tells them what the next tap will do when a capture has to be chosen. The
+     owner played it and said so. The budget follows it: --say above is derived
+     from this, so making it bigger pays for itself in the card size rather
+     than by pushing a row off the bottom. */
+  --t-say:   1.05rem;
 
   --font-display: "Bodoni Moda", "Didot", "Times New Roman", serif;
   --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -381,6 +389,18 @@ button.card:disabled{ cursor: default; }
   from{ opacity: 1; transform: none; }
   to  { opacity: 0; transform: translateY(70px) scale(.82) rotate(6deg); }
 }
+
+/* A card arriving in a hand. Without this a new hand appears between one frame
+   and the next — three outlines become three cards with nothing in between —
+   which reads as a flicker rather than as a deal. Measured across a round
+   boundary at 40ms intervals: `[.- .- B+]` to `[B+ B+ B+]` in a single sample.
+   `backwards` so the first painted frame is already the start of the
+   animation. */
+@keyframes dealIn{
+  from{ opacity: 0; transform: translateY(-14px) scale(.96); }
+  to  { opacity: 1; transform: none; }
+}
+.card[data-dealt="true"]{ animation: dealIn .3s ease-out backwards; }
 
 /* The card just played, for the beat before the table settles. Ivory rather
    than brass, because brass on this table means "the capture being proposed"
@@ -656,7 +676,7 @@ button.card:disabled{ cursor: default; }
   text-transform: uppercase;
   letter-spacing: .1em;
   color: var(--brass);
-  font-size: var(--t-tiny);
+  font-size: var(--t-say);
 }
 
 /* ---- the toast ------------------------------------------------------------ */
@@ -685,6 +705,67 @@ button.card:disabled{ cursor: default; }
   color: var(--brass);
   background: rgba(8, 26, 21, .92);
   box-shadow: inset 0 0 0 1px var(--brass-dim), 0 8px 24px rgba(0, 0, 0, .45);
+}
+
+/* ---- the result ----------------------------------------------------------- */
+
+/* Over the table and out of the budget, like the toast: five rows of counting
+   cannot be a fixed number of pixels, and a row that cannot be budgeted floats.
+   It scrolls rather than clips if a short landscape window cannot hold it —
+   reaching the last line by scrolling beats losing it. */
+.table > .result{
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(.5rem, 2vw, 1rem);
+  padding: var(--pad-inline);
+  overflow: auto;
+  background: rgba(8, 26, 21, .94);
+}
+.result__title{
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-name);
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+}
+.result__grid{
+  display: grid;
+  grid-template-columns: auto minmax(2.5ch, auto) minmax(2.5ch, auto);
+  align-items: baseline;
+  gap: .3rem clamp(.9rem, 4vw, 2rem);
+  font-size: var(--t-label);
+}
+.result__grid > .r-head{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--ivory-dim);
+  padding-bottom: .25rem;
+  border-bottom: 1px solid var(--rail-line);
+}
+.result__grid > .r-label{
+  font-family: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ivory-dim);
+}
+.result__grid > .r-num{
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.result__grid > [data-won="true"]{ color: var(--brass); font-weight: 700; }
+.result__grid > .r-total{
+  margin-top: .35rem;
+  padding-top: .4rem;
+  border-top: 1px solid var(--brass-dim);
+  font-size: var(--t-name);
+  color: var(--brass);
 }
 
 /* ---- the start sheet ------------------------------------------------------ */
@@ -800,6 +881,7 @@ button.card:disabled{ cursor: default; }
     --t-cta:   clamp(19px, 5.2vw, 46px);
     --t-btn:   clamp(15px, 4vw,   32px);
     --t-tiny:  clamp(12.5px, 3.2vw, 28px);
+    --t-say:   clamp(15px, 4.2vw, 34px);
   }
   .sheet-inner{ width: 100%; }
 }
@@ -853,6 +935,16 @@ button.card:disabled{ cursor: default; }
     </section>
 
     <p class="toast" id="toast" hidden></p>
+
+    <!-- The deal's five points, counted out. Iteration 4 gives this a proper
+         dialog with the running partita behind it; the owner asked for the
+         breakdown while playing iteration 3, and a score with no working is a
+         score you have to take on trust. -->
+    <section class="result" id="result" hidden aria-label="Fine della smazzata">
+      <h2 class="result__title">Fine della smazzata</h2>
+      <div class="result__grid" id="resultGrid"></div>
+      <button class="btn" id="resultAgain" type="button">Nuova smazzata</button>
+    </section>
 
     <section class="seat seat--you">
       <div class="say">
@@ -1023,8 +1115,19 @@ function sayLater(fn, ms){
 const el = {};
 for (const id of ["table","tavola","oppHand","youHand","pileOpp","pileYou","mazzo",
   "countOpp","countYou","countMazzo","scopeOpp","scopeYou","oppName","oppDeal","youDeal",
-  "plateOpp","plateYou","selName","toast","viewTable","viewStart","play","again"])
+  "plateOpp","plateYou","selName","toast","viewTable","viewStart","play","again",
+  "result","resultGrid","resultAgain"])
   el[id] = document.getElementById(id);
+
+// A slot that had nothing and now has a card has just been dealt. Comparing
+// before with after is what makes this general: it catches the first deal, the
+// five round deals, and nothing else — no flag to set and none to forget.
+function dealt(node, was){
+  if (was !== "true" || node.dataset.empty !== "false") return;
+  node.removeAttribute("data-dealt");
+  void node.offsetWidth;            // or the animation does not start again
+  node.dataset.dealt = "true";
+}
 
 function faceOf(node, card){
   if (!card){
@@ -1084,7 +1187,9 @@ function render(){
   const take = new Set(propostaCorrente());
   [...el.youHand.children].forEach((node, slot) => {
     const card = mano(BASSO)[slot];
+    const was = node.dataset.empty;
     faceOf(node, card);
+    dealt(node, was);
     // `tapped` refuses while the table is sweeping, so the button has to look
     // refused too: a card that takes a tap and does nothing is worse than one
     // that is plainly not ready.
@@ -1103,7 +1208,9 @@ function render(){
 
   // --- their hand, face down
   [...el.oppHand.children].forEach((node, slot) => {
+    const was = node.dataset.empty;
     if (mano(ALTO)[slot]) backOf(node); else faceOf(node, null);
+    dealt(node, was);
   });
 
   // --- the table
@@ -1123,6 +1230,53 @@ function render(){
   el.plateYou.classList.toggle("plate--turn", yourTurn);
 
   renderSay();
+  renderResult();
+}
+
+// The deal's five points, counted out rather than summed for you. `scoreDeal`
+// says who won each; the counts beside them are read from the piles, because
+// "denari" with no number is a claim and "denari 6–4" is the working.
+function renderResult(){
+  const over = !!(state.over && state.dealt);
+  el.result.hidden = !over;
+  if (!over) return;
+
+  const r = scoreDeal(state);
+  const piles = state.prese;
+  const den = w => piles[w].filter(c => c.s === DENARI).length;
+  const has = w => piles[w].some(isSettebello);
+  const si = yes => yes ? "sì" : "—";
+
+  // label, yours, theirs, who took the point (null for scope, which is counted
+  // rather than contested, and for a point nobody took)
+  const rows = [
+    ["carte",      piles[BASSO].length, piles[ALTO].length, r.carte],
+    ["denari",     den(BASSO), den(ALTO), r.denari],
+    ["settebello", si(has(BASSO)), si(has(ALTO)), r.settebello],
+    ["primiera",   si(r.primiera === BASSO), si(r.primiera === ALTO), r.primiera],
+    ["scope",      r.scope[BASSO], r.scope[ALTO], null],
+  ];
+
+  const cell = (text, cls, won) => {
+    const d = document.createElement("div");
+    d.className = cls;
+    d.textContent = String(text);
+    if (won) d.dataset.won = "true";
+    return d;
+  };
+
+  const out = [cell("", "r-head"), cell("Tu", "r-head"), cell(state.opponent, "r-head")];
+  for (const [label, mine, theirs, won] of rows){
+    out.push(cell(label, "r-label"));
+    out.push(cell(mine, "r-num", won === BASSO));
+    out.push(cell(theirs, "r-num", won === ALTO));
+  }
+  const win = r.punti[BASSO] === r.punti[ALTO] ? null
+            : r.punti[BASSO] > r.punti[ALTO] ? BASSO : ALTO;
+  out.push(cell("totale", "r-label r-total"));
+  out.push(cell(r.punti[BASSO], "r-num r-total", win === BASSO));
+  out.push(cell(r.punti[ALTO], "r-num r-total", win === ALTO));
+  el.resultGrid.replaceChildren(...out);
 }
 
 // §3.7. One row in landscape, two in portrait with the first ceil(n/2) cards
@@ -1453,6 +1607,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => rend
 
 el.play.addEventListener("click", () => { show("table"); newDealHere(); });
 el.again.addEventListener("click", () => newDealHere());
+el.resultAgain.addEventListener("click", () => newDealHere());
 
 buildHands();
 applyDeck(state.deck);

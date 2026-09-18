@@ -96,7 +96,13 @@ const VIEWPORTS = [
   // rem — grows past the card's height and the seat row stops costing a card.
   ['short window',      980,  340],
   ['shorter window',   1100,  330],
-  ['shortest window',  1100,  320],
+  // Not 1100x320, which was here to give the plate-overhang break somewhere to
+  // fire. The card is on its clamp floor there with nothing left over, so the
+  // six pixels the say line grew when it stopped being the smallest type on the
+  // page have nowhere to go — the budget is right and the shape is simply below
+  // what four rows of chrome and three of cards can fit in. The break fires in
+  // the inflated pass at 500x425 instead, where --slack is 0 and the plate is
+  // taller than the card by four pixels.
 ];
 
 const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
@@ -104,7 +110,7 @@ const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
 
 // The inflated pass runs these, and it is a list of what is IN rather than a
 // list of what is out. What is deliberately not here: the short landscape
-// windows (640x480, 980x340, 1100x330, 1100x320) and the narrowest phone
+// windows (640x480, 980x340, 1100x330) and the narrowest phone
 // (320x568, whose budget wants 32.1px against a 32px floor). At all of them the
 // inflation drives the card onto its clamp floor, which tests the clamp rather
 // than the derivation, exactly as the note on INFLATE says. The rest are
@@ -293,7 +299,7 @@ const playToBeat = `(() => {
     // and the beat long enough to measure. Everything before it runs fast.
     const left = state.hands[0].filter(Boolean).length
                + state.hands[1].filter(Boolean).length;
-    if (left === 1) state.speed = 2500;
+    if (left === 1) state.speed = 1200;
     const opts = prese(state.tavola, state.hands[who][slot]);
     play(who, slot, opts[0] || []);
     if (left === 1) return true;
@@ -446,7 +452,14 @@ const audit = () => {
       const size = parseFloat(cs.fontSize);
       // Two tiers: a short uppercase label can run smaller than a sentence
       // somebody has to read. Body copy sat at 12.5px until it was measured.
-      const floor = text.length > 40 ? 14.5 : 12.5;
+      //
+      // The say line is held to the second tier whatever its length, and that
+      // is the third thing the owner found by playing: it is short because the
+      // budget pays for one line, but it is the only text on the table that
+      // says what the next tap will DO, and it is read rather than glanced at.
+      // Length is a proxy for that and here it points the wrong way.
+      const reads = el.classList.contains('sel-name');
+      const floor = (reads || text.length > 40) ? 14.5 : 12.5;
       if (size < floor - 0.05)
         out.push(`${name(el)} text ${size.toFixed(1)}px, want ${floor} — "${text.slice(0, 32)}"`);
 
@@ -555,7 +568,7 @@ const SCREENS = [
         render();
       })()`);
     } },
-  { name: 'table, the deal over', open: async p => {
+  { name: 'table, the deal over, with the points counted out', open: async p => {
       await p.click('#play');
       await p.evaluate(`(() => {
         state.prese[0] = state.cards.slice(0, 21);
@@ -806,8 +819,8 @@ async function checkTable(browser, only, inflate) {
   // than the card AND the budget has nothing left over: a break that takes a
   // term out of the budget has to have somewhere to show up.
   if (QUICK) list = list.filter(v =>
-    ['phone landscape', 'narrow phone', 'Android small', 'laptop', 'tiny window',
-     'shortest window'].includes(v[0]));
+    ['phone landscape', 'narrow phone', 'Android small', 'laptop',
+     'tiny window'].includes(v[0]));
 
   for (const [vname, w, h] of list) {
     // Two decks even in the quick grid: Romagnole's cards are the widest, so it
@@ -1130,22 +1143,26 @@ async function checkChoice(browser) {
       }));
     }
 
-    // The rungs below the whole name. Two of them are decided by the character
-    // count alone — 43 characters and 81 — so they are the same string at every
-    // width and are asserted as strings.
+    // What the ladder must do, stated as a rule rather than as a string table.
     //
-    // The third is not, and that is the point of it: `Prendi l'asso e il fante
-    // con il cavallo` is 39 characters, inside the count, and 335px, outside a
-    // 360px phone. Which rung wins there depends on the width AND on the font,
-    // so asserting a string against a width is asserting the metrics of
-    // whatever typeface happened to load — which is what shipped a check that
-    // passed here and failed in CI. What is asserted instead is the ladder's
-    // own rule, which is true at every width in every font: the line the player
-    // sees is one of the rungs, it is one line, it is inside its box, and it is
-    // short enough to be a label.
+    // A string table is the shape of assertion that shipped a check passing
+    // here and failing in CI: which rung wins depends on the width AND on the
+    // type metrics, so naming one per viewport is naming the metrics of
+    // whatever typeface happened to load. It was true of the widest line first,
+    // and it became true of the middle rung the moment the say line stopped
+    // being --t-tiny — 28 characters no longer fit a 320px screen.
+    //
+    // So each position declares what it MAY say and, where the count settles
+    // it, what it may not: the whole name is over the cap at two of the three
+    // whatever the font, and the shown line must always be one of the rungs,
+    // one line, inside its box and short enough to be a label.
+    const LONG_FULL = 'Prendi il quattro di bastoni con il quattro';
+    const SEGNATA = 'Prendi la carta segnata';
     const rungBad = [];
-    for (const [pose, want] of [[poseLongSay, LONG_SAY], [poseUnnameable, UNNAMEABLE_SAY],
-                                [poseWidestSay, null]]) {
+    for (const [pose, may, mayNot] of [
+           [poseLongSay,    [LONG_SAY, SEGNATA],     LONG_FULL],
+           [poseUnnameable, [UNNAMEABLE_SAY],        null],
+           [poseWidestSay,  [WIDEST_SAY, CUT_SAY],   null]]) {
       await page.reload();
       await page.addStyleTag({ content: STILL });
       await page.click('#play');
@@ -1153,23 +1170,19 @@ async function checkChoice(browser) {
       await page.mouse.move(0, 0);
       await page.evaluate(pose);
       await page.waitForTimeout(40);
-      rungBad.push(...await page.evaluate(([exp, rungs]) => {
+      rungBad.push(...await page.evaluate(([rungs, forbidden]) => {
         const out = [];
-        const what = exp || 'the widest line';
         if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
-          out.push(`the position meant to say "${what}" played the card instead of raising it`);
+          out.push(`the position meant to say "${rungs[0]}" played the card instead of raising it`);
         const el = document.querySelector('.sel-name');
         const said = el.textContent;
-        if (exp !== null) {
-          if (said !== exp) out.push(`the say line should name the capture "${exp}", it says "${said}"`);
-          return out;
-        }
-        // The rule, rather than the string. Not the character count as well:
-        // this position can only produce the three strings below, all of them
+        if (!rungs.includes(said))
+          out.push(`the say line should name the capture "${rungs[0]}", it says "${said}"`);
+        if (forbidden !== null && said === forbidden)
+          out.push(`the say line says "${said}", which is past the cap however it is measured`);
+        // Not the character count as well: every rung a position may produce is
         // inside the cap, so a length check here has a firing set that is a
         // strict subset of the membership check's and cannot go red on its own.
-        if (!rungs.includes(said))
-          out.push(`the say line says "${said}", which is none of the rungs it may say`);
         const cs = getComputedStyle(el);
         const r = el.getBoundingClientRect();
         if (r.height > parseFloat(cs.lineHeight) + 1)
@@ -1178,7 +1191,7 @@ async function checkChoice(browser) {
         if (r.left < box.left - 1 || r.right > box.right + 1)
           out.push(`the say line is ${Math.round(r.width)}px in a ${Math.round(box.width)}px box: "${said}"`);
         return out;
-      }, [want, [WIDEST_SAY, CUT_SAY, 'Prendi la carta segnata']]));
+      }, [may, mayNot]));
     }
 
     const all = [...bad, ...toastBad, ...crowdBad, ...sayBad, ...rungBad, ...errs];
@@ -1367,6 +1380,27 @@ async function checkStates(browser) {
         out.push(`the empty hand keeps ${slots} card-sized slot(s), want 3 — it collapsed`);
       return out;
     });
+
+    // And then the new hand arrives. It must be DEALT rather than appear: three
+    // outlines becoming three cards between one frame and the next reads as a
+    // flicker, which is what the owner saw. The animation itself cannot be
+    // asserted here — this check runs with motion off, on purpose — but the
+    // mark the page puts on a card it has just dealt can be, and a hand that is
+    // never marked is a hand that was never dealt in.
+    await page.waitForFunction('beat === false', null, { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(60);
+    between.push(...await page.evaluate(() => {
+      const out = [];
+      const hands = [...document.querySelectorAll('.hand .card')];
+      const drawn = hands.filter(c => c.dataset.empty !== 'true');
+      if (drawn.length !== 6)
+        out.push(`the new round drew ${drawn.length} cards, want 6`);
+      const marked = drawn.filter(c => c.dataset.dealt === 'true').length;
+      if (marked !== drawn.length)
+        out.push(`${drawn.length - marked} of ${drawn.length} cards in the new hand `
+          + `were not drawn as dealt — they appeared`);
+      return out;
+    }));
     if (!reached) between.push('the driver never reached the end of a round');
 
     const all = [...lands, ...flying, ...oppLands, ...flyingOpp, ...laidBad,
@@ -1641,14 +1675,25 @@ async function checkDeal(browser) {
     bad.push(`the deal could not be driven to the end: ${String(e).split('\n')[0].slice(0, 100)}`);
   }
 
-  const end = await page.evaluate(() => ({
-    over: state.over, plays: state.plays,
-    domTavola: document.querySelectorAll('.tavola .card').length,
-    tavola: state.tavola.length,
-    piles: state.prese[0].length + state.prese[1].length,
-    say: document.querySelector('.sel-name').textContent,
-    punti: scoreDeal(state).punti,
-  }));
+  const end = await page.evaluate(() => {
+    const r = scoreDeal(state);
+    const grid = document.getElementById('resultGrid');
+    const nums = [...grid.querySelectorAll('.r-num')].map(n => n.textContent);
+    return {
+      over: state.over, plays: state.plays,
+      domTavola: document.querySelectorAll('.tavola .card').length,
+      tavola: state.tavola.length,
+      piles: state.prese[0].length + state.prese[1].length,
+      say: document.querySelector('.sel-name').textContent,
+      punti: r.punti,
+      resultShown: !document.getElementById('result').hidden,
+      labels: [...grid.querySelectorAll('.r-label')].map(n => n.textContent),
+      // carte, denari, settebello, primiera, scope, totale — six rows of two
+      nums,
+      carte: [String(state.prese[0].length), String(state.prese[1].length)],
+      scope: state.scope.map(String),
+    };
+  });
 
   if (!end.over) bad.push(`the deal did not finish: ${end.plays} plays`);
   if (end.plays !== 36) bad.push(`${end.plays} plays, want 36`);
@@ -1659,6 +1704,26 @@ async function checkDeal(browser) {
   // And the score the page shows is what scoreDeal returned.
   const want = `Fine: ${end.punti[0]} a ${end.punti[1]}`;
   if (end.say !== want) bad.push(`the page says "${end.say}", scoreDeal returned "${want}"`);
+
+  // The breakdown, which is the only thing that says WHY the score is what it
+  // is. A total with no working is a number the player has to take on trust.
+  if (!end.resultShown) bad.push('the deal ended and the points were never counted out');
+  const wantLabels = ['carte', 'denari', 'settebello', 'primiera', 'scope', 'totale'];
+  if (JSON.stringify(end.labels) !== JSON.stringify(wantLabels))
+    bad.push(`the breakdown lists ${JSON.stringify(end.labels)}, want ${JSON.stringify(wantLabels)}`);
+  if (end.nums.length !== 12)
+    bad.push(`the breakdown has ${end.nums.length} numbers, want 12 — six rows of two`);
+  else {
+    if (end.nums[0] !== end.carte[0] || end.nums[1] !== end.carte[1])
+      bad.push(`the breakdown counts ${end.nums[0]}/${end.nums[1]} cards, the piles hold `
+        + `${end.carte[0]}/${end.carte[1]}`);
+    if (end.nums[8] !== end.scope[0] || end.nums[9] !== end.scope[1])
+      bad.push(`the breakdown counts ${end.nums[8]}/${end.nums[9]} scope, the engine counted `
+        + `${end.scope[0]}/${end.scope[1]}`);
+    if (end.nums[10] !== String(end.punti[0]) || end.nums[11] !== String(end.punti[1]))
+      bad.push(`the breakdown totals ${end.nums[10]}/${end.nums[11]}, scoreDeal returned `
+        + `${end.punti[0]}/${end.punti[1]}`);
+  }
   if (!chosenByTap) bad.push('no capture was chosen by tapping a table card');
   if (!chosenByAccept) bad.push('no capture was chosen by accepting the proposal');
 

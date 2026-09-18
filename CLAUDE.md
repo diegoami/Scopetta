@@ -65,6 +65,17 @@ play and the leftovers, a pile with three scope showing. When the page gains a
 state, the check gains the row that puts it there, and that is the harder half
 of the work.
 
+**Three more the owner found by playing, after six review rounds had not.** A
+new hand *appeared* — three outlines became three cards between one frame and
+the next, measured at 40ms intervals across a round boundary — which reads as a
+flicker rather than as a deal, so a card that arrives in a hand is dealt in. The
+say line was `--t-tiny`, the smallest type on the table, while being the only
+text on it that says what the next tap will DO: it has a size of its own now and
+the check holds it to the floor it holds body copy to, whatever its length,
+because length is a proxy for "is this read" and here it points the wrong way.
+And the deal ended with a total and no working — the five points are counted out
+now, with the counts beside them, because "denari" with no number is a claim.
+
 **A card the player never sees is a card that was never played.** `gioca` moves
 a capturing card from a hand straight to a pile, so a table that draws only
 what `state.tavola` holds never draws it at all: the opponent's card appears

@@ -40,6 +40,9 @@
 //     of a round`, `the deal could not be driven to the end`, `the posed
 //     position offers only one capture`, `nothing on the crowded table is
 //     marked`, `the say line has no box while a card is raised`;
+//   - the deal-in ANIMATION, as opposed to the mark the page puts on a card it
+//     has just dealt, which is asserted: this check runs with motion off on
+//     purpose, so no pass can watch an animation run;
 //   - and `document.fonts.ready` re-rendering the page, which has no assertion
 //     at all: the check blocks the webfont on purpose so that its measurements
 //     are deterministic and are the worst case, which means the state that
@@ -151,7 +154,7 @@ const EXPECT = {
   "the proposal marks every card on the table": "the table marks",
   "the proposal marks nothing at all": "nothing on the table is marked",
   "the say line goes quiet while a card is raised": "is hidden while a card is raised",
-  "the say line says the whole capture however long it is": "want 14.5",
+  "the say line says the whole capture however long it is": "should name the capture",
   "the say line names the card instead of the capture": "does not say what the tap does",
   "the say line drops the suit that tells two sevens apart": "reads the same for both",
   "tapping a table card does not switch the proposal": "did not change the proposal",
@@ -159,6 +162,11 @@ const EXPECT = {
   // --- the sweep and the beat ----------------------------------------------
   "the capture is not drawn leaving the table": "not drawn leaving the table",
   "the played card never lands on the table": "was not laid on the table",
+  "a new hand appears between one frame and the next": "were not drawn as dealt",
+  "the say line goes back to being the smallest type on the page": "want 14.5",
+  "the points are not counted out": "never counted out",
+  "the breakdown leaves a row out": "the breakdown lists",
+  "the breakdown totals something else": "the breakdown totals",
   "the played card is not drawn as the new one": "drawn as the one just played",
   "a laid card is not drawn as the new one": "just played after a lay",
   "the sweep never ends": "still draws",
@@ -374,6 +382,19 @@ const BREAKS = [
   ["the beat draws the new hand instead of the empty one",
    "const mano = who => (beat || !state.hands[who]) ? [null, null, null] : state.hands[who];",
    "const mano = who => state.hands[who] || [null, null, null];"],
+
+  ["a new hand appears between one frame and the next",
+   "    dealt(node, was);\n  });\n\n  // --- the table",
+   "  });\n\n  // --- the table"],
+  ["the say line goes back to being the smallest type on the page",
+   "  --t-say:   clamp(15px, 4.2vw, 34px);", "  --t-say:   clamp(12.5px, 3.2vw, 28px);"],
+  ["the points are not counted out",
+   "  el.result.hidden = !over;", "  el.result.hidden = true;"],
+  ["the breakdown leaves a row out",
+   "    [\"scope\",      r.scope[BASSO], r.scope[ALTO], null],", ""],
+  ["the breakdown totals something else",
+   "  out.push(cell(r.punti[BASSO], \"r-num r-total\", win === BASSO));",
+   "  out.push(cell(r.punti[BASSO] + 1, \"r-num r-total\", win === BASSO));"],
 
   // The defect the owner found by playing the preview: a capturing card went
   // from a hand to a pile and was drawn nowhere, so the opponent's play could
