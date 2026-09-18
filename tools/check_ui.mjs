@@ -103,6 +103,14 @@ const VIEWPORTS = [
   // what four rows of chrome and three of cards can fit in. The break fires in
   // the inflated pass at 500x425 instead, where --slack is 0 and the plate is
   // taller than the card by four pixels.
+  //
+  // Measured, so that this reads as a limit rather than as a pass kept green:
+  // at 1100x320 the table asks for 6px of scrolling and --cw resolves to 32px,
+  // its floor. Scrolling is the designed fallback — reaching a card by
+  // scrolling beats a card hidden under another one — so the page is not broken
+  // there, it is at the bottom of its range. Note too that 1100x330, the
+  // shortest shape still in the grid, is ALSO on the clamp floor: neither of
+  // them tests the derivation any more, and the shape that does is 980x340.
 ];
 
 const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
@@ -307,6 +315,75 @@ const playToBeat = `(() => {
   return false;
 })()`;
 
+// The 36th play, stopped while it is still landing. Nothing ever rendered it,
+// and two defects shipped in it: `gioca` sets `over` on this play, so the
+// opaque result panel — drawn from `over` alone — went up before the card had
+// landed and the three beats ran behind it; and a last card that takes nothing
+// is swept up WITH the leftovers, to whoever captured last, while the page drew
+// it going to whoever played it. One play in every deal, and every assertion
+// green through both.
+//
+// `beat` is cleared each time round because the driver cancels its own pending
+// timers: a round boundary inside the loop sets it and nothing would ever put
+// it back, and every hand would then be drawn empty.
+const playToLast = `(() => {
+  epoch++; state.mazziere = null;
+  newDeal(state, rngSeed(11));
+  state.speed = 30;
+  render();
+  for (let i = 0; i < 40 && !state.over; i++){
+    beat = false;
+    const who = state.deveGiocare;
+    if (who === null) break;
+    const slot = state.hands[who].findIndex(c => c);
+    if (slot < 0) break;
+    const last = state.plays === 35;
+    if (last) state.speed = 1200;
+    const opts = prese(state.tavola, state.hands[who][slot]);
+    play(who, slot, opts[0] || []);
+    if (last) return { who, ultimaPresa: state.ultimaPresa, took: opts[0] ? opts[0].length : 0 };
+  }
+  return null;
+})()`;
+
+// The 36th play WHEN IT TAKES NOTHING, which is the case the seeded deal above
+// does not happen to reach and the case where the last play is unlike every
+// other one: `gioca` pushes the card onto the table and then sweeps the table
+// into `resto`, which goes to whoever captured last. So the card the player
+// just played goes to the OTHER player, and drawing it toward the one who
+// played it says two players took cards from one play.
+//
+// The position is posed and the play is real — the state before a 36th play is
+// one the engine sits in, unlike the beats themselves. `ultimaPresa` is the
+// opponent and the hand card takes nothing: a re against a 2 and a 3 can make
+// no sum and match no value.
+const playLastLeftovers = `(() => {
+  state.tavola = [{s:2,n:2},{s:0,n:3}];
+  state.hands[0] = [{s:1,n:10}, null, null];
+  state.hands[1] = [null, null, null];
+  state.deveGiocare = 0; state.over = false; state.speed = 1200;
+  state.plays = 35; state.ultimaPresa = 1;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
+// And the same play onto an EMPTY table, which a scopa on the 35th leaves. Then
+// the played card is the only thing swept up, so a page reading "is anything
+// leaving?" off the table's own cards sees nothing, sends the card down the lay
+// path, and indexes a table it is no longer on: the last card of the deal is
+// drawn nowhere at all.
+const playLastOnEmpty = `(() => {
+  state.tavola = [];
+  state.hands[0] = [{s:1,n:10}, null, null];
+  state.hands[1] = [null, null, null];
+  state.deveGiocare = 0; state.over = false; state.speed = 1200;
+  state.plays = 35; state.ultimaPresa = 1;
+  state.selected = null; state.scelta = 0;
+  render();
+  tapped(0);
+})()`;
+
 // A real sweep: one card on the table and the card that takes it in hand, then
 // the page's own tap. The toast, the empty table and the scopa mark are what
 // gioca() and render() do with it — none of it is posed.
@@ -330,6 +407,10 @@ const playSweep = `(() => {
 // These follow the page's pace and are re-derived when it changes; they were
 // 200/450/1150 against a speed of 1000 and a shorter landing beat.
 const LANDS_MS = 250;
+// The same derivation one speed up: playToLast has a whole deal to drive before
+// the measurement starts, so it plays the 36th card at 1200 and the beats fall
+// at 0 → 1200 → 1800. These are cumulative waits from the play.
+const LAST_LANDS_MS = 600, LAST_FLYING_MS = 900, LAST_SETTLED_MS = 900;
 const SWEEPING_MS = 450;
 const SWEEP_MS = 1050;
 
@@ -390,7 +471,11 @@ const audit = () => {
   // a phone screen through nineteen viewports while that assertion passed. Ask
   // the elements directly. The table row is in this list because it is the one
   // this game added.
-  const past = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .toast, .say, .sel-name')]
+  // The result panel is in it too: it has `overflow: auto`, so a grid wider
+  // than the screen would scroll INSIDE the panel and never touch the
+  // document's own width — the same way a clipped table cannot scroll sideways.
+  const past = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, '
+    + '.plate, .toast, .say, .sel-name, .result, .result__grid, .r-num')]
     .filter(el => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
@@ -1162,17 +1247,21 @@ async function checkChoice(browser) {
     // and it became true of the middle rung the moment the say line stopped
     // being --t-tiny — 28 characters no longer fit a 320px screen.
     //
-    // So each position declares what it MAY say and, where the count settles
-    // it, what it may not: the whole name is over the cap at two of the three
-    // whatever the font, and the shown line must always be one of the rungs,
-    // one line, inside its box and short enough to be a label.
-    const LONG_FULL = 'Prendi il quattro di bastoni con il quattro';
+    // So each position declares what it MAY say: the shown line must be one of
+    // the rungs, one line, inside its box and short enough to be a label.
+    //
+    // And only what it may say. A "may not" list was here as well, naming the
+    // whole capture that is over the cap at two of the three positions — but
+    // the forbidden string was never in the may list either, so the membership
+    // check three lines below fired on it first and the extra rule could not go
+    // red on its own. That is the same property this file cited when it deleted
+    // the character count from the same block.
     const SEGNATA = 'Prendi la carta segnata';
     const rungBad = [];
-    for (const [pose, may, mayNot] of [
-           [poseLongSay,    [LONG_SAY, SEGNATA],     LONG_FULL],
-           [poseUnnameable, [UNNAMEABLE_SAY],        null],
-           [poseWidestSay,  [WIDEST_SAY, CUT_SAY],   null]]) {
+    for (const [pose, may] of [
+           [poseLongSay,    [LONG_SAY, SEGNATA]],
+           [poseUnnameable, [UNNAMEABLE_SAY]],
+           [poseWidestSay,  [WIDEST_SAY, CUT_SAY]]]) {
       await page.reload();
       await page.addStyleTag({ content: STILL });
       await page.click('#play');
@@ -1180,7 +1269,7 @@ async function checkChoice(browser) {
       await page.mouse.move(0, 0);
       await page.evaluate(pose);
       await page.waitForTimeout(40);
-      rungBad.push(...await page.evaluate(([rungs, forbidden]) => {
+      rungBad.push(...await page.evaluate(rungs => {
         const out = [];
         if (!document.querySelector('.hand--you .card[aria-pressed="true"]'))
           out.push(`the position meant to say "${rungs[0]}" played the card instead of raising it`);
@@ -1188,8 +1277,6 @@ async function checkChoice(browser) {
         const said = el.textContent;
         if (!rungs.includes(said))
           out.push(`the say line should name the capture "${rungs[0]}", it says "${said}"`);
-        if (forbidden !== null && said === forbidden)
-          out.push(`the say line says "${said}", which is past the cap however it is measured`);
         // Not the character count as well: every rung a position may produce is
         // inside the cap, so a length check here has a firing set that is a
         // strict subset of the membership check's and cannot go red on its own.
@@ -1201,7 +1288,7 @@ async function checkChoice(browser) {
         if (r.left < box.left - 1 || r.right > box.right + 1)
           out.push(`the say line is ${Math.round(r.width)}px in a ${Math.round(box.width)}px box: "${said}"`);
         return out;
-      }, [may, mayNot]));
+      }, may));
     }
 
     const all = [...bad, ...toastBad, ...crowdBad, ...sayBad, ...rungBad, ...errs];
@@ -1364,7 +1451,121 @@ async function checkStates(browser) {
       return out;
     });
 
+    // The 36th play. Everything above measures a play in the middle of a deal,
+    // and the last one is not one of those: `gioca` sets `over` on it and
+    // sweeps the leftovers up with it, so it is the one play where what covers
+    // the table and where the cards go are both decided differently. Nothing
+    // rendered it, and both went wrong.
+    const last = await page.evaluate(playToLast);
+    const ending = [];
+    if (!last) ending.push('the driver never reached the last play of the deal');
+    else {
+      await page.waitForTimeout(LAST_LANDS_MS);
+      ending.push(...await page.evaluate(() => {
+        const out = [];
+        // The panel is opaque and covers the whole table. Up from the first
+        // frame, the card that ends the deal lands and sweeps behind it.
+        if (!document.getElementById('result').hidden)
+          out.push('the points are counted out over the last play, before it has been drawn');
+        const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+        if (played !== 1)
+          out.push(`${played} card(s) drawn as the one that ended the deal, want 1`);
+        const going = document.querySelectorAll('.tavola .card--won-up, .tavola .card--won-down').length;
+        if (going) out.push(`${going} card(s) are already leaving on the last play before it has landed`);
+        return out;
+      }));
+      await page.waitForTimeout(LAST_FLYING_MS);
+      ending.push(...await page.evaluate(info => {
+        const out = [];
+        if (!document.getElementById('result').hidden)
+          out.push('the points are counted out over the last play while it is still sweeping');
+        const down = document.querySelectorAll('.tavola .card--won-down').length;
+        const up = document.querySelectorAll('.tavola .card--won-up').length;
+        const shown = document.querySelectorAll('.tavola .card').length;
+        if (down + up !== shown)
+          out.push(`the last play leaves ${down + up} of ${shown} card(s) on the table — `
+            + `after the 36th card nothing stays on it`);
+        // ONE way. A card that takes nothing on the last play is swept up with
+        // the leftovers, to whoever captured last — drawing it toward the
+        // player who played it says two players took cards from one play.
+        const wantDown = (info.took ? info.who : info.ultimaPresa) === 0;
+        const wrong = wantDown ? up : down;
+        if (wrong)
+          out.push(`the last play sends ${wrong} of ${down + up} card(s) the wrong way: `
+            + `they all go to player ${info.took ? info.who : info.ultimaPresa}`);
+        return out;
+      }, last));
+      await page.waitForTimeout(LAST_SETTLED_MS);
+      ending.push(...await page.evaluate(() => {
+        const out = [];
+        // And then it does show, or holding it back would be a way to lose it.
+        if (document.getElementById('result').hidden)
+          out.push('the last play was drawn and the points were never counted out');
+        const shown = document.querySelectorAll('.tavola .card').length;
+        if (shown) out.push(`the middle still draws ${shown} card(s) after the deal is over`);
+        return out;
+      }));
+    }
+
+    // The 36th play that takes NOTHING, twice: onto a table with cards on it
+    // and onto an empty one. A driven deal reaches whichever ending its seed
+    // reaches — this one captures — so these two are posed up to the play and
+    // then played. Both breaks written for the lines below survived until the
+    // check rendered them, which is the rule in one sentence.
+    // `want` counts the card that was just played as well as the leftovers it
+    // is joining: two on the table plus itself, and nothing plus itself.
+    for (const [what, pose, want] of [['with leftovers under it', playLastLeftovers, 3],
+                                      ['onto an empty table',     playLastOnEmpty,   1]]) {
+      await page.reload();
+      await page.addStyleTag({ content: STILL });
+      await page.click('#play');
+      await page.evaluate(d => applyDeck(d), deck);
+      await page.mouse.move(0, 0);
+      await page.evaluate(pose);
+      await page.waitForTimeout(LAST_LANDS_MS);
+      ending.push(...await page.evaluate(([label, n]) => {
+        const out = [];
+        const shown = document.querySelectorAll('.tavola .card').length;
+        if (shown !== n)
+          out.push(`the last card ${label} is drawn on a table of ${shown}, want ${n}`);
+        const played = document.querySelectorAll('.tavola .card[data-played="true"]').length;
+        if (played !== 1)
+          out.push(`${played} card(s) drawn as the last card ${label}, want 1`);
+        return out;
+      }, [what, want]));
+      await page.waitForTimeout(LAST_FLYING_MS);
+      ending.push(...await page.evaluate(([label, n]) => {
+        const out = [];
+        const down = document.querySelectorAll('.tavola .card--won-down').length;
+        const up = document.querySelectorAll('.tavola .card--won-up').length;
+        if (down + up !== n)
+          out.push(`${down + up} of ${n} card(s) leaving on the last card ${label}`);
+        // ultimaPresa is the opponent in both poses, so everything goes up —
+        // the leftovers AND the card that was just played, which is what makes
+        // this play unlike every other one.
+        if (down) out.push(`the last card ${label} sends ${down} card(s) the wrong way: `
+          + `it takes nothing, so it goes up with the leftovers`);
+        return out;
+      }, [what, want]));
+    }
+
     const reached = await page.evaluate(playToBeat);
+    // The window between the play that empties both hands and the beat, which
+    // is a state of its own and was never rendered. `gioca` deals the next
+    // round before it returns, so by the time the page hears about the play the
+    // state already holds three new cards a side — while the card that ended
+    // the round is still landing. Drawn there, a hand appears, deals in, blanks
+    // for the beat and deals in AGAIN: the flicker the deal-in was written to
+    // remove, in a worse form, and measured at 1.35s of it.
+    if (reached) ending.push(...await page.evaluate(() => {
+      const out = [];
+      const drawn = who => [...document.querySelectorAll(who)]
+        .filter(c => c.dataset.empty !== 'true').length;
+      if (drawn('.hand--you .card') || drawn('.hand--opp .card'))
+        out.push(`the card that ended the round is still landing and the next round is `
+          + `already drawn: ${drawn('.hand--you .card')}/${drawn('.hand--opp .card')} in hand`);
+      return out;
+    }));
     if (reached) await page.waitForFunction('beat === true', null, { timeout: 8000 })
       .catch(() => {});
     const between = await page.evaluate(() => {
@@ -1414,7 +1615,7 @@ async function checkStates(browser) {
     if (!reached) between.push('the driver never reached the end of a round');
 
     const all = [...lands, ...flying, ...oppLands, ...flyingOpp, ...laidBad,
-                 ...sweep, ...between, ...errs];
+                 ...sweep, ...ending, ...between, ...errs];
     if (all.length) {
       failed++;
       console.log(`  FAIL  ${vname} / ${deck}`);
@@ -1600,18 +1801,44 @@ async function checkRules(browser) {
 
     // And back to the TABLE when that is where it was opened from, with the
     // deal still there.
+    //
+    // The deal has to be PUT IN MOTION and the rules left open long enough for
+    // it to move, or "reading the rules changed the hand" cannot go red: the
+    // first version of this clicked in and straight back out, no timer ever
+    // fired, and the assertion passed a page where the opponent answered, the
+    // capture swept and both were gone before the player pressed Back. A card
+    // is played, the rules are opened on the beat that follows, and the wait is
+    // longer than the whole of a capture at this speed.
     await page.click('#play');
-    const before = await page.evaluate(() => state.hands[0].map(c => c && c.n + ':' + c.s).join(','));
+    const before = await page.evaluate(() => {
+      // A card is played so that the table is IN MOTION when the rules open —
+      // the opponent's answer is on the clock. Without that there is no timer
+      // to hold, and the assertion below passes a page that would have played
+      // the whole exchange behind the screen. The first version of this row
+      // clicked in and straight back out and could not go red at all.
+      state.speed = 300;
+      tapped(0);
+      if (state.selected !== null) tapped(0);   // a capture with a choice raises first
+      return { plays: state.plays, tavola: state.tavola.length };
+    });
     await page.click('#about');
     if (await page.evaluate(() => document.getElementById('viewRules').hidden))
       bad.push('the rules did not open from the table');
+    // Longer than a whole capture at this speed — LANDS + SWEEP + NEXT is 1.9 x
+    // speed — so a table that has not been stopped will have moved.
+    await page.waitForTimeout(1500);
     await page.click('#rulesBack');
     bad.push(...await page.evaluate(was => {
       const out = [];
       if (document.getElementById('viewTable').hidden)
         out.push('the rules were opened from the table and went back to the start sheet');
-      const now = state.hands[0].map(c => c && c.n + ':' + c.s).join(',');
-      if (now !== was) out.push(`reading the rules changed the hand: ${was} became ${now}`);
+      // The deal is where it was left. Not the hand: gioca takes the played
+      // card out of it synchronously, so a hand is unchanged by a deal running
+      // on behind the screen, and an assertion on it says nothing.
+      if (state.plays !== was.plays)
+        out.push(`the deal played on behind the rules: ${was.plays} plays became ${state.plays}`);
+      if (state.tavola.length !== was.tavola)
+        out.push(`the table changed behind the rules: ${was.tavola} cards became ${state.tavola.length}`);
       return out;
     }, before));
 
@@ -1788,6 +2015,15 @@ async function checkDeal(browser) {
       marked: [pts(0), pts(1)],
       rule: (document.querySelector('.result__rule') || {}).textContent || '',
       carte: [String(state.prese[0].length), String(state.prese[1].length)],
+      denari: [0, 1].map(w => String(state.prese[w].filter(c => c.s === DENARI).length)),
+      // The one row whose number is not a count of anything the player can
+      // see — and so the one most worth reading back. A missing suit is no
+      // point at all, which the engine says with null and the page draws as a
+      // dash rather than a zero.
+      prim: [0, 1].map(w => {
+        const p = primieraTotale(state.prese[w]);
+        return p === null || p === undefined ? '—' : String(p);
+      }),
       sette: [0, 1].map(w => String(state.prese[w].some(isSettebello) ? 1 : 0)),
       scope: state.scope.map(String),
     };
@@ -1824,6 +2060,18 @@ async function checkDeal(browser) {
     if (end.nums[0] !== end.carte[0] || end.nums[1] !== end.carte[1])
       bad.push(`the breakdown counts ${end.nums[0]}/${end.nums[1]} cards, the piles hold `
         + `${end.carte[0]}/${end.carte[1]}`);
+    // Every one of the twelve, not the four that happened to be easy. Two of
+    // them — denari and primiera — were read and never asserted, and a page
+    // that showed the wrong player's denari count and the wrong player's
+    // primiera total was green through all nine passes. The marker sum cannot
+    // stand in for this: the markers come from scoreDeal too, so a wrong count
+    // beside a right marker adds up perfectly.
+    if (end.nums[2] !== end.denari[0] || end.nums[3] !== end.denari[1])
+      bad.push(`the breakdown counts ${end.nums[2]}/${end.nums[3]} denari, the piles hold `
+        + `${end.denari[0]}/${end.denari[1]}`);
+    if (end.nums[6] !== end.prim[0] || end.nums[7] !== end.prim[1])
+      bad.push(`the breakdown totals ${end.nums[6]}/${end.nums[7]} of primiera, the piles make `
+        + `${end.prim[0]}/${end.prim[1]}`);
     if (end.nums[4] !== end.sette[0] || end.nums[5] !== end.sette[1])
       bad.push(`the breakdown counts ${end.nums[4]}/${end.nums[5]} settebello, the piles hold `
         + `${end.sette[0]}/${end.sette[1]}`);

@@ -995,8 +995,10 @@ button.card:disabled{ cursor: default; }
          dialog with the running partita behind it; the owner asked for the
          breakdown while playing iteration 3, and a score with no working is a
          score you have to take on trust. -->
-    <section class="result" id="result" hidden aria-label="Fine della smazzata">
-      <h2 class="result__title">Fine della smazzata</h2>
+    <!-- Labelled BY the heading rather than beside it: an aria-label with the
+         same words as the h2 is the panel announced twice. -->
+    <section class="result" id="result" hidden aria-labelledby="resultTitle">
+      <h2 class="result__title" id="resultTitle">Fine della smazzata</h2>
       <div class="result__grid" id="resultGrid"></div>
       <p class="result__rule">Un punto per le carte, i denari, il settebello e la
         primiera, più un punto per ogni scopa.</p>
@@ -1233,6 +1235,10 @@ const state = {
 
 let timer = null, sayTimer = null;
 let epoch = 0;          // bumped on every new deal, so a stale timer cannot fire into it
+// What the table is about to do, and what it was about to do when the player
+// left it. See holdClock below: a screen the player READS has to stop the deal,
+// or the beats this table exists for happen where nobody is looking.
+let pending = null, held = null;
 
 // Both hands are empty for a beat between rounds. gioca() deals the next round
 // itself — §2.2's flow has the deal there, and a state with two empty hands and
@@ -1269,6 +1275,11 @@ let sweeping = null;
 // arrived.
 let laid = -1;
 const flushSweep = () => { sweeping = null; laid = -1; };
+// True while the table is still showing a play that the state has already moved
+// past. Anything that would cover the table has to wait for this, or the beats
+// run behind it: gioca sets `over` on the 36th play, so a result panel drawn
+// from `over` alone goes up before the last card has even landed.
+const settling = () => sweeping !== null || laid >= 0;
 
 // The game's own clock: one timer, so a new deal cancels whatever the last one
 // was about to do. An abandoned deal must not keep playing itself behind the
@@ -1276,7 +1287,30 @@ const flushSweep = () => { sweeping = null; laid = -1; };
 function later(fn, ms){
   const mine = epoch;
   clearTimeout(timer);
-  timer = setTimeout(() => { if (mine === epoch) fn(); }, ms);
+  pending = { fn, mine };
+  timer = setTimeout(() => { pending = null; if (mine === epoch) fn(); }, ms);
+}
+
+// Reading the rules must not cost you the deal. The table runs on one timer, so
+// leaving the table holds whatever it was about to do and coming back re-arms
+// it. Without this the opponent answers, the capture sweeps and both are gone
+// before the player presses Back — which is precisely what the three beats
+// exist to prevent, happening on a screen nobody is looking at.
+//
+// It comes back after a beat rather than after whatever was left of the
+// original wait, because a player who has just looked up from a page of rules
+// wants the same moment to re-read the table that they got when the card
+// landed.
+function holdClock(){
+  if (!pending) return;
+  clearTimeout(timer);
+  held = pending;
+  pending = null;
+}
+function releaseClock(){
+  const was = held;
+  held = null;
+  if (was && was.mine === epoch) later(was.fn, state.speed * NEXT);
 }
 // The toast needs its own, or the next scheduled play cancels its auto-hide and
 // "Scopa!" stays on the table for the rest of the deal.
@@ -1413,7 +1447,10 @@ function render(){
 // says who won each; the counts beside them are read from the piles, because
 // "denari" with no number is a claim and "denari 6–4" is the working.
 function renderResult(){
-  const over = !!(state.over && state.dealt);
+  // Not while the table is still catching up: the last play of the deal has to
+  // be watchable like every other one, and this panel is opaque and covers all
+  // of it.
+  const over = !!(state.over && state.dealt && !settling());
   el.result.hidden = !over;
   if (!over) return;
 
@@ -1651,14 +1688,35 @@ function play(who, slot, presa){
   for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;
   if (r.resto.length)
     before.forEach((_, i) => { if (!(i in dir)) dir[i] = state.ultimaPresa; });
-  const swept = Object.keys(dir).length > 0;
+
+  // And where the card that was just played goes, which is NOT always the
+  // player who played it. On the last play of a deal a card that takes nothing
+  // is pushed onto the table and then swept up with the leftovers, so it goes
+  // to whoever captured last — drawing it toward the player who played it says
+  // two players took cards from one play. `null` means it stays on the table,
+  // which is the ordinary lay.
+  const cardGoesTo = r.presa.length ? who : (r.resto.length ? state.ultimaPresa : null);
+
+  // Something is leaving if the table lost cards OR the played card did — and
+  // the second without the first is reachable: a scopa on the 35th play leaves
+  // an empty table, and the 36th card is then the only thing swept up. Reading
+  // `dir` alone sent that card down the lay path, where `laid` indexes a table
+  // it is no longer on, and it was drawn nowhere at all.
+  const swept = Object.keys(dir).length > 0 || cardGoesTo !== null;
+
+  // gioca deals the next round before it returns, so by now the state holds
+  // three new cards a side while the card that ended the round is still
+  // landing. Drawing them there makes a hand appear, deal in, blank for the
+  // beat and deal in AGAIN — the flicker the deal-in was written to remove,
+  // in a worse form. The hands are empty from the play that empties them until
+  // the beat is over, which is what the player is actually watching.
+  if (r.nuovoGiro) beat = true;
 
   // What happens once the table has caught up. The beat between rounds comes
   // after the sweep, not during it: they are two things to look at, not one.
   const then = () => {
     flushSweep();
     if (r.nuovoGiro){
-      beat = true;
       render();
       later(() => { beat = false; render(); resume(); }, state.speed * BEAT);
       return;
@@ -1685,7 +1743,7 @@ function play(who, slot, presa){
   // a real table, and the only way to see what the opponent played.
   const cards = before.concat([r.card]);
   const landed = cards.length - 1;
-  dir[landed] = who;
+  dir[landed] = cardGoesTo;
   sweeping = { cards, dir: {}, played: landed };
   render();
   later(() => {
@@ -1724,6 +1782,7 @@ function newDealHere(){
   clearTimeout(timer);
   clearTimeout(sayTimer);
   beat = false;
+  pending = held = null;
   flushSweep();
   el.toast.hidden = true;
   newDeal(state, Math.random);
@@ -1772,6 +1831,9 @@ const VIEWS = { table: el.viewTable, start: el.viewStart, rules: el.viewRules };
 let cameFrom = "start";
 
 function show(name){
+  // Leaving the table stops its clock and coming back starts it again, for
+  // every screen rather than for the one that has a button today.
+  if (name === "table") releaseClock(); else holdClock();
   for (const [k, node] of Object.entries(VIEWS)) node.hidden = k !== name;
 }
 

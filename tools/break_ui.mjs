@@ -73,7 +73,20 @@
 //     however long it is` and `the say line is sized by its content`, whose
 //     EXPECTs name the two phrasings that fire first;
 //   - `the position meant to say "X" played the card instead of raising it`
-//     with `a capture with a choice plays instead of raising`.
+//     with `a capture with a choice plays instead of raising`;
+//   - `N card(s) are already leaving before the card that takes them has landed`
+//     with `nothing is drawn as the card that has just landed`, whose EXPECT
+//     names the last play's phrasing, `N card(s) are already leaving on the
+//     last play before it has landed` — one rule, "nothing leaves before the
+//     card that takes it has landed", asserted at both of the plays that have
+//     a landing beat.
+//
+// The sixth review found three assertions in the sweep pass with no break at
+// all and two of the breakdown's six rows never read back; those are breaks
+// now, not entries in the list above. It also found two assertions that could
+// not go red — one whose firing set was a strict subset of the membership check
+// beside it, and one that clicked into the rules and straight back out, so no
+// timer ever fired. The first is deleted and the second plays a card first.
 
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -187,12 +200,26 @@ const EXPECT = {
   "the empty hand is allowed to collapse": "card-sized slot",
   "the page stops listening for the new round": "never entered the beat",
   "the beat draws the new hand instead of the empty one": "both hands are empty",
+  "nothing is drawn as the card that has just landed": "are already leaving on the last play",
+  "the opponent's card is not marked as the one just played": "never drawn on the table",
+  "a card that takes nothing is drawn leaving": "sweeping off the table",
+
+  // --- the last play of the deal, and the window before a beat --------------
+  "the points are counted out over the last play": "before it has been drawn",
+  "the last play sends the played card to whoever played it": "the wrong way",
+  "the last card of an empty table is drawn nowhere": "is drawn on a table of",
+  "the next round is drawn while the last card is still landing": "already drawn",
+  "the rules let the deal play on behind them": "played on behind the rules",
 
   // --- the page against the engine -----------------------------------------
   "the pile badge stops counting": "badges say",
   "the deck badge stops counting": "the deck badge says",
   "the scopa marks stop counting": "scopa marks",
   "the middle draws a card the engine does not hold": "cards, the engine holds",
+  "the denari are counted for the wrong player": "denari, the piles hold",
+  "the primiera is read from the wrong pile": "of primiera, the piles make",
+  "carte counts something other than the pile": "cards, the piles hold",
+  "the scope row stops counting": "scope, the engine counted",
   "the leftovers are left on the table": "still shows",
   "a played card keeps its face": "shows a card",
   "a slot you hold is drawn empty": "holds a card and shows none",
@@ -474,6 +501,49 @@ const BREAKS = [
   ["the final score is read out backwards",
    "    el.selName.textContent = `Fine: ${r.punti[BASSO]} a ${r.punti[ALTO]}`;",
    "    el.selName.textContent = `Fine: ${r.punti[ALTO]} a ${r.punti[BASSO]}`;"],
+
+  // --- the three beats, the breaks the sixth review found missing -----------
+  ["nothing is drawn as the card that has just landed",
+   "  sweeping = { cards, dir: {}, played: landed };",
+   "  sweeping = { cards, dir, played: landed };"],
+  ["the opponent's card is not marked as the one just played",
+   "      if (sweeping ? idx === sweeping.played : idx === laid) b.dataset.played = \"true\";",
+   "      if (sweeping ? idx === sweeping.played : idx === laid) b.dataset.played = String(state.deveGiocare === 1);"],
+  ["a card that takes nothing is drawn leaving",
+   "    laid = state.tavola.length - 1;",
+   "    laid = state.tavola.length - 1;\n    sweeping = { cards: state.tavola.slice(), dir: {0: BASSO}, played: laid };"],
+
+  // --- the last play of the deal -------------------------------------------
+  ["the points are counted out over the last play",
+   "  const over = !!(state.over && state.dealt && !settling());",
+   "  const over = !!(state.over && state.dealt);"],
+  ["the last play sends the played card to whoever played it",
+   "  dir[landed] = cardGoesTo;", "  dir[landed] = who;"],
+  ["the last card of an empty table is drawn nowhere",
+   "  const swept = Object.keys(dir).length > 0 || cardGoesTo !== null;",
+   "  const swept = Object.keys(dir).length > 0;"],
+
+  // --- the window between a round's last play and the beat -----------------
+  ["the next round is drawn while the last card is still landing",
+   "  if (r.nuovoGiro) beat = true;", ""],
+
+  // --- reading the rules ----------------------------------------------------
+  ["the rules let the deal play on behind them",
+   "  if (name === \"table\") releaseClock(); else holdClock();", ""],
+
+  // --- the numbers under the breakdown that had no break -------------------
+  ["the denari are counted for the wrong player",
+   "  const den = w => piles[w].filter(c => c.s === DENARI).length;",
+   "  const den = w => piles[1 - w].filter(c => c.s === DENARI).length;"],
+  ["the primiera is read from the wrong pile",
+   "  const prim = w => primieraTotale(piles[w]) ?? \"\u2014\";",
+   "  const prim = w => primieraTotale(piles[1 - w]) ?? \"\u2014\";"],
+  ["carte counts something other than the pile",
+   "    [\"carte\",      piles[BASSO].length, piles[ALTO].length, r.carte],",
+   "    [\"carte\",      piles[BASSO].length + 1, piles[ALTO].length, r.carte],"],
+  ["the scope row stops counting",
+   "    [\"scope\",      r.scope[BASSO], r.scope[ALTO], \"scope\"],",
+   "    [\"scope\",      0, 0, \"scope\"],"],
 ];
 
 const filter = process.argv[2];

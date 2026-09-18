@@ -129,6 +129,26 @@ assertions that would have caught the clipped deck were all written and all
 green. When a rule is about the widest thing on the screen, the grid needs the
 narrowest screen the rule has to hold on.
 
+**And the last play of a deal is a state, and so is the moment after the play
+that ends a round.** Three defects shipped in those two, all found by the sixth
+review and none by any assertion: `gioca` sets `over` on the 36th play, so a
+result panel drawn from `over` alone goes up before the card has landed and the
+three beats run behind an opaque panel, for one play in every deal; a last card
+that takes nothing is swept up *with the leftovers*, to whoever captured last,
+and was drawn going to whoever played it, which says two players took cards from
+one play; and `gioca` deals the next round before it returns, so between the
+play that empties both hands and the beat the state already holds three new
+cards a side — drawn there, a hand appears, deals in, blanks and deals in again,
+1.35s of flicker where the deal-in was meant to remove it. **When the engine
+does something extra on a play, that play is a state of its own**, and the beats
+around it need rendering separately from the ordinary ones.
+
+**And a state the seed does not reach has to be posed.** A driven deal reaches
+whichever ending its seed reaches: the deal the check drives ends in a capture,
+so the two endings where the last card takes *nothing* — onto leftovers, and
+onto a table a scopa emptied — are posed up to the play and then played. The
+break written for each of them survived until the check rendered them.
+
 **And a way into a screen is a state.** The rules screen is reachable from the
 start sheet and from the table, and Back has to return to whichever opened it —
 a Back that always lands on the start sheet abandons the deal of anyone who
@@ -341,7 +361,9 @@ ran from `FormCreate`. It is a house tradition now, not a Delphi accident.
 
 ## Conventions
 
-- Player-facing text is Italian. Comments, commit messages and documents are
+- Player-facing text is Italian, except on the rules screen, which says
+  everything twice — the owner asked for both languages, and the check measures
+  each `section[lang]` on its own. Comments, commit messages and documents are
   English.
 - No build step and no runtime dependencies. `playwright-core` is for the UI
   check only and is gitignored.

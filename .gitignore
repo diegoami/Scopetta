@@ -4,8 +4,7 @@ node_modules
 
 # The two harnesses' own output, when a run is redirected to a file rather than
 # read off the terminal. Neither is a record of anything: re-run them.
-.break-ui.log
-.full-check.log
+*.log
 
 # That npm install also writes these. They are not dependencies of the game —
 # there are none — and committing them would say otherwise.

@@ -168,10 +168,19 @@ another.
 
 **The deal over, with the points counted out** — carte, denari, settebello,
 primiera with its totals, scope, and the total, each row a pair of counts and
-what they are worth. The deal pass reads every number back against `scoreDeal`
-and the piles, **and adds the row markers up to check they come to the total**:
-a breakdown that agrees with itself and not with the engine is worse than none,
-and arithmetic shown on the page is a claim the page has to keep.
+what they are worth. The deal pass reads **all twelve numbers** back against
+`scoreDeal` and the piles, **and adds the row markers up to check they come to
+the total**: a breakdown that agrees with itself and not with the engine is
+worse than none, and arithmetic shown on the page is a claim the page has to
+keep.
+
+All twelve since the sixth review, which found that this sentence was not true:
+denari and primiera were read out of the DOM and never compared with anything.
+A page showing the wrong player's denari count and the wrong player's primiera
+total was green through all nine passes. The marker sum cannot stand in for the
+counts — the markers come from `scoreDeal` too, so a wrong count beside a right
+marker adds up perfectly — and primiera is the row whose number nobody can
+check by looking at the table.
 
 The five rows are the five points and nothing else. Carte was briefly broken
 down by suit; three of the four suits can never score, and the fourth is the
@@ -183,8 +192,17 @@ the one that has to come back to where it came from. Asserts that each of
 `section[lang="it"]` and `section[lang="en"]` is the rules rather than a note
 (at least five blocks and two hundred words, naming the scopa, the primiera and
 the settebello), and that Back returns to the table when the table opened it,
-with the hand unchanged — a Back that always lands on the start sheet abandons
-the deal of anyone who opened the rules to check what a scopa is worth mid-hand.
+with the deal exactly where it was left — a Back that always lands on the start
+sheet abandons the deal of anyone who opened the rules to check what a scopa is
+worth mid-hand, and a table that keeps playing behind the screen loses them the
+exchange whether or not they get back to it.
+
+That second half needs the deal **in motion**, and the first version of it
+could not go red: it clicked in and straight back out, so no timer ever fired.
+It plays a card first, waits longer than a whole capture, and asserts on
+`state.plays` rather than on the hand — `gioca` takes the played card out of the
+hand synchronously, so a hand is unchanged by a deal running on behind a screen
+and an assertion on it says nothing at all.
 The language lives on the `section`, not on each paragraph: half a page not
 marked as its own language is half a page screen readers and hyphenation read
 as the other one — and, less loftily, an assertion that looks for one `lang`
@@ -197,6 +215,21 @@ renders all three beats of a capture — the card lands among the cards it is
 about to take, they all leave together, the table is empty and the scopa is
 announced — and the other way a card arrives, a lay, which is ringed for a beat
 because it lands among as many as twelve others.
+
+**The 36th play, and the window before a beat** — the two moments this pass did
+not render, each of which had shipped a defect. `gioca` sets `over` on the last
+play and sweeps the leftovers up with it, so it is the one play where what
+covers the table and where the cards go are both decided differently: the
+opaque result panel went up before the card had landed, and a last card that
+takes nothing — swept up with the leftovers, to whoever captured last — was
+drawn going to whoever played it. A driven deal reaches whichever ending its
+seed reaches, so the two endings where the last card takes nothing are posed up
+to the play and then played.
+
+And `gioca` deals the next round before it returns, so between the play that
+empties both hands and the beat the state already holds three new cards a side.
+Drawn there, a hand appears, deals in, blanks for the beat and deals in again —
+1.35s of it, measured. Nothing sampled that window, so nothing saw it.
 
 **The sweep, and the beat between rounds** — the two states that only playing
 can reach, and the reason for it: a toast over a table that still has cards on
