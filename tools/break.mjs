@@ -105,7 +105,8 @@ const EXPECT = {
   "the cards are dealt to the opponent first": "the cards are dealt in order: three to you, three to them, four up",
   "the settebello term is dropped from worth": "with two sevens on the table, it takes the settebello",
   "the tempo term is dropped": "the golden fixture still plays out exactly as recorded",
-  "the tempo term looks at their real hand": "the golden fixture still plays out exactly as recorded",
+  "the tempo term recurses instead of stopping at one ply": "the tempo term stops at one ply",
+  "the tempo term looks at their real hand": "the tempo term cannot tell their hand from the deck",
   "the tempo term guesses at a round boundary it cannot see past": "the tempo term guesses at nothing it cannot see",
   "the score hands out a live reference to the scope": "the score reports a copy of the scope, not the state's own array",
   "worth ignores the suit, so a denaro is just a card": "offered the same card in two suits, it takes the denaro",
@@ -188,6 +189,9 @@ const BREAKS = [
   ["the tempo term looks at their real hand",
    "    st.hands[altro(me)] = ordina(pick.map(c => ({ ...c })));",
    "    void pick;"],
+  ["the tempo term recurses instead of stopping at one ply",
+   "    const reply = compGioca(st, P, 1);  // depth 1: their reply prices no tempo",
+   "    const reply = compGioca(st, P, 0);"],
   ["the tempo term guesses at a round boundary it cannot see past",
    "  if (mine <= 1 && h <= 1) return 0;",
    "  if (false) return 0;"],
@@ -372,7 +376,7 @@ let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [],
 // means nothing.
 let BASELINE = 0;
 try {
-  const out = String(execFileSync(process.execPath, ["--test", ...TESTS], { stdio: "pipe" }));
+  const out = String(execFileSync(process.execPath, ["--test", ...TESTS], { stdio: "pipe", maxBuffer: 64 * 1024 * 1024 }));
   // How many tests the suite really has, so the "did it run at all?" check
   // below is a fact rather than a magic number.
   BASELINE = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
@@ -397,13 +401,18 @@ for (const [name, find, replace, why] of chosen){
   try {
     // A break can stop the deal from ending — "a new deal keeps the old plays
     // count" leaves a second deal that never reaches 36 — and a harness that
-    // hangs reports nothing at all. The suite takes under a second, so a
-    // minute is a hang.
+    // hangs reports nothing at all. A real hang lands in INVALID rather than in
+    // caught, deliberately: nothing ran, so nothing noticed anything. It still
+    // exits red.
     //
-    // A hang lands in INVALID, not in caught, and that is deliberate: nothing
-    // ran, so nothing noticed anything. It still exits red.
+    // Ten minutes, not one. A break can be caught *slowly*: removing the tempo
+    // term's depth guard does not recurse for ever, it recurses exponentially,
+    // and the suite still fails on the test that names it — after 6m36s. At a
+    // one-minute budget that arrived here as "the suite did not run", which
+    // was a harness defect reporting a caught break as an unrunnable one. One
+    // slow break costs this tool a few minutes and it is run by hand.
     execFileSync(process.execPath, ["--test", ...TESTS],
-      { stdio: "pipe", timeout: 60000,
+      { stdio: "pipe", timeout: 600000, maxBuffer: 64 * 1024 * 1024,
         env: { ...process.env, SCOPETTA_ENGINE: file } });
   } catch (e) {
     failed = true;

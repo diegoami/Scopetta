@@ -391,11 +391,26 @@ so the count is a coincidence and the membership is not.
 | GIFT_FACTOR | leaving cards they can pair, by their worth and the chance they hold the value |
 | TEMPO_BONUS | keeping a sweep alive for my own next turn — §4's tempo question, answered yes |
 
-`SCOPA_BONUS` is gone. **A scopa still wins the argmax without it**, because a
-sweep takes every card on the table: it maximises the captured term and leaves
-nothing for the gift term to subtract. Measured rather than argued — restoring
-it at 8 or 25 and comparing paired on the same deals is worth −0.03% and +0.03%
-of score rate, z = −1.41 and +0.47.
+`SCOPA_BONUS` is gone, **and the reason is a measurement rather than an
+argument** — the argument was wrong twice over. It read: a sweep takes every
+card on the table, so it maximises the captured term, leaves nothing for the
+gift term, and wins the argmax without help. On the shipped engine Franco
+declines a legal sweep in **47 of 1,534** decisions that offer one, 3.06% over
+2,000 deals; on the five-weight engine it was 0.77%, so the two terms added
+since made a claim that was already false four times more so. It was restated
+in this section and in `CLAUDE.md` without being re-checked, which is the §7.5
+defect this iteration spent a round fixing elsewhere.
+
+What holds is the measurement. Restoring `SCOPA_BONUS` on the engine that ships
+and comparing paired on the same deals is worth **−0.10% (z = −1.21)** and
+**−0.02% (z = −0.23)** of score rate on the two held-out ranges. It buys
+nothing, so it stays out.
+
+**One thing for the owner to watch at the table**, per §4's instruction to play
+it before moving on: declining an available sweep went from about one play in
+130 to one in 33. The paired numbers say it costs no points and §3.4's fourth
+trap still passes, so this is a question about whether it *reads* wrong, which
+only a player can answer.
 
 **What the ladder measured**, `node tools/selfplay.mjs --ladder-all 3000`, over
 6,000 deals, counting only the decisions the weights make — more than one legal
@@ -567,13 +582,19 @@ could fall — which only makes the conclusion safer.
 **The tempo question is answered yes, and the formula gained a term for it.**
 §4 asks whether the opponent lays low cards into a table it could have swept
 next turn had it waited, and says a 2-ply term is the candidate if the harness
-says yes. `node tools/selfplay.mjs --tempo 400`: some play would have left
-Franco a sweep on its next turn in 5.92% of decisions with a real choice, and
-it gave that chance up in **49.3% of them** — 2.92% of all decisions.
+says yes. `node tools/selfplay.mjs --tempo 400`, **before** the term existed:
+some play would have left Franco a sweep on its next turn in 5.85% of decisions
+with a real choice, and it gave that chance up in **49.0% of them**.
 
-The term that prices them is worth **+0.81% (z = 2.07)** and **+1.73%
-(z = 4.43)** of score rate on the two held-out ranges, paired
-(`--paired TEMPO_BONUS=0`). Three things are worth recording about how it is
+With the term, the same command on the engine that ships: 5.99% of decisions
+offer the chance and it gives up **40.7%** of them. That is the evidence that
+matters — the term does the thing it was added to do, measured on the
+behaviour rather than inferred from a score. In points it is worth **+0.81%
+(z = 2.07)** and **+1.73% (z = 4.43)** of score rate on the two held-out
+ranges, paired: `SEED_FROM=20001 node tools/selfplay.mjs --paired
+TEMPO_BONUS=0 1200`. (At the harness default of 1500 the same command gives
++0.77% and +1.33%; the effect is a few tenths either side of these, not two
+decimals of it.) Three things are worth recording about how it is
 built, because two of them are traps:
 
 - **It may not look at their hand.** A 2-ply term that copies the state and
@@ -585,15 +606,24 @@ built, because two of them are traps:
   from the reply, not from the table.
 - So the honest version **guesses**: it draws `TEMPO_SAMPLES` = 6 plausible
   hands from `fuori`, plays each one ply, and scores the fraction in which it is
-  left holding a sweep. Six because sixteen is barely better. The samples are a
-  deterministic spread rather than a random draw, because a fixture that depends
-  on an rng the page does not share is not a fixture. And it refuses to guess
-  past a round boundary, where the next hand is in a deck it may not read.
+  left holding a sweep. The samples are a deterministic spread rather than a
+  random draw, because a fixture that depends on an rng the page does not share
+  is not a fixture. And it refuses to guess past a round boundary, where the
+  next hand is in a deck it may not read.
+- **Six is a cost choice, not a quality one.** Sixteen samples measures
+  +0.85% (z = 2.12) and +2.02% (z = 4.63) against six's +0.81% and +1.73% —
+  better on the far range, not "barely better" as an earlier draft of this
+  section claimed without a command to back it. Six is kept because it is
+  cheaper and the gain is already there; sixteen is the move if the term ever
+  needs to be stronger. The gain also survives every sampler tried — four
+  different spreads are positive on both ranges — so the term is not an artefact
+  of this particular lattice, but its **magnitude** does depend on which six
+  hands are guessed, and the honest range is +0.3 to +0.9 and +1.2 to +2.0.
 
 Cost: a worst single decision of **2.55ms** over 150 deals, against the same
 70ms budget.
 
-**The bars are measured, not written, and the table is the claim.****The bars are measured, not written, and the table is the claim.**
+**The bars are measured, not written, and the table is the claim.**
 Tressette's plan set 95% and 70% from intuition and both were wrong; its
 iteration 2 measured 85% and 80%, and its iteration 5 review found half the
 roster straddling those on half the seed ranges, because they had been set
@@ -673,8 +703,9 @@ settings ──Cambia avversario──► confirm ─► start
   denari taken and whether the settebello is in. A transient toast for
   "Scopa!", floating, out of the budget, as Tressette's declarations are.
 - **settings** — deck, felt, rhythm, show points, sound, change opponent,
-  and the weights disclosure: five — the count iteration 2's ladder left — with
-  a note that the sixth round uses none of them.
+  and the weights disclosure: seven — the count iteration 2's ladder left, which
+  is not the seven this plan drafted — with a note that the sixth round uses
+  none of them.
 - **history** — tally, record against each opponent, the last hundred
   smazzate.
 - **about** — what the game is, which Scopa it plays (§2, every constant

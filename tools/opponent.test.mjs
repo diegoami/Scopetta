@@ -20,7 +20,7 @@ runInThisContext(readFileSync(SOURCE, "utf8"));
 
 const { BASSO, ALTO, DENARI, rngSeed, newDeal, gioca, scoreDeal,
         WEIGHT_KEYS, rollProfiles, compGioca, mosse, CODA_FROM,
-        tempoShare, fuori } = globalThis;
+        tempoShare, fuori, altro } = globalThis;
 
 const FRANCO = rollProfiles(rngSeed(1)).Franco;
 const card = (s, n) => ({ s, n });
@@ -91,6 +91,38 @@ test("offered 4+3 or 5+2 for a seven, it takes the pair with the denaro", () => 
   assert.equal(choices.length, 2, "4+3 and 5+2, and nothing else");
   const m = compGioca(s, FRANCO);
   assert.deepEqual(m.presa, [0, 1], "it left the denaro on the table");
+});
+
+test("the settebello trap holds with room to spare, and where it stops", () => {
+  // §3.4 presents its traps as behaviours the opponent must have *whatever its
+  // weights are*, and they are all run against Franco. For most of them that is
+  // harmless; for this one it is not. The trap above flips somewhere between
+  // SETTEBELLO_BONUS 5 and 6, and Franco's value is 6 — one notch above the
+  // edge — while the ladder's own range for that weight is [0, 3, 6, 12, 25],
+  // so two of the five values it runs put the engine into a state where §3.4's
+  // first trap fails and nothing would notice.
+  //
+  // Pinned here so iteration 5 cannot walk over it while building a roster:
+  // a profile that wants the settebello point needs the weight above the edge,
+  // and strength cannot tell it — paired, 3 and 12 and 25 all measure z ≤ 1.72.
+  const board = () => position({
+    tavola: [card(1, 7), card(DENARI, 7)],
+    hands: [[card(2, 7), null, null], [card(3, 10), card(3, 9), null]],
+    prese: [[card(DENARI, 6)], []]
+  });
+  const takesIt = v => {
+    const m = compGioca(board(), { ...FRANCO, SETTEBELLO_BONUS: v });
+    return m.presa.length === 1 && board().tavola[m.presa[0]].s === DENARI;
+  };
+  assert.equal(takesIt(FRANCO.SETTEBELLO_BONUS), true, "Franco declines the settebello");
+  assert.equal(takesIt(0), false, "without the term it should decline — the trap is not vacuous");
+
+  // The edge itself, so that it cannot drift without this failing.
+  let edge = 0;
+  for (let v = 0; v <= 12; v += 0.1) if (takesIt(Number(v.toFixed(1)))){ edge = Number(v.toFixed(1)); break; }
+  assert.ok(edge > 5 && edge < 6, `the trap now flips at ${edge}, not between 5 and 6`);
+  assert.ok(FRANCO.SETTEBELLO_BONUS > edge,
+    `Franco's ${FRANCO.SETTEBELLO_BONUS} is not above the edge at ${edge}`);
 });
 
 test("offered the same card in two suits, it takes the denaro", () => {
@@ -391,6 +423,73 @@ test("the tempo term guesses at nothing it cannot see", () => {
   assert.ok(shares.some(v => v > 0),
     `the term never fires even with a round to play: ${JSON.stringify(shares)}`);
   assert.ok(shares.some(v => v === 0), "and it does not fire for every play alike");
+});
+
+test("the tempo term cannot tell their hand from the deck", () => {
+  // The property the whole design rests on, named by an assertion instead of
+  // by the golden fixture. §3.4: the engine is given nothing a human could not
+  // count, and `fuori` is the deck and their hand *together* — so swapping one
+  // of their cards for one still in the deck leaves `fuori` identical as a set,
+  // and an honest tempoShare must return the identical number.
+  //
+  // A version that reads their real hand does not: it answers differently for
+  // the same `fuori`, which is exactly what reading it means.
+  let compared = 0;
+  for (let seed = 1; seed <= 40; seed++){
+    const s = newDeal({}, rngSeed(seed));
+    while (!s.over){
+      const me = s.deveGiocare;
+      if (s.giro < CODA_FROM && s.next < 40){
+        const hidden = fuori(s, me);
+        const theirs = s.hands[altro(me)];
+        const held = new Set(theirs.filter(c => c).map(c => c.s * 16 + c.n));
+        const inDeck = hidden.find(c => !held.has(c.s * 16 + c.n));
+        const slot = theirs.findIndex(c => c);
+        if (inDeck && slot >= 0){
+          const swapped = { ...s, hands: [s.hands[BASSO].slice(), s.hands[ALTO].slice()] };
+          swapped.hands[altro(me)] = theirs.slice();
+          swapped.hands[altro(me)][slot] = { ...inDeck };
+          for (const m of mosse(s, me)){
+            const a = tempoShare(s, me, m, hidden, FRANCO);
+            const b = tempoShare(swapped, me, m, fuori(swapped, me), FRANCO);
+            assert.equal(a, b,
+              `seed ${seed}, play ${s.plays + 1}: the guess changed when only their hand did`);
+            compared++;
+          }
+        }
+      }
+      const m = compGioca(s, FRANCO);
+      gioca(s, me, m.slot, m.presa);
+    }
+  }
+  assert.ok(compared > 500, `only ${compared} comparisons — the case barely came up`);
+});
+
+test("the tempo term stops at one ply", () => {
+  // Removing the depth guard recurses until the stack gives out, which is a
+  // crash rather than a defect the suite can name — so name it by counting
+  // instead. compGioca reads TEMPO_BONUS exactly twice per root play, once to
+  // test it and once to multiply by it, and never at depth 1. If the reply
+  // priced tempo of its own, the reads would run away.
+  const s = position({
+    giro: 1, plays: 7, deveGiocare: ALTO, mazziere: ALTO, ultimaPresa: BASSO,
+    tavola: [card(DENARI, 10), card(2, 4)],
+    hands: [[card(1, 3), null, card(3, 1)], [card(2, 10), card(2, 9), card(2, 2)]],
+    prese: [new Array(4).fill(card(1, 8)), new Array(5).fill(card(3, 8))]
+  });
+  const roots = mosse(s, ALTO).length;
+  let reads = 0;
+  const counting = { ...FRANCO };
+  delete counting.TEMPO_BONUS;
+  Object.defineProperty(counting, "TEMPO_BONUS", {
+    get(){
+      if (++reads > 2 * roots)
+        throw new Error(`TEMPO_BONUS read ${reads} times for ${roots} plays — the reply is pricing tempo too`);
+      return FRANCO.TEMPO_BONUS;
+    }
+  });
+  compGioca(s, counting);
+  assert.equal(reads, 2 * roots, `${reads} reads for ${roots} root plays`);
 });
 
 /* --- the search is the search ------------------------------------------------ */

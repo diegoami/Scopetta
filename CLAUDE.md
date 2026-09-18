@@ -140,9 +140,8 @@ Discola's engine was a transcription of a 1997 original, so its rule was
 from v1.0 the same rule applies for a different reason: the golden fixture
 freezes the plays, and a formula change invalidates it. There are **seven**
 weights and the settings sheet discloses seven — but not the seven the plan
-drafted: iteration 2's ladder cut `SCOPA_BONUS`, which cannot promote a play a
-sweep already wins, and added `TEMPO_BONUS`, which §4's tempo question turned
-out to want. The count is a coincidence; the membership is the measurement.
+drafted: iteration 2's ladder cut `SCOPA_BONUS`, which buys nothing measurable,
+and added `TEMPO_BONUS`, which §4's tempo question turned out to want. The count is a coincidence; the membership is the measurement.
 
 **A weight under §4's 1% bar is a question, not a verdict.** `SETTEBELLO_BONUS`
 moves 0.45% of decisions and was removed on that rule, with a reason that was

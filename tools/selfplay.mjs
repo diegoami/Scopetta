@@ -205,9 +205,14 @@ function ladderAll(n){
   for (const { key, most } of summary)
     console.log(`  ${key.padEnd(20)} ${most.pct.toFixed(2)}%`.padEnd(32) +
                 `${String(most.v).padStart(6)}     ${(100 * most.rate).toFixed(1)}%`);
-  console.log(`\n  §4: under 1% at any value and the weight goes, before the settings sheet shows it.`);
+  console.log(`\n  §4: under 1% at any value is the bar — but it is a question, not a verdict.`);
   const dead = summary.filter(s => s.most.pct < 1);
   console.log(`  under 1%: ${dead.length ? dead.map(s => s.key).join(", ") : "none"}`);
+  if (dead.length){
+    console.log(`\n  Before deleting one, ask what its plays decide. SETTEBELLO_BONUS sits under`);
+    console.log(`  the bar and is kept on purpose: it moves few plays because one card carries`);
+    console.log(`  a whole point, and \`--paired KEY=0\` says it is worth half of one. §3.4.`);
+  }
 }
 
 function tryCandidate(spec, n){
