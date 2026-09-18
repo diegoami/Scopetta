@@ -26,11 +26,12 @@ pull request as well, and a red check does not merge.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
-and `check.yml` has the job that runs it. Eight passes: the document, every
+and `check.yml` has the job that runs it. Nine passes: the document, every
 screen, the table at every viewport in every deck, the table again with the
 spacing inflated and no slack, the capture choice and the toast, the states
 only playing can reach — a card landing, a sweep, a lay and the beat between
-rounds — turning the phone over, and one whole deal.
+rounds — turning the phone over, the rules in both languages and both ways in,
+and one whole deal.
 
 **Which card a tap lands on, and which words a player can read, are decided by
 paint order, and nothing about paint order moves a box.** Four of iteration 3's
@@ -75,10 +76,13 @@ the check holds it to the floor it holds body copy to, whatever its length,
 because length is a proxy for "is this read" and here it points the wrong way.
 And the deal ended with a total and no working — the five points are counted out
 now, with the counts beside them, because "denari" with no number is a claim;
-carte carries the four suits it is made of; and each row shows what it is
-**worth**, because a column of counts with a total underneath does not say how
-one becomes the other. The markers down a column are the total, the check adds
-them up and compares, and the rule is written once in words underneath.
+and each row shows what it is **worth**, because a column of counts with a
+total underneath does not say how one becomes the other. The markers down a
+column are the total, the check adds them up and compares, and the rule is
+written once in words underneath. Carte briefly carried the four suits it is
+made of, and that was a number too many: three of the four can never score and
+the fourth is the denari row again, so half the working was there to be
+discarded. **Working shown is only working if every line of it is used.**
 
 **A card the player never sees is a card that was never played.** `gioca` moves
 a capturing card from a hand straight to a pile, so a table that draws only
