@@ -165,10 +165,13 @@ listen for `resize` is a page the whole grid agrees with. It rotates four shapes
 both ways with thirteen cards down, and raises a card at one width to read it at
 another.
 
-**The deal over, with the points counted out** — carte, denari, settebello,
-primiera, scope and the total, with the counts beside them. The deal pass reads
-every number back against `scoreDeal` and the piles: a breakdown that agrees
-with itself and not with the engine is worse than none.
+**The deal over, with the points counted out** — carte with the four suits it is
+made of, denari, settebello, primiera with its totals, scope, and the total,
+each row carrying what it is worth. The deal pass reads every number back
+against `scoreDeal` and the piles, **and adds the row markers up to check they
+come to the total**: a breakdown that agrees with itself and not with the engine
+is worse than none, and arithmetic shown on the page is a claim the page has to
+keep.
 
 **A card arriving** — the beat the owner found missing by playing the preview.
 A capturing card never touches `state.tavola`, so a middle row that draws the

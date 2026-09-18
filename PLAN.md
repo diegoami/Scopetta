@@ -958,6 +958,24 @@ moved once. A capture plays out in 1.71s where it took 1.40s, and the part that
 grew is the part you are meant to look at. `SWEEP` is not allowed below the
 420ms the keyframes take at the default speed, or the cards vanish mid-flight.
 
+**And a row says what it is WORTH, not only what it counts.** A column of counts
+with a total underneath does not say how one becomes the other — the owner read
+it and said the formula was not clear. Each of the four contested rows carries
+a brass `+1` in the winner's column and the scope row carries `+N`, so the
+markers down a column ARE the total and add up on sight; the slot is in every
+cell, empty or not, so the counts stay in a line. Under the table the rule is
+written once in words. The check adds the markers up and compares them with the
+total, which is what makes the arithmetic on the page a claim the page has to
+keep rather than a decoration.
+
+**Carte is forty cards, so the four suits go under it.** "carte 21–19" says who
+won; the suits say how, and they are the working for the denari point as well —
+which appears twice, once as a quarter of the carte and once as a point, because
+those are two different facts about the same six cards. Primiera shows its
+totals rather than a tick, since a point decided by an arithmetic nobody can see
+is the one most worth showing: `null` from `primieraTotale` means a suit is
+missing and no point, and is drawn as a dash rather than a zero.
+
 **The result is counted out, and that is iteration 4's dialog arriving early.**
 §3.7 had the deal's score land in the say line until iteration 4 gave it a
 dialog; the owner played iteration 3 and asked for the breakdown, so the five

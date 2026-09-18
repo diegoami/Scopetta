@@ -1678,7 +1678,12 @@ async function checkDeal(browser) {
   const end = await page.evaluate(() => {
     const r = scoreDeal(state);
     const grid = document.getElementById('resultGrid');
-    const nums = [...grid.querySelectorAll('.r-num')].map(n => n.textContent);
+    const val = sel => [...grid.querySelectorAll(sel)].map(n => n.querySelector('.r-val').textContent);
+    // The points each column is awarded, read off the markers the player sees.
+    const pts = who => [...grid.querySelectorAll('.r-num:not(.r-sub):not(.r-total)')]
+      .filter((_, i) => i % 2 === who)
+      .reduce((sum, n) => sum + (parseInt(n.querySelector('.r-pt').textContent.slice(1), 10) || 0), 0);
+    const bySuit = w => [0, 1, 2, 3].map(s => state.prese[w].filter(c => c.s === s).length);
     return {
       over: state.over, plays: state.plays,
       domTavola: document.querySelectorAll('.tavola .card').length,
@@ -1687,10 +1692,15 @@ async function checkDeal(browser) {
       say: document.querySelector('.sel-name').textContent,
       punti: r.punti,
       resultShown: !document.getElementById('result').hidden,
-      labels: [...grid.querySelectorAll('.r-label')].map(n => n.textContent),
+      labels: [...grid.querySelectorAll('.r-label:not(.r-sub)')].map(n => n.textContent),
+      subLabels: [...grid.querySelectorAll('.r-label.r-sub')].map(n => n.textContent),
       // carte, denari, settebello, primiera, scope, totale — six rows of two
-      nums,
+      nums: val('.r-num:not(.r-sub)'),
+      subNums: val('.r-num.r-sub'),
+      marked: [pts(0), pts(1)],
+      rule: (document.querySelector('.result__rule') || {}).textContent || '',
       carte: [String(state.prese[0].length), String(state.prese[1].length)],
+      suits: [bySuit(0), bySuit(1)],
       scope: state.scope.map(String),
     };
   });
@@ -1711,6 +1721,23 @@ async function checkDeal(browser) {
   const wantLabels = ['carte', 'denari', 'settebello', 'primiera', 'scope', 'totale'];
   if (JSON.stringify(end.labels) !== JSON.stringify(wantLabels))
     bad.push(`the breakdown lists ${JSON.stringify(end.labels)}, want ${JSON.stringify(wantLabels)}`);
+  // Carte is forty cards and the suits are what it is made of.
+  const wantSubs = ['denari', 'coppe', 'spade', 'bastoni'];
+  if (JSON.stringify(end.subLabels) !== JSON.stringify(wantSubs))
+    bad.push(`the working under carte lists ${JSON.stringify(end.subLabels)}, want ${JSON.stringify(wantSubs)}`);
+  const wantSuits = [0, 1, 2, 3].flatMap(su => [String(end.suits[0][su]), String(end.suits[1][su])]);
+  if (JSON.stringify(end.subNums) !== JSON.stringify(wantSuits))
+    bad.push(`the working under carte counts ${JSON.stringify(end.subNums)}, the piles hold ${JSON.stringify(wantSuits)}`);
+
+  // And the arithmetic is on the page rather than in the reader's head: the
+  // markers down each column are what the total is made of, so they have to
+  // add up to it.
+  if (end.marked[0] !== end.punti[0] || end.marked[1] !== end.punti[1])
+    bad.push(`the points marked on the rows add to ${end.marked[0]}/${end.marked[1]}, `
+      + `the total says ${end.punti[0]}/${end.punti[1]}`);
+  if (!/scopa/i.test(end.rule))
+    bad.push(`the breakdown does not say what the total is made of: "${end.rule}"`);
+
   if (end.nums.length !== 12)
     bad.push(`the breakdown has ${end.nums.length} numbers, want 12 — six rows of two`);
   else {

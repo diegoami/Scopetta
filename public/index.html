@@ -760,6 +760,34 @@ button.card:disabled{ cursor: default; }
   text-align: right;
 }
 .result__grid > [data-won="true"]{ color: var(--brass); font-weight: 700; }
+/* The working under a point, rather than a point: smaller, quieter, indented
+   by its own label so the eye can see at a glance which rows add up to which. */
+.result__grid > .r-num{
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: .3em;
+}
+/* Always in the row, empty or not, so the counts stay in a column and the
+   points stay in one of their own — which is what makes them add up on sight. */
+.r-pt{
+  min-width: 1.7em;
+  text-align: left;
+  font-family: var(--font-label);
+  font-size: var(--t-tiny);
+  color: var(--brass);
+}
+.result__grid > .r-total .r-pt{ display: none; }
+.result__rule{
+  margin: 0;
+  max-width: 30rem;
+  text-align: center;
+  font-size: var(--t-say);
+  line-height: 1.35;
+  color: var(--ivory-dim);
+}
+.result__grid > .r-sub{ font-size: var(--t-tiny); color: var(--ivory-dim); }
+.result__grid > .r-label.r-sub{ padding-left: 1.2em; }
 .result__grid > .r-total{
   margin-top: .35rem;
   padding-top: .4rem;
@@ -943,6 +971,8 @@ button.card:disabled{ cursor: default; }
     <section class="result" id="result" hidden aria-label="Fine della smazzata">
       <h2 class="result__title">Fine della smazzata</h2>
       <div class="result__grid" id="resultGrid"></div>
+      <p class="result__rule">Un punto per le carte, i denari, il settebello e la
+        primiera, più un punto per ogni scopa.</p>
       <button class="btn" id="resultAgain" type="button">Nuova smazzata</button>
     </section>
 
@@ -1243,39 +1273,74 @@ function renderResult(){
 
   const r = scoreDeal(state);
   const piles = state.prese;
-  const den = w => piles[w].filter(c => c.s === DENARI).length;
+  const bySuit = (w, s) => piles[w].filter(c => c.s === s).length;
+  const den = w => bySuit(w, DENARI);
   const has = w => piles[w].some(isSettebello);
   const si = yes => yes ? "sì" : "—";
+  // A primiera with a suit missing scores nothing, and the engine says so by
+  // returning null rather than a total. "—" is that, not a zero.
+  const prim = w => primieraTotale(piles[w]) ?? "—";
 
   // label, yours, theirs, who took the point (null for scope, which is counted
-  // rather than contested, and for a point nobody took)
+  // rather than contested, and for a point nobody took), and whether the row is
+  // working rather than a point.
+  //
+  // Carte is a count of forty cards and the four suits are what it is made of,
+  // so they go under it: "carte 21–19" says who won and the suits say how. The
+  // denari row appears twice on purpose — once as a quarter of the carte, once
+  // as a point of its own — because those are two different facts about the
+  // same six cards.
+  // Each row carries what it is WORTH as well as what it counts, because a
+  // column of counts and a total underneath does not say how one becomes the
+  // other. One point to whoever takes each of the four, and one for every
+  // scopa: the markers down the right of each column are the sum, and the
+  // line under the table says the rule in words once.
   const rows = [
-    ["carte",      piles[BASSO].length, piles[ALTO].length, r.carte],
-    ["denari",     den(BASSO), den(ALTO), r.denari],
-    ["settebello", si(has(BASSO)), si(has(ALTO)), r.settebello],
-    ["primiera",   si(r.primiera === BASSO), si(r.primiera === ALTO), r.primiera],
-    ["scope",      r.scope[BASSO], r.scope[ALTO], null],
+    ["carte",      piles[BASSO].length, piles[ALTO].length, r.carte, false],
+    ...SEMI.map((nome, suit) =>
+    [nome,         bySuit(BASSO, suit), bySuit(ALTO, suit), null, true]),
+    ["denari",     den(BASSO), den(ALTO), r.denari, false],
+    ["settebello", si(has(BASSO)), si(has(ALTO)), r.settebello, false],
+    ["primiera",   prim(BASSO), prim(ALTO), r.primiera, false],
+    ["scope",      r.scope[BASSO], r.scope[ALTO], "scope", false],
   ];
 
-  const cell = (text, cls, won) => {
+  const label = (text, cls) => {
     const d = document.createElement("div");
     d.className = cls;
-    d.textContent = String(text);
-    if (won) d.dataset.won = "true";
+    d.textContent = text;
+    return d;
+  };
+  // A number and what it is worth, with the worth always present — empty when
+  // the row pays nothing — so the counts stay in a column.
+  const num = (text, cls, points) => {
+    const d = document.createElement("div");
+    d.className = cls;
+    const v = document.createElement("span");
+    v.className = "r-val";
+    v.textContent = String(text);
+    const p = document.createElement("span");
+    p.className = "r-pt";
+    p.textContent = points ? `+${points}` : "";
+    d.append(v, p);
+    if (points) d.dataset.won = "true";
     return d;
   };
 
-  const out = [cell("", "r-head"), cell("Tu", "r-head"), cell(state.opponent, "r-head")];
-  for (const [label, mine, theirs, won] of rows){
-    out.push(cell(label, "r-label"));
-    out.push(cell(mine, "r-num", won === BASSO));
-    out.push(cell(theirs, "r-num", won === ALTO));
+  const out = [label("", "r-head"), label("Tu", "r-head"), label(state.opponent, "r-head")];
+  for (const [name, mine, theirs, won, sub] of rows){
+    const tag = sub ? " r-sub" : "";
+    const pts = who => won === "scope" ? r.scope[who] : (won === who ? 1 : 0);
+    out.push(label(name, "r-label" + tag));
+    out.push(num(mine, "r-num" + tag, sub ? 0 : pts(BASSO)));
+    out.push(num(theirs, "r-num" + tag, sub ? 0 : pts(ALTO)));
   }
   const win = r.punti[BASSO] === r.punti[ALTO] ? null
             : r.punti[BASSO] > r.punti[ALTO] ? BASSO : ALTO;
-  out.push(cell("totale", "r-label r-total"));
-  out.push(cell(r.punti[BASSO], "r-num r-total", win === BASSO));
-  out.push(cell(r.punti[ALTO], "r-num r-total", win === ALTO));
+  out.push(label("totale", "r-label r-total"));
+  out.push(num(r.punti[BASSO], "r-num r-total", 0));
+  out.push(num(r.punti[ALTO], "r-num r-total", 0));
+  if (win !== null) out[out.length - (win === BASSO ? 2 : 1)].dataset.won = "true";
   el.resultGrid.replaceChildren(...out);
 }
 

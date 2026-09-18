@@ -74,7 +74,11 @@ text on it that says what the next tap will DO: it has a size of its own now and
 the check holds it to the floor it holds body copy to, whatever its length,
 because length is a proxy for "is this read" and here it points the wrong way.
 And the deal ended with a total and no working — the five points are counted out
-now, with the counts beside them, because "denari" with no number is a claim.
+now, with the counts beside them, because "denari" with no number is a claim;
+carte carries the four suits it is made of; and each row shows what it is
+**worth**, because a column of counts with a total underneath does not say how
+one becomes the other. The markers down a column are the total, the check adds
+them up and compares, and the rule is written once in words underneath.
 
 **A card the player never sees is a card that was never played.** `gioca` moves
 a capturing card from a hand straight to a pile, so a table that draws only
