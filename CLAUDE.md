@@ -278,6 +278,19 @@ tallest dossier the roster produces at this width, re-measured when the phone
 turns and when the webfont lands — which is the same rule the say line's rung
 follows, and the same rule `--chrome` follows.
 
+**And a guard is railed, not just written.** Five of iteration 4's assertions
+sat behind a condition with nothing watching whether it was ever entered, and
+the worst of them no viewport grid could have reached: `NOTE_OK` skipped its
+whole property check when the result's note named no component, so a
+`notaFinale` that stopped naming them and always fell back to the margin would
+have left "2 punti di scarto." on a 5–3 deal with every pass green. The others
+were a box measured on a screen that was not on, a count asserted where every
+number was 1, a record block guarded on a second opponent the fixture never
+seeded, and a collapse check that skips when the round happens to end on a
+scopa. **When an assertion is optional, say out loud what makes it optional** —
+`else out.push('… so the rule below was never asked')` — because an assertion
+that is never made looks exactly like one that passed.
+
 **And a new assertion is made to fail before it is made to pass.** Write it
 against a deliberately broken page first and watch it go red, because an
 assertion written against already-correct code encodes what the code happens to

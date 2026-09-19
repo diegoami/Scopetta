@@ -42,6 +42,35 @@ and the sections below say what moves.
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
 | 8 | What *scopa d'assi* means, if it is ever wanted | **Not built, and not guessed at.** Raised by iteration 1: §5 lists it among the variants left out, but this plan never says what it does, and the house rule genuinely differs — in some it is another name for *asso piglia tutto*, in others a scopa scored for an asso played to an empty table. The other three variants are live branches behind constants that are off; this one is a documented gap instead, because a constant guessing between two rules would be worse than none. | Nothing, unless the owner wants it. If so, say which of the two it is and it becomes a fourth constant like the others. |
 
+**Four smaller ones were settled at iteration 4**, and they are here rather than
+in a pull request comment because §7.5 says a decision lives in this section and
+nowhere else:
+
+- **A recorded equivalence satisfies §4's "every dialog-over-sheet path" where a
+  row cannot.** *The result closes whatever sheet is in front of it* has no
+  assertion, because none can fail: `show` holds the table's clock for all four
+  sheets, so a deal cannot end behind one, and the only thing that can cover the
+  table at that moment is the confirm, which is a scrim over it rather than a
+  screen instead of it. The guard stays in `finish`, the equivalence is recorded
+  in `break_ui.mjs` with its reasoning, and the Done-when is met by a stronger
+  guarantee than the row would have tested. The owner accepted the deletion.
+- **The weights disclosure stays in English.** It is the only player-facing
+  English outside the rules screen, against §1's rule, and it is deliberate:
+  those strings are the literal identifiers in `engine.js`, so a player
+  comparing the sheet with the source sees the same words, which is what a
+  disclosure is for. Tressette does the same.
+- **`recorded` keeps its two owners** — set where a deal ends, cleared where one
+  begins — with the break `a new deal does not clear the record flag` as the
+  evidence. `CLAUDE.md`'s rule came from `beat`, whose clear sat in a callback
+  nothing asserted; the harm there was the missing assertion rather than the
+  distance, and this flag has one.
+- **A pull request may merge on individually verified breaks** when the full
+  harness has not been re-run, provided the find-string matcher is clean and the
+  page changes since the last full run are named. Iteration 4 merged that way,
+  with four changes — a CSS specificity rule, a markup wrapper, a line-height
+  and a select colour — none of which touches a break's `find`. The full run
+  goes on the next iteration's first push.
+
 The first seven were confirmed by the owner before iteration 0. The eighth was
 raised by iteration 1 and is open, but it blocks nothing: its default is the
 game as specified, and answering it later costs one constant. Decision 5 was
