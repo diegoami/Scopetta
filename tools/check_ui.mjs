@@ -2122,6 +2122,40 @@ const LABEL_STACKS = [
 const FALLBACK_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone 15',
                             'iPhone Pro Max', 'phone landscape', 'tiny window'];
 
+// And the whole type scale, for the sheets. The plate is the only box on the
+// TABLE with a fixed width that has to fit text — the say line measures itself
+// and picks a rung, and the dossier's reservation is measured too — but the
+// sheets are full of boxes that are sized by their content and bounded by
+// something else: the names in a two-column chip grid, `Cambia avversario o
+// mazzo` in a 320px-bounded button, a history row on auto tracks. Not one of
+// them had ever been measured in a face this machine does not happen to have.
+//
+// Real families rather than a synthetic worst case: these exist on Windows and
+// have genuinely different metrics, which is the point. A monospace display
+// face would fail on a page that is not wrong.
+const FALLBACK_FACES = [
+  ['system',  'system-ui, sans-serif',        'system-ui, serif',        'system-ui, sans-serif'],
+  ['Verdana', 'Verdana, Geneva, sans-serif',  'Georgia, serif',          'Verdana, Geneva, sans-serif'],
+  ['Tahoma',  'Tahoma, Geneva, sans-serif',   '"Times New Roman", serif', 'Tahoma, Geneva, sans-serif'],
+];
+
+// The sheets, which is where the text is. The table is covered by the plate
+// half of this pass, at more shapes.
+const FALLBACK_SCREENS = [
+  ['the start sheet', async p => {}],
+  ['the settings', async p => { await p.click('#play'); await p.click('#btnSettings');
+    await p.evaluate(`document.querySelector('#viewSettings details').open = true`); }],
+  ['the history', async p => {
+    await p.evaluate(`localStorage.setItem("scopetta.history", JSON.stringify([
+      { t: Date.parse("2026-02-11"), o: "Graziano", d: "Romagnole", y: 2, a: 5 },
+      { t: Date.parse("2026-02-10"), o: "Franco", d: "Trevisane", y: 4, a: 4 }
+    ]))`);
+    await p.reload();
+    await p.click('#play'); await p.click('#btnHistory'); }],
+  ['the result', async p => { await p.click('#play'); await p.evaluate(poseDraw); }],
+  ['the confirm', async p => { await p.click('#play'); await p.click('#again'); }],
+];
+
 async function checkFallbackFonts(browser) {
   console.log('\nthe plates in a fallback font');
   let failed = 0;
@@ -2164,8 +2198,45 @@ async function checkFallbackFonts(browser) {
       await page.close();
     }
   }
+  // And the sheets, in a whole type scale this machine does not have. The audit
+  // is the right instrument here rather than `measure`: what can go wrong on a
+  // sheet in a wider face is text past the screen edge, text clipped by a box
+  // that cannot scroll, and a button that has stopped being thumb-sized — which
+  // are rules it already carries, and which have only ever been asked in one
+  // font.
+  const shapes = QUICK ? ['narrow phone'] : ['narrow phone', 'Android small', 'tiny window'];
+  const faces = QUICK ? FALLBACK_FACES.slice(0, 2) : FALLBACK_FACES;
+  for (const vname of shapes) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    for (const [label, sans, serif, body] of faces) {
+      for (const [sname, open] of FALLBACK_SCREENS) {
+        const page = await openPage(browser, { width: w, height: h });
+        const errs = [];
+        page.on('pageerror', e => errs.push(String(e)));
+        page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+        await page.goto(URL_);
+        await page.addStyleTag({ content: STILL });
+        await page.addStyleTag({ content: `:root{
+          --font-label: ${sans} !important;
+          --font-display: ${serif} !important;
+          --font-body: ${body} !important; }` });
+        await open(page);
+        await page.waitForTimeout(60);
+        const bad = await page.evaluate(audit);
+        const all = [...bad, ...errs];
+        if (all.length) {
+          failed++;
+          console.log(`  FAIL  ${sname} @ ${vname} / ${label}`);
+          all.forEach(b => console.log(`        ${b}`));
+        }
+        await page.close();
+      }
+    }
+  }
+
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${list.length} viewports x ${stacks.length} fallback label fonts`);
+    + `${list.length} viewports x ${stacks.length} label faces on the table, `
+    + `${shapes.length} x ${faces.length} x ${FALLBACK_SCREENS.length} on the sheets`);
   return failed;
 }
 
