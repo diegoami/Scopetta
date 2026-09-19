@@ -258,6 +258,16 @@ are worth more than the breaks that passed, and the shapes repeat.
   with it, so the harness saw eight failures with nothing in them. `checkDeal`
   has carried that guard since iteration 3; every pass that drives needs it.
 
+**And an assertion behind a condition needs a fixture that meets the
+condition.** Three of this iteration's survivors were one shape, and it is the
+one to look for first: the rule was written correctly, and the fixture could
+not reach it. The points box measured on a screen that was not on. The tally
+measured against a single smazzata, where every count is 1. The record against
+each opponent guarded by `names.length > 1`, with every seeded row against the
+same name — so the block never rendered and the guard skipped in silence, which
+looks exactly like passing. A guard that is never entered is an assertion that
+is never made, and nothing but the break can tell you which you have.
+
 **And a reservation for text is a height, and a height is measured.** The start
 sheet holds space for the dossier so that choosing an opponent does not move the
 deck row under a thumb already on its way to it. Tressette reserves four lines;

@@ -238,6 +238,21 @@ const EXPECT = {
   "the first hand of a session is not dealt in": "start neither empty nor full",
   "the beat is entered and not held": "did not hold the beat",
 
+  // --- what the fresh-context review of PR #8 found had no assertion --------
+  "the last result is drawn at a label size": "want 14.5",
+  "the last result is shown with nothing behind it": "with an empty history",
+  "show-points moves the table": "it stands in a column the budget",
+  "the way on is not pinned": "below the fold inside a dialog",
+  "the number keys stop playing cards": "did not raise a card",
+  "space stops cycling the proposal": "Space did not cycle",
+  "enter stops playing the raised card": "Enter did not play",
+  "escape stops putting the card back": "Escape did not put the raised card back",
+  "escape stops backing out of a sheet": "Escape did not back out",
+  "clearing the history clears nothing": "smazzate in storage",
+  "the record against each opponent counts wrong": "the record against",
+  "the dossier is reserved once and never again": "after turning, the dossier",
+  "a new deal does not clear the record flag": "played to the last card was lost",
+
   // --- what each side has taken, and the box it goes in --------------------
   "the plate takes whatever width it wants in portrait again": "of scrolling",
   "the points box is squeezed narrower than its content": "past its own width",
@@ -311,6 +326,8 @@ const EXPECT = {
   "the pile badge stops counting": "badges say",
   "the deck badge stops counting": "the deck badge says",
   "the scopa marks stop counting": "scopa marks",
+  "the primiera counter reads the wrong pile": "counters say",
+  "the counters stop at three points": "counters say",
   "the middle draws a card the engine does not hold": "cards, the engine holds",
   "the denari are counted for the wrong player": "denari, the piles hold",
   "the primiera is read from the wrong pile": "of primiera, the piles make",
@@ -559,7 +576,7 @@ const BREAKS = [
    "    const pts = who => won === \"scope\" ? r.scope[who] : (won === who ? 1 : 0);",
    "    const pts = who => 0;"],
   ["the rule the total comes from is not stated",
-   "      <p class=\"result__rule\">Un punto per le carte, i denari, il settebello e la\n        primiera, più un punto per ogni scopa.</p>\n",
+   "        <p class=\"result__rule\">Un punto per le carte, i denari, il settebello e la\n          primiera, più un punto per ogni scopa.</p>\n",
    ""],
   ["the rules are Italian only",
    "      <section lang=\"en\">", "      <section>"],
@@ -611,6 +628,14 @@ const BREAKS = [
   ["the deck badge stops counting",
    "  el.countMazzo.textContent = String(left);",
    "  el.countMazzo.textContent = String(left + 1);"],
+  // The four counters the owner plays off. Primiera above all: it is the one
+  // number on this table nobody can check by looking at the cards.
+  ["the primiera counter reads the wrong pile",
+   "  const prim = state.prese ? primieraTotale(pile) : null;",
+   "  const prim = state.prese ? primieraTotale(state.prese[1 - who]) : null;"],
+  ["the counters stop at three points",
+   "    [\"primiera\", prim === null || prim === undefined ? \"—\" : String(prim),\n      prim !== null && prim !== undefined],\n",
+   ""],
   ["the scopa marks stop counting",
    "  const s = state.scope ? state.scope[who] : 0;",
    "  const s = 0;"],
@@ -874,6 +899,83 @@ const BREAKS = [
   ["the card keys eat the letters of the word",
    "    if (e.key >= \"1\" && e.key <= \"3\"){ tapped(Number(e.key) - 1); return; }",
    "    if (e.key >= \"1\" && e.key <= \"6\"){ tapped((Number(e.key) - 1) % 3); return; }"],
+
+  // --- what the fresh-context review of PR #8 found had no assertion --------
+  // Each of these is behaviour this iteration added with nothing watching it.
+  // The review found them by reading; these are what make the finding stick.
+  //
+  // Note what is NOT here: the `.hero .last-result` specificity fix itself. A
+  // rule that loses to `.hero p` draws the line LARGER, in body copy, which no
+  // threshold can call a defect — the check is not a design opinion. What is
+  // assertable is the size the rule asks for, and that it clears the floor for
+  // something somebody reads, which is this break.
+  ["the last result is drawn at a label size",
+   "  font-size: var(--t-say);\n  color: var(--brass);\n}",
+   "  font-size: var(--t-label);\n  color: var(--brass);\n}"],
+  ["the last result is shown with nothing behind it",
+   "  if (!last){ el.lastResult.hidden = true; return; }",
+   "  if (!last){ el.lastResult.hidden = false; return; }"],
+
+  // The argument for putting the counters opposite the plate rather than on it
+  // is that --seat-extra had already bought the column. Put them anywhere the
+  // budget does not pay for and the table moves when a setting is toggled.
+  ["show-points moves the table",
+   "  .say, .seat__cards{ flex: 0 0 100%; }",
+   "  .say, .seat__cards, .points{ flex: 0 0 100%; }"],
+
+  // The end-of-deal panel's two ways on, unpinned — which is how iteration 4
+  // shipped it, with `Ancora` 10px below the fold at 980x385.
+  //
+  // Three edits, because it takes three to get the defect back, and finding
+  // that out cost a SURVIVED: removing the explicit `grid-template-rows` alone
+  // changes nothing, and neither does adding `overflow: auto` back. The panel
+  // has a definite height from `inset: 0`, so two auto rows STRETCH to fill it,
+  // the body row gets a bounded height, and `.result__body` scrolls and pins
+  // the actions whatever the rows say. The wrapper is the fix; the rows only
+  // say so out loud. So the break removes the wrapper, which is what this
+  // iteration actually shipped — measured on the rebuilt page: `Cambia` 28px
+  // below the fold at 500x425, `Ancora` 10px and `Cambia` 60px at 980x385, the
+  // same numbers issue #6 reports.
+  ["the way on is not pinned",
+   ["  grid-template-rows: minmax(0, 1fr) auto;\n  justify-items: center;",
+    "      <!-- The counting scrolls; the two ways on below it do not. -->\n      <div class=\"result__body\">\n        <h2",
+    "        <p class=\"result__note\" id=\"resultNote\"></p>\n      </div>\n"],
+   ["  align-content: center;\n  overflow: auto;\n  justify-items: center;",
+    "      <h2",
+    "      <p class=\"result__note\" id=\"resultNote\"></p>\n"]],
+
+  // The keys, whose suppression under a dialog was asserted and whose working
+  // was not. Four promises the rules screen makes to the player.
+  ["the number keys stop playing cards",
+   "    if (e.key >= \"1\" && e.key <= \"3\"){ tapped(Number(e.key) - 1); return; }",
+   "    if (false){ tapped(Number(e.key) - 1); return; }"],
+  ["space stops cycling the proposal",
+   "        if (opts.length > 1){ state.scelta = (state.scelta + 1) % opts.length; render(); }",
+   "        if (opts.length > 99){ state.scelta = (state.scelta + 1) % opts.length; render(); }"],
+  ["enter stops playing the raised card",
+   "        play(BASSO, state.selected, propostaCorrente());", ""],
+  ["escape stops putting the card back",
+   "      if (e.key === \"Escape\"){ state.selected = null; state.scelta = 0; render(); return; }", ""],
+  ["escape stops backing out of a sheet",
+   "  if (e.key === \"Escape\" && onScreen !== \"table\" && onScreen !== \"start\"){ back(); return; }", ""],
+
+  // The history sheet's own two, which were rendered and never read back.
+  ["clearing the history clears nothing",
+   "  try{ localStorage.removeItem(HKEY); } catch (e){}", "  try{ } catch (e){}"],
+  ["the record against each opponent counts wrong",
+   "    if (m.y > m.a) riga.v++;", "    riga.v++;"],
+
+  // The reservation is a measured height, so it is a width question, so it is
+  // a rotation question — and it was measured at one size and never again.
+  ["the dossier is reserved once and never again",
+   "  redraw = requestAnimationFrame(() => { redraw = 0; render(); reserveDossier(); });",
+   "  redraw = requestAnimationFrame(() => { redraw = 0; render(); });"],
+
+  // `recorded` is set in `play` and cleared in `newDealHere`, which is a flag
+  // with two owners — CLAUDE.md's rule, paid for by `beat` at iteration 3. The
+  // argument that it is safe here is only worth what this break says it is.
+  ["a new deal does not clear the record flag",
+   "  beat = false;\n  recorded = false;", "  beat = false;"],
 
   // --- the numbers under the breakdown that had no break -------------------
   ["the denari are counted for the wrong player",

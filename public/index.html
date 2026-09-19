@@ -680,8 +680,17 @@ button.card:disabled{ cursor: default; }
   height: var(--plate-h);
   display: grid;
   align-content: center;
-  gap: .05rem;
-  padding: .2rem .5rem;
+  /* No row gap, and a tight line, because the box holds FOUR rows and its
+     height is not its own: it is --plate-h, which is derived from the three
+     rows the name plate can hold. The owner asked for primiera beside carte,
+     ori and the settebello — rightly, it is the one point nobody can compute
+     while playing — and a fourth row at the body's 1.45 line wants 83px of a
+     75.8px box. 1.25 is what fits with room to spare at every shape the grid
+     holds, and the check asserts scrollHeight against clientHeight here, so a
+     line that stops fitting is a failure rather than an opinion. */
+  gap: 0;
+  line-height: 1.25;
+  padding: .15rem .5rem;
   border-radius: 3px;
   background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.28));
   box-shadow: inset 0 0 0 1px var(--rail-line);
@@ -828,17 +837,36 @@ button.card:disabled{ cursor: default; }
    cannot be a fixed number of pixels, and a row that cannot be budgeted floats.
    It scrolls rather than clips if a short landscape window cannot hold it —
    reaching the last line by scrolling beats losing it. */
+/* Two rows: the counting, which scrolls, and the two ways on, which do not.
+   `overflow: auto` on the whole panel was the shape issue #6 named — the
+   buttons WERE reachable, by scrolling a panel with nothing to say it scrolls
+   — and iteration 4 made it worse by adding a computed note and a second
+   button. Measured before this: at 980x385 `Ancora` sat 10px below the fold and
+   `Cambia` 60px, at 1100x330 it was 38px and 88px, and three more shapes lost
+   the second button. Five viewports where the deal ends and the only way on
+   looks like it is not there.
+
+   So the actions are pinned as a footer row, which is what the start sheet does
+   with Gioca and for the same reason: the content above may scroll on a short
+   window, the primary action never leaves the screen. */
 .table > .result{
   position: absolute;
   inset: 0;
   z-index: 5;
   display: grid;
-  align-content: center;
+  grid-template-rows: minmax(0, 1fr) auto;
   justify-items: center;
   gap: clamp(.5rem, 2vw, 1rem);
   padding: var(--pad-inline);
-  overflow: auto;
   background: rgba(8, 26, 21, .94);
+}
+.result__body{
+  overflow: auto;
+  width: 100%;
+  display: grid;
+  align-content: safe center;
+  justify-items: center;
+  gap: clamp(.5rem, 2vw, 1rem);
 }
 .result__title{
   margin: 0;
@@ -1008,11 +1036,24 @@ button.card:disabled{ cursor: default; }
   margin: 0;
 }
 .hero p{ margin: 0; color: var(--ivory-dim); font-size: var(--t-body); line-height: 1.5; }
-.last-result{
+/* `.hero .last-result`, not `.last-result`. It is a <p> inside .hero, and
+   `.hero p` above is (0,1,1) against this rule's (0,1,0) — so the two
+   declarations written for this element, its label size and its brass, lost to
+   the body copy rule and the line drew at 17px ivory-dim. Only the family
+   landed, which is why it looked plausible. Forked from Tressette, which has
+   the same shape; the element is this iteration's. */
+.hero .last-result{
   font-family: var(--font-label);
   text-transform: uppercase;
   letter-spacing: .1em;
-  font-size: var(--t-label);
+  /* --t-say, not --t-label, and the specificity fix above is what exposed it:
+     the moment the rule started applying, the line drew at 13px on a 320px
+     phone against the check's 14.5px floor. "Ultima smazzata: hai vinto 5-3
+     contro Graziano" is forty-five characters — a sentence somebody reads, not
+     a label they glance at — which is the same call already made for the
+     result's note and the confirm's paragraph. Tressette sets it in a hard
+     .95rem and its grid holds no 320px phone. */
+  font-size: var(--t-say);
   color: var(--brass);
 }
 
@@ -1128,6 +1169,14 @@ button.card:disabled{ cursor: default; }
   border-radius: 3px;
   padding: .3rem .4rem;
 }
+/* An explicit dark ground on the select AND on its options. Transparent with
+   inherited ivory text renders the closed control correctly on this page and
+   the open dropdown light-on-white, because the native list is painted by the
+   platform on its own background — reported against discola-web, which shipped
+   it. Nothing in the check can see this: a native dropdown is not in the DOM,
+   so there is no box to measure and no assertion to write. */
+.field select{ background-color: var(--rail); color: var(--ivory); }
+.field select option{ background-color: var(--rail); color: var(--ivory); }
 .field input[type="color"]{ width: 46px; height: 30px; padding: 2px; cursor: pointer; }
 .field input[type="range"]{ width: 140px; accent-color: var(--brass); }
 
@@ -1420,11 +1469,14 @@ button.card:disabled{ cursor: default; }
          same words as the h2 is the panel announced twice. -->
     <section class="result" id="result" hidden role="dialog" aria-modal="true"
              aria-labelledby="resultTitle">
-      <h2 class="result__title" id="resultTitle">Fine della smazzata</h2>
-      <div class="result__grid" id="resultGrid"></div>
-      <p class="result__rule">Un punto per le carte, i denari, il settebello e la
-        primiera, più un punto per ogni scopa.</p>
-      <p class="result__note" id="resultNote"></p>
+      <!-- The counting scrolls; the two ways on below it do not. -->
+      <div class="result__body">
+        <h2 class="result__title" id="resultTitle">Fine della smazzata</h2>
+        <div class="result__grid" id="resultGrid"></div>
+        <p class="result__rule">Un punto per le carte, i denari, il settebello e la
+          primiera, più un punto per ogni scopa.</p>
+        <p class="result__note" id="resultNote"></p>
+      </div>
       <div class="result__actions">
         <button class="btn btn--primary" id="resultAgain" type="button">Ancora</button>
         <button class="btn" id="resultChange" type="button">Cambia avversario o mazzo</button>
@@ -2117,6 +2169,18 @@ function renderPoints(box, who){
   const pile = state.prese ? state.prese[who] : [];
   const ori = pile.filter(c => c.s === DENARI).length;
   const sette = pile.some(isSettebello);
+  // The fourth row, and the one the owner asked for after playing: primiera is
+  // the only one of the five points a player cannot keep in their head — the
+  // best card of each suit, summed, on a scale where a seven is 21 and a re is
+  // 10. §3.6 gives the same reason for showing its totals in the result rather
+  // than a tick: a point decided by an arithmetic nobody can see is the one
+  // most worth showing.
+  //
+  // `primieraTotale` returns null while a suit is missing from the pile, which
+  // is most of the early deal and is not a zero — it is "no point at all from
+  // here". Drawn as a dash, exactly as the result panel draws it, so the two
+  // places the primiera appears say the same thing in the same way.
+  const prim = state.prese ? primieraTotale(pile) : null;
   box.replaceChildren(...[
     ["carte", String(pile.length), true],
     ["ori", String(ori), true],
@@ -2124,6 +2188,8 @@ function renderPoints(box, who){
     // move, and "nobody has it yet" is a fact where a blank is an absence the
     // reader has to interpret.
     ["settebello", sette ? "sì" : "—", sette],
+    ["primiera", prim === null || prim === undefined ? "—" : String(prim),
+      prim !== null && prim !== undefined],
   ].map(([label, value, has]) => {
     const row = document.createElement("div");
     const l = document.createElement("span");

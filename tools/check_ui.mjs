@@ -704,6 +704,24 @@ const audit = () => {
       }
     }
 
+    // A way ON has to be on screen. The audit's below-the-fold rule measures
+    // YOUR SEAT, and a dialog is `position: absolute; inset: 0` over the table
+    // rather than part of it — so when the end-of-deal panel grew a computed
+    // note and a second button, `Ancora` sat 10px below the fold at 980x385 and
+    // 38px at 1100x330, reachable only by scrolling a panel that gives no sign
+    // it scrolls, and nothing in eleven passes said a word.
+    //
+    // Scoped to dialogs because that is where a control is the ONLY way on: the
+    // sheets scroll as sheets, visibly, with the rest of the page around them.
+    if (el.tagName === 'BUTTON' && el.closest('[role="dialog"]')) {
+      const below = Math.round(r.bottom - window.innerHeight);
+      if (below > 1)
+        out.push(`${name(el)} is ${below}px below the fold inside a dialog — `
+          + `it is the way on and it is off the screen`);
+      if (r.right > window.innerWidth + 1 || r.left < -1)
+        out.push(`${name(el)} runs off the side of a dialog`);
+    }
+
     // Thumb-sized targets. Cards are excluded because a card's size is the
     // table's budget and is asserted by the second pass.
     const inlineLink = el.tagName === 'A' && cs.display.startsWith('inline');
@@ -734,6 +752,19 @@ const noisy = m => noise(m.text()) || FONTS.test((m.location() || {}).url || '')
 // one of these exists only in the middle of a deal.
 const SCREENS = [
   { name: 'start', open: async p => {} },
+  // The start sheet with a smazzata behind it, which is what a returning player
+  // sees and what no pass ever rendered: `#lastResult` is `hidden` until
+  // `loadHistory` returns something, the start row opens on empty storage, and
+  // the row that seeds storage walks to the history sheet instead. So the line
+  // was new behaviour with no assertion — and it was drawing at 17px ivory-dim
+  // rather than the brass label its own rule asks for, because `.hero p` beats
+  // `.last-result` on specificity.
+  { name: 'start, with a smazzata behind it', open: async p => {
+      await p.evaluate(`localStorage.setItem("scopetta.history", JSON.stringify([
+        { t: Date.parse("2026-02-11"), o: "Graziano", d: "Romagnole", y: 5, a: 3 }
+      ]))`);
+      await p.reload();
+    } },
   // Both ways in, because a screen reachable from one place and not the other
   // is half a screen. The rules are the only page here that is READ, so the
   // audit's body-copy floor is the one that matters on them.
@@ -1948,8 +1979,43 @@ async function checkRotation(browser) {
       }
     }
 
+    // And the dossier's reservation, which is also a measured height and so is
+    // also a width question. It is asserted once, at whatever size that pass
+    // loads — and `reserveDossier` is called from the resize listener for
+    // exactly this reason, with nothing watching that it still is. Same shape
+    // as the defect this whole pass was written for.
+    // A reload, because the page boots onto the start sheet and this pass has
+    // been at the table since its first line. The reservation is then taken at
+    // `from` and read at 320.
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.setViewportSize({ width: from[0], height: from[1] });
+    await page.waitForTimeout(60);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.waitForTimeout(80);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (document.getElementById('viewStart').hidden)
+        return ['the start sheet was not on show, so the dossier was never measured'];
+      const dossier = document.querySelector('#dossier');
+      const where = () => Math.round(document.querySelector('#decks').getBoundingClientRect().top);
+      const was = where();
+      const said = dossier.textContent;
+      dossier.textContent = '';
+      const empty = where();
+      dossier.textContent = said;
+      if (Math.abs(empty - was) > 1)
+        out.push(`after turning, the dossier does not hold its height: emptying it `
+          + `moved the deck row by ${Math.abs(empty - was)}px`);
+      return out;
+    }));
+
     // And the say line, which picks its rung by measuring: raised at one width,
     // read at another.
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    await page.click('#play');
+    await page.evaluate(d => applyDeck(d), deck);
     await page.setViewportSize({ width: from[0], height: from[1] });
     await page.evaluate(poseWidestSay);
     await page.waitForTimeout(40);
@@ -2317,6 +2383,12 @@ async function checkSheets(browser) {
         out.push(`${JSON.stringify(pressed)} chips are pressed, the opponent is ${state.opponent}`);
       if (!document.querySelector('#dossier').textContent.trim())
         out.push('the chosen opponent has no dossier');
+      // And the line that says how the last one went, which is the only thing
+      // on this sheet that is about a smazzata rather than about the next one.
+      // With nothing behind it, it must be out of the way rather than blank.
+      const last = document.getElementById('lastResult');
+      if (!last.hidden)
+        out.push(`the start sheet says "${last.textContent}" with an empty history`);
       const decks = [...document.querySelectorAll('#decks .deck-opt')].map(d => d.dataset.deck);
       if (decks.length !== 5)
         out.push(`the deck row offers ${decks.length} decks, want 5`);
@@ -2435,16 +2507,56 @@ async function checkSheets(browser) {
     // `.points` box has zero height while `#viewTable` is hidden, whatever
     // show-points says, so the break written for this survived the whole check.
     // An assertion has to look at the screen its subject is on.
+    //
+    // And nothing the CARD BUDGET pays for may move when it is toggled. That is
+    // the whole argument for putting these counters in the column opposite the
+    // plate rather than on it — `--seat-extra` was already buying two plate
+    // widths and only one had a plate in it — and it was the one property
+    // nothing measured. (The plate itself DOES move, by 71.5px, in portrait:
+    // the seat is a centred flex row there, so losing one of its two items
+    // re-centres the other. That is a visible jolt when a setting is changed
+    // and it is not the budget; §3.6 says so rather than claiming otherwise.)
     await page.click('#viewSettings [data-back]');
-    bad.push(...await page.evaluate(() => {
+    await page.evaluate(`(() => { el.pointsSel.checked = true;
+      el.pointsSel.dispatchEvent(new Event("change")); })()`);
+    const withPoints = await page.evaluate(() => {
+      const R = s => { const e = document.querySelector(s); const r = e.getBoundingClientRect();
+                       return [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10,
+                               Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; };
+      return { cw: getComputedStyle(document.documentElement).getPropertyValue('--cw'),
+               card: R('.hand--you .card'), tavola: R('.tavola'),
+               oppSeat: R('.seat--opp'), youSeat: R('.seat--you') };
+    });
+    await page.evaluate(`(() => { el.pointsSel.checked = false;
+      el.pointsSel.dispatchEvent(new Event("change")); })()`);
+    bad.push(...await page.evaluate(was => {
       const out = [];
       if (document.getElementById('viewTable').hidden)
         return ['Back from the settings did not return to the table'];
       const shown = [...document.querySelectorAll('.points')]
         .filter(b => b.getBoundingClientRect().height > 0).length;
       if (shown) out.push(`${shown} points box(es) still drawn with show-points off`);
+      const R = s => { const e = document.querySelector(s); const r = e.getBoundingClientRect();
+                       return [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10,
+                               Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; };
+      const now = { cw: getComputedStyle(document.documentElement).getPropertyValue('--cw'),
+                    card: R('.hand--you .card'), tavola: R('.tavola'),
+                    oppSeat: R('.seat--opp'), youSeat: R('.seat--you') };
+      // Within a pixel, not to the tenth of one. Flex and grid round their
+      // tracks, and at 500x425 the hand card lands on 197.4 with the counters
+      // and 197.0 without — which is the layout rounding differently, not the
+      // budget changing. The defect this rule is for moves things by a plate
+      // width or a card row, so a pixel of tolerance costs it nothing and a
+      // tenth of one makes it cry wolf.
+      const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 1);
+      for (const k of Object.keys(was)) {
+        const same = k === 'cw' ? now.cw === was.cw : near(now[k], was[k]);
+        if (!same)
+          out.push(`show-points moved ${k}: ${JSON.stringify(was[k])} became `
+            + `${JSON.stringify(now[k])} — it stands in a column the budget already paid for`);
+      }
       return out;
-    }));
+    }, withPoints));
     await page.click('#btnSettings');
     await page.reload();
     await page.addStyleTag({ content: STILL });
@@ -2483,6 +2595,64 @@ async function checkSheets(browser) {
       if (await page.evaluate(() => document.getElementById('viewTable').hidden))
         bad.push(`Back from ${view} did not return to the table`);
     }
+
+    /* --- the keys that are supposed to work --------------------------------- */
+    // Only their SUPPRESSION under a dialog was asserted. `1`-`3` playing a
+    // card, Space cycling the proposal, Enter confirming it and Escape putting
+    // it back are four documented promises — §3.6's key list, and both halves
+    // of the rules screen — with no row between them. A handler that stopped
+    // playing cards entirely would have been caught by nothing.
+    await page.evaluate(`(() => {
+      epoch++; clearTimeout(timer); pending = null;
+      state.tavola = [{s:1,n:7},{s:0,n:7},{s:2,n:4},{s:3,n:3}];
+      state.hands[0] = [{s:2,n:7}, {s:3,n:10}, {s:1,n:2}];
+      state.deveGiocare = 0; state.over = false;
+      state.selected = null; state.scelta = 0; render();
+    })()`);
+    await page.keyboard.press('1');            // two sevens down: raises
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (state.selected !== 0) out.push('`1` did not raise a card that has a capture to choose');
+      return out;
+    }));
+    const firstChoice = await page.evaluate(() => JSON.stringify(propostaCorrente()));
+    await page.keyboard.press(' ');
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (JSON.stringify(propostaCorrente()) === was)
+        out.push(`Space did not cycle the proposal: still ${was}`);
+      return out;
+    }, firstChoice));
+    await page.keyboard.press('Escape');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (state.selected !== null) out.push('Escape did not put the raised card back');
+      return out;
+    }));
+    const beforeKeys = await page.evaluate(() => state.plays);
+    await page.keyboard.press('1');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(40);
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (state.plays !== was + 1)
+        out.push(`Enter did not play the raised card: ${was} plays became ${state.plays}`);
+      return out;
+    }, beforeKeys));
+
+    // And Escape backs out of a sheet, which is the other promise the rules
+    // screen makes about it. Nothing pressed Escape anywhere in this check.
+    await page.evaluate(`(() => { epoch++; clearTimeout(timer); pending = null; render(); })()`);
+    await page.click('#btnSettings');
+    await page.keyboard.press('Escape');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (document.getElementById('viewSettings').hidden === false)
+        out.push('Escape did not back out of the settings sheet');
+      if (document.getElementById('viewTable').hidden)
+        out.push('Escape left the settings sheet and did not land on the table');
+      return out;
+    }));
 
     /* --- the card keys while a dialog is open ------------------------------- */
     // A dialog is over the table, not beside it. While one is open the card
@@ -2654,11 +2824,17 @@ async function checkSheets(browser) {
     // smazzata in the history every count is 1 and every cell agrees with every
     // other by accident: the break that made the tally count wins where it says
     // smazzate survived the whole check.
+    //
+    // And under TWO names, for the same reason one step along: the record
+    // against each opponent only renders when there is more than one to compare,
+    // so seeding them all against Franco left that assertion guarded by a
+    // condition the fixture never met — and the break for it survived too. Two
+    // names, and the second one loses both of its, so a miscount shows.
     await page.evaluate(`(() => {
       const list = JSON.parse(localStorage.getItem("scopetta.history") || "[]");
       list.push({ t: Date.parse("2026-02-10"), o: "Franco", d: "Trevisane", y: 6, a: 1 },
-                { t: Date.parse("2026-02-09"), o: "Franco", d: "Trevisane", y: 1, a: 4 },
-                { t: Date.parse("2026-02-08"), o: "Franco", d: "Trevisane", y: 2, a: 2 });
+                { t: Date.parse("2026-02-09"), o: "Graziano", d: "Trevisane", y: 1, a: 4 },
+                { t: Date.parse("2026-02-08"), o: "Graziano", d: "Trevisane", y: 2, a: 2 });
       localStorage.setItem("scopetta.history", JSON.stringify(list));
     })()`);
     await page.click('#btnHistory');
@@ -2711,6 +2887,40 @@ async function checkSheets(browser) {
         out.push(`${after} rows after three unreadable entries were added, want ${list.length}`);
       if (!document.querySelector('#historyBody .btn'))
         out.push('the history sheet lost the button that clears it');
+      // And the record against each opponent, read back rather than merely
+      // rendered. The tally's four cells were made discriminating this
+      // iteration; these two numbers were not, and `clearHistory` was asserted
+      // to EXIST and never pressed.
+      const per = {};
+      for (const m of list) { const r = per[m.o] || (per[m.o] = { n: 0, v: 0 });
+                              r.n++; if (m.y > m.a) r.v++; }
+      const names = Object.keys(per);
+      const record = [...document.querySelectorAll('#historyBody .group .field')];
+      if (names.length > 1){
+        if (record.length !== names.length)
+          out.push(`the record shows ${record.length} opponents, the history holds ${names.length}`);
+        for (const line of record){
+          const who = line.firstElementChild.textContent;
+          const said = line.querySelector('.score').textContent;
+          const want = `${per[who].v}/${per[who].n}`;
+          if (said !== want)
+            out.push(`the record against ${who} reads ${said}, the history says ${want}`);
+        }
+      }
+      return out;
+    }));
+
+    // The button that clears it, pressed. It is the one control on this sheet
+    // that destroys something, and it had never been touched.
+    await page.click('#historyBody .btn');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const list = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      if (list.length) out.push(`clearing the history left ${list.length} smazzate in storage`);
+      if (document.querySelectorAll('#historyBody .log li').length)
+        out.push('clearing the history left rows on the sheet');
+      if (!document.querySelector('#historyBody .empty'))
+        out.push('the cleared history does not say it is empty');
       return out;
     }));
 
@@ -2882,6 +3092,22 @@ async function checkDeal(browser) {
       hand: [...document.querySelectorAll('.hand--you .card')]
         .map(c => ({ empty: c.dataset.empty, disabled: c.disabled })),
       slots: state.hands[0].map(c => !!c),
+      // What the show-points boxes say, against what the piles hold. The owner
+      // plays off these counters, so they are read back after every play like
+      // the badges are — and primiera above all, since it is the one number on
+      // this table nobody can check by looking at the cards.
+      shownPoints: [
+        [...document.querySelectorAll('#pointsYou b')].map(b => b.textContent),
+        [...document.querySelectorAll('#pointsOpp b')].map(b => b.textContent),
+      ],
+      wantPoints: [0, 1].map(w => {
+        const pile = state.prese[w];
+        const p = primieraTotale(pile);
+        return [String(pile.length),
+                String(pile.filter(c => c.s === DENARI).length),
+                pile.some(isSettebello) ? 'sì' : '—',
+                p === null || p === undefined ? '—' : String(p)];
+      }),
     }));
 
     // --- read the table, every play ---------------------------------------
@@ -2895,6 +3121,11 @@ async function checkDeal(browser) {
       bad.push(`play ${st.plays}: the deck badge says ${st.badgeDeck}, the deck holds ${st.deck}`);
     if (st.marksYou !== st.scope[0] || st.marksOpp !== st.scope[1])
       bad.push(`play ${st.plays}: ${st.marksYou}/${st.marksOpp} scopa marks, the engine counted ${st.scope[0]}/${st.scope[1]}`);
+    for (const w of [0, 1])
+      if (JSON.stringify(st.shownPoints[w]) !== JSON.stringify(st.wantPoints[w]))
+        bad.push(`play ${st.plays}: ${w ? "their" : "your"} counters say `
+          + `${JSON.stringify(st.shownPoints[w])}, the pile holds `
+          + `${JSON.stringify(st.wantPoints[w])} (carte, ori, settebello, primiera)`);
     // Every card you hold is shown, and every slot you do not is empty —
     // except in the beat between rounds, which is the one moment the page draws
     // empty hands over a state that already holds the next three. checkStates
