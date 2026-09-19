@@ -1432,6 +1432,27 @@ iteration's own design:
 And one of the repairs found a defect in the page after all: the assertion
 written for the dossier's reserved height fired on the *good* page. See §3.6.
 
+**And CI found the one neither could.** The first pull request went up with the
+check green here and the `ui` job red: `#plateOpp spills 3px past its own width`
+at every 360x800 case in all five decks. Blocking the webfont pins the font the
+page *asks for*; it says nothing about the fallback, and `--font-label` ends in
+`system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
+Linux runner — wider by exactly that much.
+
+The page defect was `--plate-w`, and it is §3.7's own rule missed by one token:
+it was `7.5 × --t-pick`, the size of the NAME, when what sets the plate's
+minimum is `avversario` beneath it at `--t-tiny` — which §5 measured as longer
+than any name in §0's roster. The two agree until the scales come apart, and
+they come apart where both hit their floors: at 320 and 360 `--t-pick` is 16px
+and `--t-tiny` is 12.5px, so the token bought 120px against 125px of content.
+It is `10.8 × --t-tiny` now, measured across five label faces at eight shapes;
+it costs about 2.5px of card width where the width term binds.
+
+The check gained the pass that would have caught it — *the plates in a fallback
+font*, six shapes × five real label stacks — because a check whose answer
+depends on which fonts the machine has is not a check, which is the same
+sentence the webfont blocking was written under.
+
 ### 5 — The opponents (1 day)
 
 **One thing settled here in advance.** `--plate-w` is a derived width and the

@@ -295,6 +295,27 @@ page it exists to measure. CI is Linux and never saw it, and neither did three
 iterations. `fileURLToPath` and `pathToFileURL` are identical on Linux and
 correct on both.
 
+**And blocking the webfont pins the font the page ASKS for, not the one it gets.**
+Iteration 4 shipped a name plate that fitted here and spilled 3px in CI at every
+360x800 case in all five decks, with the local check green — the same shape as
+the defect that made the blocking necessary, one level down. `--font-label` ends
+in `system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
+Linux runner, and the second is wider. **A check whose answer depends on which
+fonts the machine happens to have is not a check**, so it asks the question
+against a spread of real metrics instead: the pass *the plates in a fallback
+font* renders the plates in five label faces at six shapes. Anything sized to
+fit text needs that treatment, not just a measurement taken once on one machine.
+
+**And a box is derived from the type it has to hold, not from the type next to
+it.** `--plate-w` was `7.5 × --t-pick` — the size of the NAME — when what sets
+the plate's minimum is `avversario` beneath it at `--t-tiny`, which §5 measured
+as longer than any name in the roster. The two agree until the scales come
+apart, and they come apart exactly where both hit their floors: at 320 and 360
+`--t-pick` is 16px and `--t-tiny` is 12.5px, so the token bought 120px against
+125px of content. Deriving from the wrong one of two tokens is a coincidence
+that holds until it does not, which is the same failure as hard-coding, wearing
+a derivation.
+
 The `ui-check` skill explains what it covers and how to read a failure.
 
 ## The card size is a budget, and it has two terms

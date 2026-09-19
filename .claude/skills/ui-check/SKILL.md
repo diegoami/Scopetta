@@ -252,6 +252,18 @@ carrying the class. It reports the round in `nuovoGiro`; the page draws the
 beat from that flag. Posing either state by assigning to `state` renders a page
 the game cannot reach, and passes whether or not the page can reach it.
 
+**The plates in a fallback font** — six phone and short-landscape shapes × five
+real label faces (`system-ui`, Verdana, Tahoma, Arial and a monospace),
+asserting the plate and points spill rules against each.
+
+Blocking the webfont pins the font the page *asks for* and says nothing about
+the one it gets, and the fallback is not the same on two machines:
+`--font-label` ends in `system-ui`, which is Segoe UI on Windows and DejaVu or
+Liberation Sans on a Linux runner. Iteration 4 shipped a plate that fitted
+locally and spilled 3px in CI at every 360x800 case in all five decks, with the
+local check green — the same shape as the defect that made the blocking
+necessary, one level down. Anything sized to fit text belongs in this pass.
+
 **The sheets, and the partita** — iteration 4's pass, and the one that measures
 everything around the deal rather than the deal. The start sheet: a chip for
 every name the engine's roster holds (asked of `rollProfiles`, not of a list
@@ -388,6 +400,7 @@ was committed:
 | the dossier does not hold its height | the start sheet keeps space for it so that choosing a name does not move the deck row under a thumb already on its way to it. Emptied and put back, rather than by clicking each chip — with one name in the roster, clicking the only chip re-renders the same sentence and nothing can move. It caught a real one: four lines is Tressette's number, and Franco's dossier is six at 320x568 |
 | the tally counts […], the history holds […] | asserted against a win, a loss and a draw, because against one smazzata every cell is 1 and three of the four can be wired to the wrong list and still agree |
 | N points box(es) still drawn with show-points off | measured at the table, not from the settings sheet: every box on a hidden screen has no height whatever the setting says |
+| #plateOpp spills Npx past its own width, in the fallback-font pass | `--plate-w` was `7.5 × --t-pick`, the size of the name, when what sets the plate's minimum is `avversario` beneath it at `--t-tiny`. The two agree until both hit their floors — 16px and 12.5px at 320 and 360 — and then the box is 120px against 125px of content, in a fallback wider than the one this machine picks |
 | the sheets could not be driven to the end | not a rule about the page — it is the pass admitting a click timed out. Without it an exception took every finding the pass had already made with it, and the mutation harness saw eight failures with nothing in them |
 
 If you believe a threshold is genuinely wrong, change it — then run the check

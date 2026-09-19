@@ -2095,6 +2095,80 @@ async function checkRules(browser) {
   return failed;
 }
 
+/* ---- pass 2ee: the plates in a fallback font ------------------------------- */
+
+// Blocking the webfont made the check deterministic about the font it ASKS for
+// and said nothing about the one it falls back to — and the fallback is not the
+// same on two machines. `system-ui` is Segoe UI on Windows and DejaVu or
+// Liberation Sans on a Linux runner, and the second is wider. So iteration 4
+// shipped a plate that fitted here and spilled 3px in CI at every 360x800 case
+// in all five decks, with the local check green: the same shape as the
+// iteration-3 defect that made the font blocking necessary, one level down.
+//
+// A check whose answer depends on which fonts the machine happens to have is
+// not a check. This one asks the question against a spread of real metrics
+// instead: narrow, wide, and a monospace that is wider than either.
+const LABEL_STACKS = [
+  ['system-ui', 'system-ui, sans-serif'],
+  ['Verdana',   'Verdana, Geneva, sans-serif'],
+  ['Tahoma',    'Tahoma, Geneva, sans-serif'],
+  ['Arial',     'Arial, Helvetica, sans-serif'],
+  ['monospace', '"Courier New", monospace'],
+];
+
+// The phone shapes and the two short landscape ones, which is where --t-pick
+// and --t-tiny sit on different floors and the plate is at its narrowest
+// relative to the word it has to hold.
+const FALLBACK_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone 15',
+                            'iPhone Pro Max', 'phone landscape', 'tiny window'];
+
+async function checkFallbackFonts(browser) {
+  console.log('\nthe plates in a fallback font');
+  let failed = 0;
+  const list = QUICK ? ['Android small'] : FALLBACK_VIEWPORTS;
+  const stacks = QUICK ? LABEL_STACKS.slice(0, 2) : LABEL_STACKS;
+  for (const vname of list) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    for (const [label, stack] of stacks) {
+      const page = await openPage(browser, { width: w, height: h });
+      const errs = [];
+      page.on('pageerror', e => errs.push(String(e)));
+      page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+      await page.goto(URL_);
+      await page.addStyleTag({ content: STILL });
+      // The label face only. It is what the role and the mazziere tag are set
+      // in, and the role is what sets the plate's minimum — §5 measured the
+      // whole roster and `avversario` is longer than any name in it.
+      await page.addStyleTag({ content: `:root{ --font-label: ${stack} !important; }` });
+      await page.click('#play');
+      await page.mouse.move(0, 0);
+      // The longest name in §0's roster, as everywhere else that measures a
+      // plate: only Franco exists until iteration 5.
+      await page.evaluate(`(() => { state.opponent = "Graziano"; render(); })()`);
+      await page.waitForTimeout(40);
+
+      const m = await page.evaluate(measure);
+      const bad = [...m.plateBad];
+      for (const e of m.offScreen) bad.push(`${e} runs off the screen`);
+      if (m.tableScroll > 1)
+        bad.push(`the table needs ${m.tableScroll}px of scrolling`);
+      if (m.youSeatBottom > m.viewportH + 1)
+        bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
+
+      const all = [...bad, ...errs];
+      if (all.length) {
+        failed++;
+        console.log(`  FAIL  ${vname} / ${label}`);
+        all.forEach(b => console.log(`        ${b}`));
+      }
+      await page.close();
+    }
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
+    + `${list.length} viewports x ${stacks.length} fallback label fonts`);
+  return failed;
+}
+
 /* ---- pass 2f: the sheets, and the partita around the deal ------------------ */
 
 // A position one play from the end, with the OPPONENT to play it. Everything
@@ -2966,6 +3040,7 @@ failed += await checkChoice(browser);
 failed += await checkStates(browser);
 failed += await checkRotation(browser);
 failed += await checkRules(browser);
+failed += await checkFallbackFonts(browser);
 failed += await checkSheets(browser);
 failed += await checkDeal(browser);
 await browser.close();

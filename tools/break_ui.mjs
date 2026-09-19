@@ -148,6 +148,7 @@ const EXPECT = {
   // name plates, and the player's own is what goes off the edge, so that is
   // what the entry names: one assertion, one element, tied to this defect
   // rather than to any overflow anywhere.
+  "the plate is sized from the type it does not have to hold": "past its own width",
   "the plates are left out of the card budget": "#plateYou runs off",
   "the plates are squeezed instead of budgeted": "lands on the cards",
   "the plate is laid out as a flex row again": "past its own width",
@@ -367,6 +368,14 @@ const BREAKS = [
   // Without the plates the seat row needs more width than the screen has, the
   // table grows to fit it, and `overflow: hidden auto` carries the deck and
   // your own plate off the right edge with no sideways scroll to show for it.
+  // The defect CI caught and this machine could not: 7.5 x --t-pick is 120px
+  // where --t-pick is on its 16px floor, against 125px of `avversario` in a
+  // fallback wider than the one Windows picks. The pass that catches it renders
+  // the plates in five real label faces rather than in whichever one the
+  // machine happens to have.
+  ["the plate is sized from the type it does not have to hold",
+   "  --plate-w: calc(var(--t-tiny) * 10.8);",
+   "  --plate-w: calc(var(--t-pick) * 7.5);"],
   ["the plates are left out of the card budget",
    "  --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));",
    "  --seat-extra: 0px;"],

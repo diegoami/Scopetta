@@ -105,7 +105,26 @@
      opinion either: check_ui.mjs asserts scrollWidth against clientWidth on
      every plate at every viewport, which is what makes 7.5 a measurement. */
   --seat-span: 5;
-  --plate-w: calc(var(--t-pick) * 7.5);
+  /* Derived from --t-tiny, not from --t-pick, and that is iteration 4's
+     correction to it. What sets the plate's minimum width is not the NAME at
+     --t-pick — §5 measured the whole of §0's roster and every name fits — it is
+     the word `avversario` beneath it at --t-tiny, which is longer than any of
+     them. Sizing the box from the type it does NOT have to hold is a
+     coincidence, and the coincidence broke where the two scales come apart:
+     --t-pick is on its 16px floor at 320 and 360 while --t-tiny is on its own
+     12.5px floor, so `7.5 x --t-pick` bought 120px against 125px of content.
+
+     Which showed up in CI and not here, because the check blocks the webfont
+     and the two machines then disagree about the FALLBACK: `system-ui` is Segoe
+     UI on Windows and DejaVu/Liberation Sans on a Linux runner, and the wider
+     one needs 3px more. Measured across system-ui, Verdana, Tahoma, Arial and a
+     monospace at eight shapes, the worst case wants 125px at 320x568 and 142px
+     at 430x932; 10.8 buys 135px and 148.6px. The margin is deliberate: no
+     machine here can enumerate every fallback a browser might pick.
+
+     It costs 6px of plate in landscape, so 12px of --seat-extra and about 2.5px
+     of card width where the width term binds. check_ui.mjs prices that. */
+  --plate-w: calc(var(--t-tiny) * 10.8);
   --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));
   /* The height term, in two shapes, because a seat row is as tall as the taller
      of its card and its plate. If the card wins, a row costs --ch and the
