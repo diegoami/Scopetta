@@ -472,7 +472,20 @@ const poseDraw = `(() => {
 // not a second copy of notaFinale: it asserts the PROPERTY the line claims —
 // that the component it names is one the deal turns on — which is what a
 // phrase chosen from a table rather than computed from the deal cannot keep.
-const NOTE_OK = `(() => {
+// `mustName` is the rail, and it is here because the `if (said)` beneath it was
+// a guard with nothing watching whether it was ever entered. A note that names
+// no component skips the whole property assertion, and the only other rule on
+// this line asks whether anything was said at all — so a `notaFinale` that
+// stopped naming components and always fell back to the margin would leave
+// "2 punti di scarto." on a 5-3 deal and every pass green. §3.6's "a phrase
+// that can be wrong about the deal it describes is worse than no phrase" would
+// have quietly become "a phrase that says nothing is fine".
+//
+// `poseScopeDecide` is built so that exactly one component decides it — its own
+// comment says take the scope out and it is 1 to 3 — so that is the pose that
+// passes true, and the branch stops being optional there.
+const NOTE_OK = (mustName = false) => `(() => {
+  const mustName = ${mustName};
   const r = scoreDeal(state);
   const note = document.getElementById('resultNote').textContent;
   const out = [];
@@ -483,6 +496,9 @@ const NOTE_OK = `(() => {
   const NAMED = { 'le carte': 'carte', 'i denari': 'denari', 'il settebello': 'settebello',
                   'la primiera': 'primiera', 'le scope': 'scope' };
   const said = Object.keys(NAMED).find(k => note.toLowerCase().includes(k));
+  if (mustName && !said)
+    out.push(\`the note says "\${note}" and names no component, on a smazzata \`
+      + \`exactly one of them decides — so the rule below was never asked\`);
   if (said){
     const key = NAMED[said];
     const p = [0, 0];
@@ -718,8 +734,14 @@ const audit = () => {
       if (below > 1)
         out.push(`${name(el)} is ${below}px below the fold inside a dialog — `
           + `it is the way on and it is off the screen`);
-      if (r.right > window.innerWidth + 1 || r.left < -1)
-        out.push(`${name(el)} runs off the side of a dialog`);
+      // A sideways version of this was here and is deleted. A `.btn` in
+      // `.result__actions` is a grid item in a single-column track whose
+      // min-content is its longest word — `avversario`, about 70px — against a
+      // track never narrower than about 237px, so the button cannot leave the
+      // viewport sideways unless its actions box or the dialog does, and both
+      // are already in the off-screen list above. A strict subset of an
+      // existing assertion's firing set is the definition of cover, and this
+      // file has deleted two others for it.
     }
 
     // Thumb-sized targets. Cards are excluded because a card's size is the
@@ -1832,6 +1854,12 @@ async function checkStates(browser) {
       const ch = card ? card.getBoundingClientRect().height : 0;
       const slots = [...document.querySelectorAll('.hand--you .card')]
         .filter(c => c.getBoundingClientRect().height > ch - 1).length;
+      // Railed, because `ch` comes from a card on the table and the play that
+      // ends a round can be a scopa, which leaves none. Seed 11 does not, and
+      // the break for the collapse is caught today — but that is a property of
+      // one seed recorded nowhere, and a reseed would skip this in silence.
+      if (!ch)
+        out.push('the table was empty on the beat, so the hand was never measured against a card');
       if (ch && slots !== 3)
         out.push(`the empty hand keeps ${slots} card-sized slot(s), want 3 — it collapsed`);
       return out;
@@ -2389,6 +2417,32 @@ async function checkSheets(browser) {
       const last = document.getElementById('lastResult');
       if (!last.hidden)
         out.push(`the start sheet says "${last.textContent}" with an empty history`);
+      // And with one behind it, it is SHOWN and it says what happened. The
+      // screen row that renders this state runs `audit()` and nothing else, and
+      // `audit` skips anything invisible — so a regression that left the line
+      // hidden would have rendered an empty start sheet and reported `pass`,
+      // and the verb, the score and the name were unasserted besides: "hai
+      // vinto 5-3 contro Graziano" could have read "hai perso 3-5 contro
+      // Franco" with everything green.
+      localStorage.setItem('scopetta.history', JSON.stringify(
+        [{ t: Date.parse('2026-02-11'), o: 'Graziano', d: 'Romagnole', y: 5, a: 3 }]));
+      renderLastResult();
+      if (last.hidden)
+        out.push('the start sheet says nothing about the smazzata behind it');
+      else {
+        const want = 'Ultima smazzata: hai vinto 5–3 contro Graziano';
+        if (last.textContent !== want)
+          out.push(`the start sheet reads "${last.textContent}", want "${want}"`);
+      }
+      localStorage.removeItem('scopetta.history');
+      renderLastResult();
+      // And the restore happened. If `removeItem` ever failed quietly the line
+      // would stay up and the failure would surface two hundred lines later as
+      // "an abandoned smazzata was recorded", pointing at the abandon logic —
+      // a pass that drives the page has to leave it as it found it, and saying
+      // so here is what stops the misattribution.
+      if (!last.hidden)
+        out.push('the start-sheet row left its own smazzata behind');
       const decks = [...document.querySelectorAll('#decks .deck-opt')].map(d => d.dataset.deck);
       if (decks.length !== 5)
         out.push(`the deck row offers ${decks.length} decks, want 5`);
@@ -2515,16 +2569,29 @@ async function checkSheets(browser) {
     // nothing measured. (The plate itself DOES move, by 71.5px, in portrait:
     // the seat is a centred flex row there, so losing one of its two items
     // re-centres the other. That is a visible jolt when a setting is changed
-    // and it is not the budget; §3.6 says so rather than claiming otherwise.)
+    // and it is not the budget. §3.6 says so — which it did not when this
+    // comment first claimed it did, and that disagreement between a comment
+    // and the plan is the thing §7.5 exists to stop.)
     await page.click('#viewSettings [data-back]');
     await page.evaluate(`(() => { el.pointsSel.checked = true;
       el.pointsSel.dispatchEvent(new Event("change")); })()`);
+    // Four rects, and deliberately NOT `--cw`: `getPropertyValue` on a custom
+    // property returns the unresolved token stream — the whole
+    // `clamp(min(min(calc(100dvh - …))))` chain as a string — so comparing it
+    // across a toggle compares a line of the stylesheet with itself and can
+    // never differ. It read as though the budget itself were under test. The
+    // card's own box is the budget, resolved, and it is the first of these.
+    //
+    // These are BOXES, and a box can hold still while its contents move — which
+    // is exactly how the 71.5px plate shift hid inside an unchanged `youSeat`.
+    // The opponent's cards and the deck are not among them, so a regression that
+    // moved those within an unchanged seat would pass here; the symmetric one on
+    // your side would not, because `.hand--you .card` is in the list.
     const withPoints = await page.evaluate(() => {
       const R = s => { const e = document.querySelector(s); const r = e.getBoundingClientRect();
                        return [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10,
                                Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; };
-      return { cw: getComputedStyle(document.documentElement).getPropertyValue('--cw'),
-               card: R('.hand--you .card'), tavola: R('.tavola'),
+      return { card: R('.hand--you .card'), tavola: R('.tavola'),
                oppSeat: R('.seat--opp'), youSeat: R('.seat--you') };
     });
     await page.evaluate(`(() => { el.pointsSel.checked = false;
@@ -2539,8 +2606,7 @@ async function checkSheets(browser) {
       const R = s => { const e = document.querySelector(s); const r = e.getBoundingClientRect();
                        return [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10,
                                Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; };
-      const now = { cw: getComputedStyle(document.documentElement).getPropertyValue('--cw'),
-                    card: R('.hand--you .card'), tavola: R('.tavola'),
+      const now = { card: R('.hand--you .card'), tavola: R('.tavola'),
                     oppSeat: R('.seat--opp'), youSeat: R('.seat--you') };
       // Within a pixel, not to the tenth of one. Flex and grid round their
       // tracks, and at 500x425 the hand card lands on 197.4 with the counters
@@ -2550,8 +2616,7 @@ async function checkSheets(browser) {
       // tenth of one makes it cry wolf.
       const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 1);
       for (const k of Object.keys(was)) {
-        const same = k === 'cw' ? now.cw === was.cw : near(now[k], was[k]);
-        if (!same)
+        if (!near(now[k], was[k]))
           out.push(`show-points moved ${k}: ${JSON.stringify(was[k])} became `
             + `${JSON.stringify(now[k])} — it stands in a column the budget already paid for`);
       }
@@ -2896,6 +2961,14 @@ async function checkSheets(browser) {
                               r.n++; if (m.y > m.a) r.v++; }
       const names = Object.keys(per);
       const record = [...document.querySelectorAll('#historyBody .group .field')];
+      // The rail. The block only renders when there is more than one name to
+      // compare, so a fixture that seeds one leaves this guard unentered — and
+      // an assertion that is never made looks exactly like one that passed.
+      // That is how the break for it survived once already; saying so out loud
+      // is what stops it happening again to whoever reseeds this list.
+      if (names.length < 2)
+        out.push(`the history holds ${names.length} opponent(s), so the record `
+          + `against each of them was never rendered or read`);
       if (names.length > 1){
         if (record.length !== names.length)
           out.push(`the record shows ${record.length} opponents, the history holds ${names.length}`);
@@ -2950,11 +3023,15 @@ async function checkSheets(browser) {
     // this line picks between five components: one deal the scope decided and
     // one nobody won. NOTE_OK asserts the property the line claims rather than
     // comparing it with a string.
+    // The scope-decided pose passes `true`: exactly one component decides that
+    // deal, so the line has to name one and the property rule below it stops
+    // being optional. The draw does not — its branch returns before naming
+    // anything, which is the correct behaviour there.
     await page.click('#viewHistory [data-back]');
-    for (const pose of [poseScopeDecide, poseDraw]) {
+    for (const [pose, mustName] of [[poseScopeDecide, true], [poseDraw, false]]) {
       await page.evaluate(pose);
       await page.waitForTimeout(40);
-      bad.push(...await page.evaluate(NOTE_OK));
+      bad.push(...await page.evaluate(NOTE_OK(mustName)));
     }
 
     // Ancora deals again at the table, and does not ask: the smazzata is over
@@ -3270,7 +3347,7 @@ async function checkDeal(browser) {
   else if (end.logged[0].y !== end.punti[0] || end.logged[0].a !== end.punti[1])
     bad.push(`the history recorded ${end.logged[0].y}–${end.logged[0].a}, scoreDeal `
       + `returned ${end.punti[0]}–${end.punti[1]}`);
-  bad.push(...await page.evaluate(NOTE_OK));
+  bad.push(...await page.evaluate(NOTE_OK()));
 
   // The breakdown, which is the only thing that says WHY the score is what it
   // is. A total with no working is a number the player has to take on trust.

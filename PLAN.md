@@ -720,8 +720,12 @@ settings ──Cambia avversario──► confirm ─► start
   with a *mazziere* tag on whoever dealt. Each pile shows that player's
   scope always — a scopa is public, and §3.7 puts them face up across the top
   of the pile where tradition puts the cards that made them. With show-points
-  on, carte, *ori* and the settebello, **in the column opposite the plate
-  rather than on the plate**, which is iteration 4's correction. A transient
+  on, carte, *ori*, the settebello and the **primiera**, in the column opposite
+  the plate rather than on the plate, which is iteration 4's correction. The
+  primiera is the owner's, asked for after playing the preview and right: it is
+  the only one of the five a player cannot keep in their head, which is the same
+  reason the result shows its totals rather than a tick. A dash while a suit is
+  missing, as the result draws it, because that is not a zero. A transient
   toast for "Scopa!", floating, out of the budget, as Tressette's declarations
   are.
 
@@ -730,11 +734,53 @@ settings ──Cambia avversario──► confirm ─► start
   the mazziere tag — and a fourth row costs `2 × --plate-row` out of both
   `--plates` and `--seat-overhang`, which is every card on the table at every
   viewport. At 320x568 the budget already wants 32.1px against a 32px floor.
+
+  **Which is not a contradiction with the box holding four rows**, though the
+  two sentences sit thirteen lines apart and look like one. The plate's height
+  *feeds* the budget: `--plates` and `--seat-overhang` are both derived from
+  `--plate-h`, so a row added there is subtracted from every card. The points
+  box only *consumes* `--plate-h` — it is a fixed box that either fits its
+  contents or overflows them, and nothing downstream reads its height. So the
+  fourth row was bought by tightening the line rather than by growing the box:
+  `.points` sets `line-height: 1.25` where the body's 1.45 would have wanted
+  83px of a 75.8px box. `check_ui.mjs` asserts `scrollHeight` against
+  `clientHeight` on it at every viewport in every deck, so the coupling is
+  guarded rather than merely argued.
   The space it goes in instead is one the budget has been paying for since
   iteration 3 and nothing was using: the seat is `1fr auto 1fr`, `--seat-extra`
   buys two plate widths, and only one of them had a plate in it. So the box is
   `--plate-w` wide and `--plate-h` tall, and turning show-points on and off
-  changes no geometry at all — which is what makes it free.
+  **costs the card budget nothing** — the cards, the middle row and both seat
+  boxes are identical with it and without, which is what makes it free.
+
+  **Not `--cw`, and the reason is the same one this paragraph is about.**
+  `getComputedStyle().getPropertyValue('--cw')` returns the unresolved token
+  stream, the whole `clamp(min(min(calc(100dvh − …))))` chain as a string, and
+  it is byte-identical under every defect this rule exists for — the break that
+  gives the points box a whole portrait row of its own does not touch it. The
+  evidence is the resolved boxes; citing the token would be citing the one
+  quantity that cannot disagree.
+
+  **And "nothing at all" is what this paragraph said until the review measured
+  it.** It is not true. In portrait the seat is a centred flex row rather than
+  three columns, so losing one of its two items re-centres the other and **both
+  plates move, in opposite directions, by half a plate width and half a gap** —
+  `(--plate-w + --step) / 2`, which is 71.5px at 320x568 and 360x800 where
+  `--t-tiny` is on its 12.5px floor, 78.3px at 430x932 and 73.3px at 600x853
+  where it is vw-driven. Landscape does not move at all. (71.5px alone stood
+  here for a round, which is the constant-in-prose habit §3.7 legislates against
+  three hundred lines below: it was the figure at the two widths that happened
+  to be measured.) That is a visible jolt on a screen the player has just come
+  back from, and it is worth knowing; it is not the budget, and the budget is
+  the claim the design rests on. `check_ui.mjs` asserts the budget half across a
+  toggle — within a pixel, because flex rounds its tracks and 0.4px of rounding
+  at 500x425 is not a geometry change, while the defect the rule exists for
+  moves a card row.
+
+  The correction had been written into the check and not into this file, which
+  is §7.5's own failure exactly: a comment in `check_ui.mjs` claimed "§3.6 says
+  so" while §3.6 said the opposite, so the honest version lived in none of the
+  three files that are supposed to outlive a session.
 
   **And the plate is bounded in portrait now, where it used to take whatever
   its content wanted.** It could, while it was alone on its row. With a second
@@ -1392,7 +1438,8 @@ of the four are §3.6's, above; the fourth is a rule and is in `CLAUDE.md`.
 - The plan put carte, denari and the settebello **on the plate**, and the
   budget cannot pay for it: a fourth plate row is every card on the table. They
   go in the column opposite it, which `--seat-extra` was already buying and
-  nothing was using — so the setting costs nothing at all.
+  nothing was using — so the setting costs the **card budget** nothing. Not
+  "nothing at all": §3.6 says what the review measured moving.
 - A box that shares a row with another box **is bounded by the same token**.
   The plate took whatever width it wanted in portrait, which was fine while it
   was alone there; beside the points box it wrapped the row and cost 72px of

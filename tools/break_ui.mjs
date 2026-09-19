@@ -241,6 +241,8 @@ const EXPECT = {
   // --- what the fresh-context review of PR #8 found had no assertion --------
   "the last result is drawn at a label size": "want 14.5",
   "the last result is shown with nothing behind it": "with an empty history",
+  "the last result says nothing about the smazzata": "says nothing about the smazzata behind it",
+  "the last result names the wrong winner": "the start sheet reads",
   "show-points moves the table": "it stands in a column the budget",
   "the way on is not pinned": "below the fold inside a dialog",
   "the number keys stop playing cards": "did not raise a card",
@@ -295,6 +297,7 @@ const EXPECT = {
   "the verdict is not read off the totals": "the result says",
   "nothing says what decided the smazzata": "nothing says what decided it",
   "the deciding point is picked rather than computed": "leaves the same player winning",
+  "the note names no component at all": "names no component",
   "a draw is described as a win": "and the note says",
   "the result offers one way on": "the result offers",
   "the result panel is never taken down": "still over the table",
@@ -841,6 +844,14 @@ const BREAKS = [
   ["the deciding point is picked rather than computed",
    "  const decise = [...PUNTI_SEMPLICI, \"scope\"].filter(k => senza(k) !== finale);",
    "  const decise = [\"primiera\"];"],
+  // The other direction, and the one that walked straight through the guard:
+  // stop naming components at all and every note falls back to the margin.
+  // "2 punti di scarto." on a 5-3 deal is non-empty, is not a draw, and names
+  // nothing — so the property rule was skipped and the whole check stayed
+  // green. The break above cannot catch it; it makes the note name something.
+  ["the note names no component at all",
+   "  const decise = [...PUNTI_SEMPLICI, \"scope\"].filter(k => senza(k) !== finale);\n  if (decise.length === 1) return DECISE[decise[0]];",
+   "  const decise = [];"],
   ["a draw is described as a win",
    "  if (finale === 0){", "  if (false){"],
   // Two edits, and not for the usual reason. Taking the button out of the
@@ -915,6 +926,16 @@ const BREAKS = [
   ["the last result is shown with nothing behind it",
    "  if (!last){ el.lastResult.hidden = true; return; }",
    "  if (!last){ el.lastResult.hidden = false; return; }"],
+  // The other direction, which the row rendering the state did not assert: the
+  // line has to be shown, and to say what happened. `audit` skips anything
+  // invisible, so a regression that left it hidden rendered an empty start
+  // sheet and reported `pass`.
+  ["the last result says nothing about the smazzata",
+   "  el.lastResult.textContent =\n    `Ultima smazzata: hai ${verbo} ${last.y}–${last.a} contro ${last.o}`;\n  el.lastResult.hidden = false;",
+   "  el.lastResult.hidden = true;"],
+  ["the last result names the wrong winner",
+   "  const verbo = last.y > last.a ? \"vinto\" : last.y < last.a ? \"perso\" : \"pareggiato\";",
+   "  const verbo = last.y > last.a ? \"perso\" : last.y < last.a ? \"vinto\" : \"pareggiato\";"],
 
   // The argument for putting the counters opposite the plate rather than on it
   // is that --seat-extra had already bought the column. Put them anywhere the
