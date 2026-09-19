@@ -39,6 +39,18 @@
  *    Neither is a state the engine will sit in, so a posed one passes whether
  *    or not the page can reach the real one.
  *
+ * 2d. ROTATION — turning the phone over, which is the one state a grid of
+ *    viewports cannot render: every case in it loads the page at a size and
+ *    measures it once.
+ *
+ * 2e. RULES — the one screen here that is READ, and the one that has to come
+ *    back to whichever door opened it.
+ *
+ * 2f. SHEETS — the partita around the deal, which is iteration 4: the start
+ *    sheet, the settings and what they persist, the history of smazzate, the
+ *    confirm and every path through it, the result's verdict and the line
+ *    saying what decided the smazzata, and the 1997 easter egg.
+ *
  * 3. DEAL — one whole deal against Franco, played by tapping, choosing a
  *    capture by both paths, reading the table after every play.
  *
@@ -48,9 +60,15 @@
 import { chromium } from 'playwright-core';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const FILE = path.resolve(process.argv[2] ?? new URL('../public/index.html', import.meta.url).pathname);
-const URL_ = 'file://' + FILE;
+// `fileURLToPath` and `pathToFileURL` rather than `.pathname` and a `file://`
+// prefix, which is what was here: on Windows a file URL's pathname is
+// `/C:/Users/...`, `path.resolve` turns that into `C:\C:\Users\...`, and the
+// check cannot open its own page with no argument. CI is Linux and never saw
+// it. Both directions are the same on Linux and correct on both.
+const FILE = path.resolve(process.argv[2] ?? fileURLToPath(new URL('../public/index.html', import.meta.url)));
+const URL_ = pathToFileURL(FILE).href;
 
 // Three ways to find a Chromium, in order: the one CHROME names, the one this
 // development container ships, and the one `playwright-core install chromium`
@@ -412,6 +430,79 @@ const playLastOnEmpty = `(() => {
   return { cards: n, to: state.ultimaPresa };
 })()`;
 
+// Two endings posed so that the line saying what decided the smazzata has
+// something it can be wrong about. A driven deal ends wherever its seed ends,
+// and what this line does is pick between five components — so the two cases
+// worth rendering are one where exactly one of them decided it and one where
+// nobody won at all.
+//
+// The scope, and only the scope: you take the settebello and nothing else and
+// make four scope, they take everything else, which is carte, denari and — you
+// hold one suit, so you cannot score it at all — primiera. 5 to 3. Take any
+// one point out and the same player still wins; take the scope out and it is
+// 1 to 3.
+const poseScopeDecide = `(() => {
+  const sette = state.cards.find(c => c.s === DENARI && c.n === 7);
+  state.prese = [[sette], state.cards.filter(c => c !== sette)];
+  state.scope = [4, 0];
+  state.tavola = []; state.hands = [[null,null,null],[null,null,null]];
+  state.over = true; state.dealt = true; state.plays = 36; state.deveGiocare = null;
+  render();
+})()`;
+
+// And a drawn smazzata, which Scopa has and Tressette's eleven points cannot:
+// twenty cards and five denari each, so carte and denari go to NOBODY, the
+// settebello to you and the primiera to them. 1 all. The thing worth saying
+// about it is the two points nobody took, which is a fact about this game that
+// a margin cannot express.
+const poseDraw = `(() => {
+  const P = (s, ns) => ns.map(n => ({ s, n }));
+  state.prese = [
+    [...P(0,[7,1,2,3,4]), ...P(1,[8,9,10,1,2]), ...P(2,[8,9,10,1,2]), ...P(3,[8,9,10,1,2])],
+    [...P(0,[5,6,8,9,10]), ...P(1,[3,4,5,6,7]), ...P(2,[3,4,5,6,7]), ...P(3,[3,4,5,6,7])]
+  ];
+  state.scope = [0, 0];
+  state.tavola = []; state.hands = [[null,null,null],[null,null,null]];
+  state.over = true; state.dealt = true; state.plays = 36; state.deveGiocare = null;
+  render();
+})()`;
+
+// What the line that says what decided the smazzata has to be true of, read off
+// the page and checked against scoreDeal. Not a table of expected strings and
+// not a second copy of notaFinale: it asserts the PROPERTY the line claims —
+// that the component it names is one the deal turns on — which is what a
+// phrase chosen from a table rather than computed from the deal cannot keep.
+const NOTE_OK = `(() => {
+  const r = scoreDeal(state);
+  const note = document.getElementById('resultNote').textContent;
+  const out = [];
+  if (!note.trim()) return ['the smazzata ended and nothing says what decided it'];
+  const drawn = r.punti[0] === r.punti[1];
+  if (drawn !== /pareggio/i.test(note))
+    out.push(\`the smazzata was \${drawn ? 'drawn' : 'won'} and the note says "\${note}"\`);
+  const NAMED = { 'le carte': 'carte', 'i denari': 'denari', 'il settebello': 'settebello',
+                  'la primiera': 'primiera', 'le scope': 'scope' };
+  const said = Object.keys(NAMED).find(k => note.toLowerCase().includes(k));
+  if (said){
+    const key = NAMED[said];
+    const p = [0, 0];
+    for (const k of ['carte','denari','settebello','primiera'])
+      if (k !== key && r[k] !== null) p[r[k]]++;
+    if (key !== 'scope'){ p[0] += r.scope[0]; p[1] += r.scope[1]; }
+    const sgn = a => Math.sign(a[0] - a[1]);
+    if (sgn(p) === sgn(r.punti))
+      out.push(\`the note says "\${note}", and taking \${key} out of the score \`
+        + \`leaves the same player winning\`);
+  }
+  // And the verdict over it agrees with the totals it is sitting on.
+  const title = document.getElementById('resultTitle').textContent;
+  const want = r.punti[0] > r.punti[1] ? 'Hai vinto'
+             : r.punti[0] < r.punti[1] ? 'Hai perso' : 'Pareggio';
+  if (title !== want)
+    out.push(\`the result says "\${title}" on \${r.punti[0]}–\${r.punti[1]}, want "\${want}"\`);
+  return out;
+})()`;
+
 // A real sweep: one card on the table and the card that takes it in hand, then
 // the page's own tap. The toast, the empty table and the scopa mark are what
 // gioca() and render() do with it — none of it is posed.
@@ -502,8 +593,13 @@ const audit = () => {
   // The result panel is in it too: it has `overflow: auto`, so a grid wider
   // than the screen would scroll INSIDE the panel and never touch the
   // document's own width — the same way a clipped table cannot scroll sideways.
+  // `.points` is in this list for the same reason `.plate` is, and it is the
+  // box iteration 4 added: it stands in the column opposite the plate, which
+  // --seat-extra has been paying for since iteration 3, and a box that outgrows
+  // that column runs off the edge of a table that clips rather than scrolls.
   const past = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, '
-    + '.plate, .toast, .say, .sel-name, .result, .result__grid, .r-num')]
+    + '.plate, .points, .toast, .say, .sel-name, .result, .result__grid, .r-num, '
+    + '.result__actions, .dialog, .chips, .decks, .log, .tally, .weights')]
     .filter(el => {
       const r = el.getBoundingClientRect();
       return r.width > 0 && (r.right > window.innerWidth + 1 || r.left < -1);
@@ -535,7 +631,12 @@ const audit = () => {
   // beside it. Two ways that happens and they need different eyes: the plate's
   // box can be squeezed narrower than its content, which only scrollWidth
   // shows, or the box itself can be wider than its column.
-  for (const plate of document.querySelectorAll('.plate')) {
+  // The points box is measured with the plates, not beside them: it is the same
+  // size, in the same row, bounded by the same token, and it is the box that
+  // put the plate under this rule in portrait at all — a `width: auto` plate
+  // could never fail a scrollWidth test, and when the points box arrived beside
+  // it the row needed 323px of a 288px seat.
+  for (const plate of document.querySelectorAll('.plate, .points')) {
     if (plate.scrollWidth > plate.clientWidth + 1)
       out.push(`${name(plate)} spills ${plate.scrollWidth - plate.clientWidth}px past its own width`);
     // And past its own height, which is the same question turned ninety
@@ -548,7 +649,7 @@ const audit = () => {
   }
   // The plate's CHILDREN against the cards, not the plate's box: overflowing
   // content leaves the box and the box stays where it was.
-  for (const kid of document.querySelectorAll('.plate, .plate *')) {
+  for (const kid of document.querySelectorAll('.plate, .plate *, .points, .points *')) {
     const a = kid.getBoundingClientRect();
     if (!a.width || !a.height) continue;
     for (const row of document.querySelectorAll('.seat__cards'))
@@ -643,7 +744,62 @@ const SCREENS = [
       await p.click('#play');
       await p.click('#about');
     } },
+  // The three sheets iteration 4 brings. Each is entered the way a player
+  // enters it, from the table, because `show` holds the table's clock on the
+  // way out and a sheet posed by setting `hidden` would never exercise that.
+  { name: 'settings', open: async p => {
+      await p.click('#play');
+      await p.click('#btnSettings');
+    } },
+  // Open, because the weights table and the paragraph above it are the
+  // disclosure §3.6 asks for and a closed <details> renders nothing the audit
+  // can measure — the text floors, the off-screen rule and the clipped-text
+  // rule all skip it by construction.
+  { name: 'settings, the weights disclosed', open: async p => {
+      await p.click('#play');
+      await p.click('#btnSettings');
+      await p.evaluate(`document.querySelector('#viewSettings details').open = true`);
+    } },
+  { name: 'history, empty', open: async p => {
+      await p.click('#play');
+      await p.click('#btnHistory');
+    } },
+  // And with something in it. Two entries rather than one, because the tally,
+  // the per-opponent block and the log are three different shapes and a single
+  // row exercises the narrowest of them: the widest row is a loss, and the
+  // per-opponent block only appears when there is more than one name.
+  { name: 'history, with smazzate in it', open: async p => {
+      await p.evaluate(`localStorage.setItem("scopetta.history", JSON.stringify([
+        { t: Date.parse("2026-02-11"), o: "Graziano", d: "Romagnole", y: 2, a: 5 },
+        { t: Date.parse("2026-02-10"), o: "Franco", d: "Trevisane", y: 4, a: 4 },
+        { t: Date.parse("2026-02-09"), o: "Franco", d: "Trevisane", y: 6, a: 1 }
+      ]))`);
+      await p.reload();
+      await p.click('#play');
+      await p.click('#btnHistory');
+    } },
+  // The one question this game asks, over the table it is asking about.
+  { name: 'the confirm, over a deal in progress', open: async p => {
+      await p.click('#play');
+      await p.click('#again');
+    } },
   { name: 'table, just dealt', open: async p => { await p.click('#play'); } },
+  // Show-points off, which is the other half of a setting: the boxes go and
+  // nothing else moves, because they stand in a column the budget was already
+  // paying for.
+  { name: 'table, show-points off', open: async p => {
+      await p.click('#play');
+      await p.click('#btnSettings');
+      await p.click('#pointsSel');
+      await p.click('[data-back]');
+    } },
+  // The 1997 easter egg, at the table where Discola had it. Nothing but a
+  // played deal renders a face-up opponent hand, and Tressette's note under the
+  // table sat below the type floor for as long as no pass looked at it.
+  { name: 'table, the opponent\'s hand face up', open: async p => {
+      await p.click('#play');
+      await p.evaluate(`(() => { state.cheat = true; render(); })()`);
+    } },
   { name: 'table, empty middle', open: async p => {
       await p.click('#play');
       await p.evaluate(setTavola(0));
@@ -704,6 +860,17 @@ const SCREENS = [
         state.over = true; state.plays = 36; state.deveGiocare = null;
         render();
       })()`);
+    } },
+  // The two endings whose NOTE is the thing being looked at: one the scope
+  // decided, and a draw, whose line is the longest this panel ever draws — and
+  // the one that has to fit a 320px screen under a grid of six rows.
+  { name: 'table, a deal the scope decided', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseScopeDecide);
+    } },
+  { name: 'table, a drawn deal', open: async p => {
+      await p.click('#play');
+      await p.evaluate(poseDraw);
     } },
 ];
 
@@ -847,19 +1014,19 @@ const measure = () => {
   // card budget and the three breaks for it survived the whole check, because
   // the only pass that could see them ran at one portrait phone.
   const nameOf = e => e.id ? '#' + e.id : '.' + e.className.trim().split(/\s+/)[0];
-  const offScreen = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .say, .sel-name')]
+  const offScreen = [...document.querySelectorAll('.hand, .tavola, .tavola-row, .seat__cards, .plate, .points, .say, .sel-name')]
     .filter(e => {
       const q = e.getBoundingClientRect();
       return q.width > 0 && (q.right > window.innerWidth + 1 || q.left < -1);
     }).map(nameOf);
   const plateBad = [];
-  for (const plate of document.querySelectorAll('.plate')) {
+  for (const plate of document.querySelectorAll('.plate, .points')) {
     if (plate.scrollWidth > plate.clientWidth + 1)
       plateBad.push(`${nameOf(plate)} spills ${plate.scrollWidth - plate.clientWidth}px past its own width`);
     if (plate.scrollHeight > plate.clientHeight + 1)
       plateBad.push(`${nameOf(plate)} spills ${plate.scrollHeight - plate.clientHeight}px past its own height`);
   }
-  for (const kid of document.querySelectorAll('.plate, .plate *')) {
+  for (const kid of document.querySelectorAll('.plate, .plate *, .points, .points *')) {
     const a = kid.getBoundingClientRect();
     if (!a.width || !a.height) continue;
     for (const row of document.querySelectorAll('.seat__cards')) {
@@ -1928,6 +2095,585 @@ async function checkRules(browser) {
   return failed;
 }
 
+/* ---- pass 2f: the sheets, and the partita around the deal ------------------ */
+
+// A position one play from the end, with the OPPONENT to play it. Everything
+// else about it is a position the engine sits in: 37 cards accounted for, the
+// dealer is whoever plays last, and the piles are built by excluding what is on
+// the table and in the hand rather than by slicing 35 off the front.
+//
+// It exists for one row: the deal ending while the confirm is open. The confirm
+// is a scrim rather than a screen, so `show` never runs and the table's clock
+// is NOT held — which is deliberate, and which makes this reachable. A question
+// about abandoning a deal in progress stops being a question when the deal ends
+// while it is being asked, and its promise that nothing is written down has
+// just stopped being true.
+const poseOppPlaysLast = `(() => {
+  state.tavola = [{s:2,n:2},{s:0,n:3}];
+  state.hands[0] = [null, null, null];
+  state.hands[1] = [{s:1,n:10}, null, null];
+  state.deveGiocare = 1; state.over = false; state.speed = 200;
+  state.plays = 35; state.ultimaPresa = 0; state.mazziere = 0;
+  const out = state.tavola.concat(state.hands[1].filter(Boolean))
+    .map(c => c.s * 11 + c.n);
+  const rest = state.cards.filter(c => !out.includes(c.s * 11 + c.n));
+  state.prese = [rest.slice(0, 18), rest.slice(18)];
+  state.selected = null; state.scelta = 0;
+  render();
+  later(() => computerPlay(), 300);
+})()`;
+
+// The sheets are Tressette's, forked, and the three rules its iteration 4 paid
+// for are forked with them rather than rediscovered: the reload icon deals
+// again AT THE TABLE, the result closes whatever is in front of it, and the
+// confirm never opens over a deal that is already recorded.
+async function checkSheets(browser) {
+  console.log('\nthe sheets, and the partita');
+  let failed = 0;
+  const list = QUICK ? ['Android small'] : SCREEN_VIEWPORTS;
+  for (const vname of list) {
+    const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    const bad = [];
+
+    // This pass DRIVES more of the page than any other, and driving can throw:
+    // a button that should be there and is not, a scrim that should have closed
+    // and has not, and Playwright waits for it and then gives up. That is
+    // usually a defect the loop has already recorded, so it has to survive to
+    // be printed — an exception here took the whole check's output with it and
+    // the mutation harness saw eight failures with nothing in them. checkDeal
+    // has carried this guard since iteration 3; this pass needed it too.
+    //
+    // And a shorter deadline than Playwright's thirty seconds, because on a
+    // broken page several of these wait it out in series. Nothing on a correct
+    // page waits at all.
+    page.setDefaultTimeout(8000);
+    try {
+
+    /* --- the start sheet ---------------------------------------------------- */
+    // Every name the engine's roster holds has a chip, and the chosen one says
+    // so. The roster is one name until iteration 5 measures the corners; asking
+    // the page against `rollProfiles` rather than against a list written here
+    // is what makes this row grow with it instead of going stale.
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const names = Object.keys(PROFILES);
+      const chips = [...document.querySelectorAll('#opponents .chip')].map(c => c.dataset.name);
+      if (JSON.stringify(chips) !== JSON.stringify(names))
+        out.push(`the start sheet offers ${JSON.stringify(chips)}, the roster is ${JSON.stringify(names)}`);
+      const pressed = [...document.querySelectorAll('#opponents .chip')]
+        .filter(c => c.getAttribute('aria-pressed') === 'true').map(c => c.dataset.name);
+      if (JSON.stringify(pressed) !== JSON.stringify([state.opponent]))
+        out.push(`${JSON.stringify(pressed)} chips are pressed, the opponent is ${state.opponent}`);
+      if (!document.querySelector('#dossier').textContent.trim())
+        out.push('the chosen opponent has no dossier');
+      const decks = [...document.querySelectorAll('#decks .deck-opt')].map(d => d.dataset.deck);
+      if (decks.length !== 5)
+        out.push(`the deck row offers ${decks.length} decks, want 5`);
+      if (document.querySelector('#deckName').textContent !== state.deck)
+        out.push(`the deck row names ${document.querySelector('#deckName').textContent}, `
+          + `the deck is ${state.deck}`);
+      return out;
+    }));
+
+    // The deck row must not move under the thumb when the opponent changes.
+    // Tressette held four lines open for a dossier because three of its four
+    // ran to four lines on a phone; the number is a guess and the measurement
+    // is not, so the row is measured rather than the reservation trusted.
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const dossier = document.querySelector('#dossier');
+      const where = () => Math.round(document.querySelector('#decks').getBoundingClientRect().top);
+      const was = where();
+
+      // Every name in the roster, which is the real thing: choosing one must
+      // not move the row under a thumb already on its way to it.
+      for (const chip of document.querySelectorAll('#opponents .chip')){
+        chip.click();
+        if (Math.abs(where() - was) > 1)
+          out.push(`choosing ${chip.dataset.name} moved the deck row by `
+            + `${Math.abs(where() - was)}px — it is under the player's thumb`);
+      }
+
+      // And the reservation itself, because the loop above cannot see it while
+      // the roster is ONE name: clicking the only chip re-renders the same
+      // sentence, nothing moves, and the break that takes `min-height` off the
+      // dossier survived the whole check. What holds the row still is the space
+      // held open for a dossier that is not there, so that is what is measured
+      // — emptied and put back, which is the shortest and longest this box can
+      // ever be. It stops being a proxy the moment iteration 5 brings the other
+      // names, and it is right in the meantime.
+      const said = dossier.textContent;
+      dossier.textContent = '';
+      const empty = where();
+      dossier.textContent = said;
+      if (Math.abs(empty - was) > 1)
+        out.push(`the dossier does not hold its height: emptying it moved the deck row `
+          + `by ${Math.abs(empty - was)}px`);
+      return out;
+    }));
+
+    // A deck chosen on the start sheet is the deck the table deals with, and
+    // the settings sheet agrees with it. Two controls choose a deck and neither
+    // is the source of truth.
+    await page.click('#decks .deck-opt[data-deck="Romagnole"]');
+    await page.click('#play');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (state.deck !== 'Romagnole') out.push(`the deck row chose Romagnole, the state says ${state.deck}`);
+      const sheet = getComputedStyle(document.documentElement).getPropertyValue('--sheet');
+      if (!/romagnole/.test(sheet)) out.push(`the table is drawn from ${sheet.trim()}`);
+      if (document.querySelector('#deckSel').value !== 'Romagnole')
+        out.push(`the settings sheet still says ${document.querySelector('#deckSel').value}`);
+      if (!state.dealt) out.push('Gioca did not deal');
+      // And the row says so. Asserting this before anything has changed the
+      // deck asks whether `Trevisane` equals `Trevisane` — which the markup
+      // says on its own, so the break that stops the row being written at all
+      // survived the whole check. The question only has content once the deck
+      // is not the one the page was born with.
+      if (document.querySelector('#deckName').textContent !== 'Romagnole')
+        out.push(`the deck row names ${document.querySelector('#deckName').textContent} `
+          + `after Romagnole was picked`);
+      return out;
+    }));
+
+    /* --- the settings sheet ------------------------------------------------- */
+    await page.click('#btnSettings');
+    // Seven weights, which is what iteration 2's ladder left — and the values
+    // the engine will actually play with, read off the profile rather than
+    // written here.
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const rows = [...document.querySelectorAll('#weightsTable tbody tr')]
+        .map(tr => [...tr.children].map(td => td.textContent));
+      if (rows.length !== WEIGHT_KEYS.length)
+        out.push(`the settings sheet discloses ${rows.length} weights, the engine has ${WEIGHT_KEYS.length}`);
+      const P = PROFILES[state.opponent];
+      WEIGHT_KEYS.forEach((k, i) => {
+        if (!rows[i]) return;
+        if (rows[i][0] !== k.toLowerCase().replace(/_/g, ' '))
+          out.push(`weight ${i} is listed as "${rows[i][0]}", the engine's is ${k}`);
+        if (rows[i][1] !== String(P[k]))
+          out.push(`${k} is disclosed as ${rows[i][1]}, ${state.opponent} plays with ${P[k]}`);
+      });
+      return out;
+    }));
+
+    // Each control moves the state, and the state survives a reload. Storage is
+    // the only thing on this page that outlives the tab, and what comes out of
+    // it is not necessarily what this build wrote.
+    await page.click('#pointsSel');
+    await page.click('#soundSel');
+    await page.evaluate(`(() => {
+      el.speedSel.value = 1400; el.speedSel.dispatchEvent(new Event("input"));
+      el.feltSel.value = "#402a52"; el.feltSel.dispatchEvent(new Event("input"));
+      el.deckSel.value = "Francesi"; el.deckSel.dispatchEvent(new Event("change"));
+    })()`);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (state.showPoints !== false) out.push('show-points did not turn off');
+      if (state.sound !== false) out.push('sound did not turn off');
+      if (state.speed !== 800) out.push(`the rhythm slider set speed to ${state.speed}, want 800`);
+      if (state.felt !== '#402a52') out.push(`the felt is ${state.felt}`);
+      const felt = getComputedStyle(document.documentElement).getPropertyValue('--felt').trim();
+      if (felt !== '#402a52') out.push(`--felt is ${felt}, the setting says ${state.felt}`);
+      return out;
+    }));
+
+    // And the boxes it turns off are gone, measured AT THE TABLE. Measuring
+    // them from the settings sheet is measuring a screen that is not on: every
+    // `.points` box has zero height while `#viewTable` is hidden, whatever
+    // show-points says, so the break written for this survived the whole check.
+    // An assertion has to look at the screen its subject is on.
+    await page.click('#viewSettings [data-back]');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (document.getElementById('viewTable').hidden)
+        return ['Back from the settings did not return to the table'];
+      const shown = [...document.querySelectorAll('.points')]
+        .filter(b => b.getBoundingClientRect().height > 0).length;
+      if (shown) out.push(`${shown} points box(es) still drawn with show-points off`);
+      return out;
+    }));
+    await page.click('#btnSettings');
+    await page.reload();
+    await page.addStyleTag({ content: STILL });
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (state.showPoints !== false || state.sound !== false || state.speed !== 800
+          || state.felt !== '#402a52' || state.deck !== 'Francesi')
+        out.push(`the settings did not survive a reload: ${JSON.stringify({
+          showPoints: state.showPoints, sound: state.sound, speed: state.speed,
+          felt: state.felt, deck: state.deck })}`);
+      // And the controls agree with what was restored, or the sheet says one
+      // thing while the game does another.
+      if (document.querySelector('#pointsSel').checked !== state.showPoints)
+        out.push('the show-points control disagrees with the setting after a reload');
+      if (document.querySelector('#deckSel').value !== state.deck)
+        out.push('the deck control disagrees with the setting after a reload');
+      return out;
+    }));
+    // Put show-points back for the rows below, which measure a table.
+    await page.evaluate(`(() => { el.pointsSel.checked = true;
+      el.pointsSel.dispatchEvent(new Event("change")); })()`);
+
+    /* --- back, from each door ----------------------------------------------- */
+    // Every sheet is entered from the table here, so every Back returns to it —
+    // with the deal still on. `show` holds the table's clock on the way out for
+    // every screen rather than for the one that had a button first, and
+    // iteration 4 is exactly the iteration that adds the other three.
+    await page.click('#play');
+    for (const [icon, view] of [['#btnSettings', '#viewSettings'],
+                                ['#btnHistory', '#viewHistory'],
+                                ['#about', '#viewRules']]) {
+      await page.click(icon);
+      if (await page.evaluate(v => document.querySelector(v).hidden, view))
+        bad.push(`${icon} did not open ${view}`);
+      await page.click(view === '#viewRules' ? '#rulesBack' : `${view} [data-back]`);
+      if (await page.evaluate(() => document.getElementById('viewTable').hidden))
+        bad.push(`Back from ${view} did not return to the table`);
+    }
+
+    /* --- the card keys while a dialog is open ------------------------------- */
+    // A dialog is over the table, not beside it. While one is open the card
+    // keys are not the player's business — and Enter least of all, since it is
+    // what you press to answer a dialog whose safe button already has focus,
+    // and in Tressette it played the raised card on the way through. A misplay
+    // costs the deal.
+    //
+    // The table is held still first, so that "a key played a card" is a
+    // question about the keys rather than a race with the opponent's turn.
+    await page.evaluate(`(() => { epoch++; clearTimeout(timer); pending = null;
+      state.deveGiocare = 0; render(); })()`);
+    await page.click('#again');
+    const guarded = await page.evaluate(() => state.plays);
+    await page.keyboard.press('1');
+    await page.keyboard.press('Enter');
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (state.plays !== was)
+        out.push(`a key played a card through the confirm: ${was} plays became ${state.plays}`);
+      return out;
+    }, guarded));
+
+    // And put the table back the way it was found. Enter answered the confirm
+    // through its safe button, which is right — but on a page where THAT button
+    // is broken the deal is already gone by the time the next block starts, and
+    // the next block is the one that asks whether the safe button throws the
+    // deal away. It reported the damage this block did, on the wrong assertion.
+    // Tressette's rule, one iteration later: a pass that drives the page has to
+    // leave it as it found it.
+    //
+    // Frozen again for the same reason as above — the block below snapshots
+    // `state.plays` and compares it two clicks later.
+    await page.evaluate(`(() => {
+      closeConfirm(); newDealHere();
+      epoch++; clearTimeout(timer); pending = null;
+      state.deveGiocare = 0; render();
+    })()`);
+
+    /* --- abandoning --------------------------------------------------------- */
+    // The reload icon over a deal in progress asks first, and "Continua a
+    // giocare" leaves the deal exactly where it was.
+    const before = await page.evaluate(() => ({ plays: state.plays, cards: state.cards.length }));
+    await page.click('#again');
+    if (await page.evaluate(() => document.getElementById('confirmScrim').hidden))
+      bad.push('the reload icon threw the deal away without asking');
+    await page.click('#confirmNo');
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (!document.getElementById('confirmScrim').hidden)
+        out.push('"Continua a giocare" did not close the confirm');
+      if (!state.dealt || state.plays !== was.plays)
+        out.push('"Continua a giocare" threw the deal away anyway');
+      return out;
+    }, before));
+
+    // And "Abbandona" deals again AT THE TABLE. Tressette's discard went to the
+    // start sheet and dealt the new hand behind it: a live deal you could not
+    // see or play, with the opponent leading into it.
+    await page.click('#again');
+    await page.click('#confirmYes');
+    await page.waitForTimeout(40);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (document.getElementById('viewTable').hidden)
+        out.push('abandoning from the reload icon left the table');
+      if (!state.dealt) out.push('abandoning from the reload icon did not deal again');
+      if (state.plays !== 0 && state.plays !== 1)
+        out.push(`the new smazzata starts at play ${state.plays}`);
+      // And nothing was written down. A deal that is thrown away is not a
+      // result, which is what the confirm promises in so many words.
+      const list = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      if (list.length) out.push(`an abandoned smazzata was recorded: ${list.length} entries`);
+      return out;
+    }));
+
+    // "Cambia avversario" leaves the table, so it asks too — and lands on the
+    // start sheet rather than back where it was.
+    await page.click('#btnSettings');
+    await page.click('#changeOpponent');
+    if (await page.evaluate(() => document.getElementById('confirmScrim').hidden))
+      bad.push('changing opponent threw the deal away without asking');
+    await page.click('#confirmYes');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (document.getElementById('viewStart').hidden)
+        out.push('changing opponent did not land on the start sheet');
+      if (state.dealt) out.push('changing opponent left the deal running behind the start sheet');
+      return out;
+    }));
+
+    /* --- the deal ends while the confirm is open ---------------------------- */
+    // The confirm is a scrim and not a screen, so the table's clock runs on
+    // behind it. That is what makes this reachable, and it is the whole of
+    // Tressette's "the result dialog closes whatever sheet is in front".
+    await page.click('#play');
+    await page.evaluate(poseOppPlaysLast);
+    await page.click('#again');
+    if (await page.evaluate(() => document.getElementById('confirmScrim').hidden))
+      bad.push('the confirm did not open over the deal that was about to end');
+    await page.waitForTimeout(1600);
+    const ended = await page.evaluate(() => {
+      const out = [];
+      if (!document.getElementById('confirmScrim').hidden)
+        out.push('the smazzata ended and the confirm was still asking whether to abandon it');
+      if (document.getElementById('result').hidden)
+        out.push('the smazzata ended behind the confirm and the points were never counted out');
+      // "the result was drawn somewhere other than over the table it came from"
+      // was here, for `show("table")` in `finish`. It cannot fail, and the
+      // break written for it survived the whole check: `show` HOLDS the table's
+      // clock on the way to any sheet, so a pending `finish` cannot run while a
+      // sheet is up, and the only thing that can be in front of the table when
+      // a deal ends is the confirm — which is a scrim over the table rather
+      // than a screen instead of it. There is no state in this game where the
+      // player is somewhere else when `finish` runs. An assertion that cannot
+      // fire reads like cover and is not any, so it is gone; the call it
+      // guarded stays, and break_ui.mjs records it as equivalent with this
+      // reasoning rather than as a hole.
+      const r = scoreDeal(state);
+      const list = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      if (list.length !== 1)
+        out.push(`${list.length} smazzate recorded, want 1`);
+      else if (list[0].y !== r.punti[0] || list[0].a !== r.punti[1])
+        out.push(`the history recorded ${list[0].y}–${list[0].a}, scoreDeal returned `
+          + `${r.punti[0]}–${r.punti[1]}`);
+      else if (list[0].o !== state.opponent || list[0].d !== state.deck)
+        out.push(`the history recorded ${list[0].o}/${list[0].d}, the deal was `
+          + `${state.opponent}/${state.deck}`);
+      return out;
+    });
+    bad.push(...ended);
+
+    // Once it is recorded there is nothing left to lose, so the confirm does
+    // not open over it.
+    await page.click('#again');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (!document.getElementById('confirmScrim').hidden)
+        out.push('the confirm opened over a smazzata that is already recorded');
+      if (!state.dealt || state.over)
+        out.push('the reload icon did not deal again once the smazzata was over');
+      return out;
+    }));
+
+    /* --- and it survives a reload icon pressed on the closing beats --------- */
+    // `gioca` sets `over` on the 36th play and three beats of drawing follow
+    // it. Through all three `state.over` is already true, so the reload icon
+    // does NOT ask — there is nothing left to lose — and it cancels every timer
+    // the table has pending. A smazzata written down behind one of those timers
+    // is a smazzata the same click throws away, after it was played to the last
+    // card.
+    await page.evaluate(`localStorage.removeItem("scopetta.history")`);
+    await page.evaluate(playLastLeftovers);
+    await page.waitForTimeout(200);          // inside the landing beat
+    await page.click('#again');
+    await page.waitForTimeout(80);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const list = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      if (list.length !== 1)
+        out.push(`a smazzata played to the last card was lost when the next one was `
+          + `dealt over its closing beats: ${list.length} in the history, want 1`);
+      return out;
+    }));
+
+    /* --- and it shows up in the history ------------------------------------- */
+    // A win, a loss and a draw put in beside the one that was just played, so
+    // that the tally's four numbers are four DIFFERENT numbers. With one
+    // smazzata in the history every count is 1 and every cell agrees with every
+    // other by accident: the break that made the tally count wins where it says
+    // smazzate survived the whole check.
+    await page.evaluate(`(() => {
+      const list = JSON.parse(localStorage.getItem("scopetta.history") || "[]");
+      list.push({ t: Date.parse("2026-02-10"), o: "Franco", d: "Trevisane", y: 6, a: 1 },
+                { t: Date.parse("2026-02-09"), o: "Franco", d: "Trevisane", y: 1, a: 4 },
+                { t: Date.parse("2026-02-08"), o: "Franco", d: "Trevisane", y: 2, a: 2 });
+      localStorage.setItem("scopetta.history", JSON.stringify(list));
+    })()`);
+    await page.click('#btnHistory');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      // The four cells, against the list they are counted from. They are four
+      // different numbers now, so a cell wired to the wrong one says so.
+      const list0 = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      const want = [list0.length,
+                    list0.filter(m => m.y > m.a).length,
+                    list0.filter(m => m.y < m.a).length,
+                    list0.filter(m => m.y === m.a).length];
+      const got = [...document.querySelectorAll('#historyBody .tally b')].map(b => Number(b.textContent));
+      if (JSON.stringify(got) !== JSON.stringify(want))
+        out.push(`the tally counts ${JSON.stringify(got)}, the history holds `
+          + `${JSON.stringify(want)} (smazzate, vinte, perse, pari)`);
+      const rows = [...document.querySelectorAll('#historyBody .log li')];
+      const list = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      if (rows.length !== list.length)
+        out.push(`the history sheet draws ${rows.length} rows for ${list.length} smazzate`);
+      // EVERY row against its own entry, not just the newest. The newest one
+      // is whatever the driven deal happened to produce, and it happened to be
+      // a win — so the break that marks every row `V` survived the whole
+      // check. The list underneath holds a win, a loss and a draw on purpose,
+      // and all three letters have to appear on the right lines.
+      rows.forEach((li, i) => {
+        const m = list[i];
+        if (!m) return;
+        const said = li.querySelector('.score').textContent;
+        const want = `${m.y}–${m.a}`;
+        if (said !== want) out.push(`history row ${i} reads ${said}, the smazzata was ${want}`);
+        const verdict = li.querySelector('.res').textContent;
+        const wantV = m.y > m.a ? 'V' : m.y < m.a ? 'S' : 'P';
+        if (verdict !== wantV)
+          out.push(`history row ${i} is marked ${verdict}, want ${wantV} for ${want}`);
+      });
+      // And a row this build did not write is dropped rather than rendered: one
+      // entry of another shape took Tressette's sheet down along with the
+      // button that clears it, so there was no way out from inside the game.
+      localStorage.setItem('scopetta.history', JSON.stringify(
+        [null, 7, { o: 'Franco' }, ...list]));
+      // In a try, because the defect this names is a THROW: `renderHistory`
+      // read `m.y` off a null and took the sheet down along with the button
+      // that clears it, and an exception here would take this whole evaluate —
+      // and every line already in `out` — with it.
+      try { renderHistory(); }
+      catch (e){ out.push(`a row this build did not write took the history sheet down: ${e.message}`); }
+      const after = [...document.querySelectorAll('#historyBody .log li')].length;
+      if (after !== list.length)
+        out.push(`${after} rows after three unreadable entries were added, want ${list.length}`);
+      if (!document.querySelector('#historyBody .btn'))
+        out.push('the history sheet lost the button that clears it');
+      return out;
+    }));
+
+    // And it is capped. `localStorage` is a few megabytes and a smazzata is a
+    // hundred bytes, so this is not about running out today — it is that a log
+    // nothing ever prunes grows without a bound and the sheet draws every row
+    // of it. A hundred is what §3.8 says, and the same hundred the other two
+    // games keep.
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      localStorage.setItem('scopetta.history', JSON.stringify(
+        Array.from({ length: 130 }, (_, i) => (
+          { t: Date.now() - i * 1000, o: 'Franco', d: 'Trevisane', y: 4, a: 3 }))));
+      recordDeal(1, 2);
+      const list = JSON.parse(localStorage.getItem('scopetta.history') || '[]');
+      if (list.length !== 100)
+        out.push(`the history holds ${list.length} smazzate, it is capped at 100`);
+      // Newest first, and the new one is the new one.
+      if (list.length && (list[0].y !== 1 || list[0].a !== 2))
+        out.push(`the newest smazzata in the history reads ${list[0].y}–${list[0].a}, `
+          + `the one just recorded was 1–2`);
+      return out;
+    }));
+
+    /* --- what the result says, and the two ways on -------------------------- */
+    // Both posed endings, because a driven deal ends wherever its seed ends and
+    // this line picks between five components: one deal the scope decided and
+    // one nobody won. NOTE_OK asserts the property the line claims rather than
+    // comparing it with a string.
+    await page.click('#viewHistory [data-back]');
+    for (const pose of [poseScopeDecide, poseDraw]) {
+      await page.evaluate(pose);
+      await page.waitForTimeout(40);
+      bad.push(...await page.evaluate(NOTE_OK));
+    }
+
+    // Ancora deals again at the table, and does not ask: the smazzata is over
+    // and there is nothing left to lose. Cambia leaves for the start sheet.
+    await page.click('#resultAgain');
+    await page.waitForTimeout(40);
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (!document.getElementById('confirmScrim').hidden)
+        out.push('"Ancora" asked whether to abandon a smazzata that was already over');
+      if (document.getElementById('viewTable').hidden)
+        out.push('"Ancora" left the table');
+      if (!state.dealt || state.over) out.push('"Ancora" did not deal again');
+      if (!document.getElementById('result').hidden)
+        out.push('"Ancora" dealt again and the result is still over the table');
+      return out;
+    }));
+    await page.evaluate(poseDraw);
+    await page.click('#resultChange');
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      if (document.getElementById('viewStart').hidden)
+        out.push('"Cambia" did not land on the start sheet');
+      if (state.dealt)
+        out.push('"Cambia" left a deal running behind the start sheet');
+      return out;
+    }));
+
+    /* --- the easter egg ----------------------------------------------------- */
+    // 1-3 are the only card keys here, so the 6 and the 4 in the word fall
+    // through to the buffer as they did in Discola. Tressette had to move it off
+    // the table because every digit played a card.
+    await page.click('#play');
+    // The table held still while eleven keys are typed at it, so that "the word
+    // played a card" is a question about the keys rather than a race with the
+    // opponent's own turn. Bumping the epoch is what the page itself does when
+    // a deal is abandoned, and it is the only thing that stops a pending play.
+    await page.evaluate(`(() => { epoch++; clearTimeout(timer); pending = null;
+      state.deveGiocare = 0; render(); })()`);
+    await page.waitForTimeout(40);
+    const dealtNow = await page.evaluate(() => state.plays);
+    for (const k of '6winouj64ie') await page.keyboard.press(k);
+    bad.push(...await page.evaluate(was => {
+      const out = [];
+      if (!state.cheat) out.push('typing the 1997 word did not turn the opponent’s hand face up');
+      const faces = [...document.querySelectorAll('.hand--opp .card')]
+        .filter(c => c.dataset.empty === 'false' && c.style.getPropertyValue('--col') !== '10').length;
+      const held = state.hands[1].filter(Boolean).length;
+      if (faces !== held)
+        out.push(`${faces} of ${held} of the opponent’s cards are face up`);
+      if (document.getElementById('cheatNote').hidden)
+        out.push('the opponent’s hand is face up and nothing says so');
+      if (state.plays !== was)
+        out.push(`typing the word played ${state.plays - was} card(s)`);
+      return out;
+    }, dealtNow));
+
+    } catch (e) {
+      bad.push(`the sheets could not be driven to the end: `
+        + `${String(e).split('\n')[0].slice(0, 110)}`);
+    }
+
+    const all = [...bad, ...errs];
+    if (all.length) {
+      failed++;
+      console.log(`  FAIL  ${vname}`);
+      all.forEach(b => console.log(`        ${b}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${list.length} viewports`);
+  return failed;
+}
+
 /* ---- pass 3: a whole deal, through the table ------------------------------- */
 
 // The two passes above measure a table that has just been dealt. This is the
@@ -2066,6 +2812,15 @@ async function checkDeal(browser) {
     bad.push(`the deal could not be driven to the end: ${String(e).split('\n')[0].slice(0, 100)}`);
   }
 
+  // `finish` runs a beat after the table has settled, and it is what writes the
+  // smazzata down and puts the table back in front. Wait for it rather than
+  // racing it — the loop above breaks on `over`, which `gioca` sets on the 36th
+  // play, three beats earlier.
+  await page.waitForFunction(
+    '!document.getElementById("result").hidden'
+    + ' && JSON.parse(localStorage.getItem("scopetta.history") || "[]").length > 0',
+    null, { timeout: 8000 }).catch(() => {});
+
   const end = await page.evaluate(() => {
     const r = scoreDeal(state);
     const grid = document.getElementById('resultGrid');
@@ -2080,8 +2835,14 @@ async function checkDeal(browser) {
       tavola: state.tavola.length,
       piles: state.prese[0].length + state.prese[1].length,
       say: document.querySelector('.sel-name').textContent,
+      sayShown: !document.querySelector('.sel-name').hidden,
       punti: r.punti,
       resultShown: !document.getElementById('result').hidden,
+      title: document.getElementById('resultTitle').textContent,
+      note: document.getElementById('resultNote').textContent,
+      ways: [...document.querySelectorAll('#result .result__actions .btn')]
+        .map(b => b.id),
+      logged: JSON.parse(localStorage.getItem('scopetta.history') || '[]'),
       labels: [...grid.querySelectorAll('.r-label')].map(n => n.textContent),
       // carte, denari, settebello, primiera, scope, totale — six rows of two
       nums: val('.r-num'),
@@ -2108,9 +2869,32 @@ async function checkDeal(browser) {
   if (end.domTavola !== 0 || end.tavola !== 0)
     bad.push(`the table still shows ${end.domTavola} cards after the last play`);
   if (end.piles !== 40) bad.push(`${end.piles} cards in the piles, want 40`);
-  // And the score the page shows is what scoreDeal returned.
-  const want = `Fine: ${end.punti[0]} a ${end.punti[1]}`;
-  if (end.say !== want) bad.push(`the page says "${end.say}", scoreDeal returned "${want}"`);
+  // The say line is the capture line and nothing else. Iteration 3 put the
+  // deal's score in it because there was nowhere else for it; iteration 4 has
+  // the panel, and a second copy of the score is a second thing that can be
+  // wrong. It was: the panel is held back while the last play is still being
+  // drawn — that was a defect and it was fixed — and this line is not under the
+  // panel until the panel goes up, so the score was read out over the last card
+  // as it landed.
+  if (end.sayShown || end.say)
+    bad.push(`the say line still says "${end.say}" with the smazzata over — the score `
+      + `is the result panel's, and a second copy of it is a second thing to be wrong about`);
+
+  // The partita around the deal: the verdict, the line saying what decided it,
+  // the two ways on, and the entry in the history.
+  if (end.title !== (end.punti[0] > end.punti[1] ? 'Hai vinto'
+                   : end.punti[0] < end.punti[1] ? 'Hai perso' : 'Pareggio'))
+    bad.push(`the result says "${end.title}" on ${end.punti[0]}–${end.punti[1]}`);
+  if (!end.note.trim())
+    bad.push('the smazzata ended and nothing says what decided it');
+  if (JSON.stringify(end.ways) !== JSON.stringify(['resultAgain', 'resultChange']))
+    bad.push(`the result offers ${JSON.stringify(end.ways)}, want Ancora and Cambia`);
+  if (end.logged.length !== 1)
+    bad.push(`${end.logged.length} smazzate in the history after one deal, want 1`);
+  else if (end.logged[0].y !== end.punti[0] || end.logged[0].a !== end.punti[1])
+    bad.push(`the history recorded ${end.logged[0].y}–${end.logged[0].a}, scoreDeal `
+      + `returned ${end.punti[0]}–${end.punti[1]}`);
+  bad.push(...await page.evaluate(NOTE_OK));
 
   // The breakdown, which is the only thing that says WHY the score is what it
   // is. A total with no working is a number the player has to take on trust.
@@ -2182,6 +2966,7 @@ failed += await checkChoice(browser);
 failed += await checkStates(browser);
 failed += await checkRotation(browser);
 failed += await checkRules(browser);
+failed += await checkSheets(browser);
 failed += await checkDeal(browser);
 await browser.close();
 
