@@ -18,8 +18,9 @@ calibrated, and in Tressette, which inherited the check and added the rest.
 node tools/check_ui.mjs
 ```
 
-Exit code 0 means clean. It takes about fifteen minutes; let it finish rather
-than interrupting it. It prints the Chromium it used, because that is part of
+Exit code 0 means clean. It takes about twenty-five minutes — ten passes, and
+the sheets pass iteration 4 added drives more of the page than any other; let it
+finish rather than interrupting it. It prints the Chromium it used, because that is part of
 the answer — `check.yml` pins `playwright-core` so CI runs the same one.
 
 **And then read the `ui` job on the pull request.** Locally the Google Fonts
@@ -79,14 +80,24 @@ it.
 
 **Screens pass** — every screen, and **every state that exists only in the
 middle of a deal**, at seven real device shapes: the start sheet; the rules,
-opened from the start sheet and again from the table; the table just dealt; the
-table with an empty middle; the table with thirteen cards; a capture waiting to
-be chosen; a scopa announced; both hands empty for the beat between rounds; a
-pile with three scope showing; and the deal over. Asserts exactly one
+opened from the start sheet and again from the table; the settings, and the
+settings with the weights disclosed; the history, empty and with smazzate in
+it; the confirm over a deal in progress; the table just dealt; the table with
+show-points off; the table with the opponent's hand face up; the table with an
+empty middle; the table with thirteen cards; a capture waiting to be chosen; a
+scopa announced; both hands empty for the beat between rounds; a pile with
+three scope showing; and the deal over three ways — a posed breakdown, a deal
+the scope decided, and a draw. Asserts exactly one
 screen is visible, no sideways scroll, nothing past the screen edge, no table
-card on a hand card, no name plate on the cards or wider than its own box, no
+card on a hand card, no name plate or points box on the cards or wider than its
+own box, no
 text below its size floor, no text clipped by a container that cannot scroll, no
 tap target under 32px, and no script or console errors.
+
+A `<details>` is opened on purpose for one of those rows. A closed one renders
+nothing the audit can measure — the text floors, the off-screen rule and the
+clipped-text rule all skip it by construction — so the weights disclosure was a
+screen the check could walk past without looking at.
 
 Rows arrive with their screens. A row pointing at a state that does not exist is
 a check that silently passes. **Two of them are played rather than posed** — the
@@ -241,6 +252,61 @@ carrying the class. It reports the round in `nuovoGiro`; the page draws the
 beat from that flag. Posing either state by assigning to `state` renders a page
 the game cannot reach, and passes whether or not the page can reach it.
 
+**The plates in a fallback font** — six phone and short-landscape shapes × five
+real label faces (`system-ui`, Verdana, Tahoma, Arial and a monospace),
+asserting the plate and points spill rules against each.
+
+Blocking the webfont pins the font the page *asks for* and says nothing about
+the one it gets, and the fallback is not the same on two machines:
+`--font-label` ends in `system-ui`, which is Segoe UI on Windows and DejaVu or
+Liberation Sans on a Linux runner. Iteration 4 shipped a plate that fitted
+locally and spilled 3px in CI at every 360x800 case in all five decks, with the
+local check green — the same shape as the defect that made the blocking
+necessary, one level down. Anything sized to fit text belongs in this pass.
+
+**The sheets, and the partita** — iteration 4's pass, and the one that measures
+everything around the deal rather than the deal. The start sheet: a chip for
+every name the engine's roster holds (asked of `rollProfiles`, not of a list
+written in the check, so the row grows with iteration 5 instead of going
+stale), the chosen one marked, a dossier that holds its height so that choosing
+a name does not move the deck row under a thumb already on its way to it, and a
+deck picked there being the deck the table deals with *and* the deck the
+settings sheet says. The settings: seven weights disclosed with the values the
+profile will actually play with, every control reaching the state, and the
+state surviving a reload — with the controls agreeing with what was restored,
+because a sheet that says one thing while the game does another is worse than
+one that forgets.
+
+Then the abandon paths, which are Tressette's three rules forked rather than
+rediscovered: the reload icon **asks first** and then deals again **at the
+table** (its discard went to the start sheet and dealt the new hand behind it —
+a live deal nobody could see or play); "Continua a giocare" leaves the deal
+exactly where it was; "Cambia avversario" asks too and lands on the start
+sheet; and an abandoned smazzata is **not written down**, which is what the
+confirm promises in so many words.
+
+Then the result: the verdict read off the totals, the line saying what decided
+the smazzata, the two ways on, and the entry in the history. The line is
+asserted as a **property** — take the component it names out of `scoreDeal`'s
+answer and the other player has to win — rather than against a table of
+strings, which is the shape of assertion a table of phrases would pass by
+accident. Two endings are posed for it, one the scope decided and one drawn,
+because a driven deal ends wherever its seed ends.
+
+And the row that could only be reached because the confirm is a **scrim and not
+a screen**: `show` holds the table's clock, so a deal can never end behind a
+*sheet*, but it can end behind the confirm. The pass plays the opponent's last
+card with the confirm open and asserts that the confirm closes, the result goes
+up over the table, and the smazzata is recorded once with the score `scoreDeal`
+returned.
+
+Last, the history's own defence — three entries of a shape this build did not
+write are pushed into storage and `renderHistory` is called inside a `try`,
+because the defect it names is a *throw*: one bad row took Tressette's sheet
+down along with the button that clears it, and there was no way out from inside
+the game. And the 1997 easter egg, at the table, where only `1`–`3` are card
+keys so the `6` and the `4` in the word fall through to the buffer.
+
 **Deal pass** — one whole deal against Franco at one viewport, played by
 tapping. The passes above measure a table that has just been dealt, so this is
 the only one that fails when the page and the engine come apart. It **reads the
@@ -270,6 +336,15 @@ a weak threshold; the page was simply never in the state that shows them.
 
 So when the page gains a state, the check gains the row that puts it there. That
 is the harder half of adding an assertion, and it is the half that gets skipped.
+
+**And an assertion has to be in a position to see its own subject.** Iteration
+4's first mutation run caught 126 of 141, and every one of the fifteen it
+missed was this rather than a weak threshold: a box measured on a screen that
+was not showing, a count asserted against a list where every number was 1, a
+value read before anything had changed it, a rule held up by two lines so that
+removing either changed nothing, and a pass that threw on a broken page and
+took its own findings with it. Run `tools/break_ui.mjs` after adding an
+assertion, not before shipping it — the survivors are the part worth reading.
 
 ## Reading a failure
 
@@ -314,6 +389,19 @@ was committed:
 | the table marks the wrong cards | a proposal nobody can read is a rule the table fails to teach |
 | badges vs the engine | a badge that lags the state is the kind of defect nothing throws for |
 | the middle shows N, the engine holds M | the page and the engine coming apart mid-deal, which only a played deal can see |
+| the points box spills past its own width | it shares a row with the plate, and a box sized by its content grows that row: `Graziano / avversario / mazziere` at max-content is 195px, the pair 323px of a 288px seat at 320x568, and the row wrapped into a plate row nobody had budgeted for — 72px of scrolling with the seat 63px below the fold. It is also what put the plate under this rule in portrait at all, where `width: auto` could never fail it |
+| the say line still says "…" with the smazzata over | the score was in two places, and the second one still had the defect the first one's fix removed: the panel is held back while the last play is drawn, and the say line is not under it until it goes up |
+| the note says "…", and taking X out of the score leaves the same player winning | the line names what decided the deal, so it has to be checkable against the deal — a phrase chosen from a table passes a string comparison and fails this |
+| an abandoned smazzata was recorded | the confirm promises in so many words that nothing is written down |
+| abandoning from the reload icon left the table | Tressette's: discarding went to the start sheet and dealt the new hand behind it, a live deal nobody could see or play |
+| the smazzata ended and the confirm was still asking whether to abandon it | the confirm is a scrim, so the clock runs on behind it; when the deal ends the question is moot and its promise has just stopped being true |
+| a row this build did not write took the history sheet down | one entry of another shape threw inside `renderHistory` and took the log *and* the button that clears it, so there was no way out from inside the game |
+| typing the word played N card(s) | the easter egg comes back to the table here because only `1`–`3` are card keys; widen them and the `6` and the `4` in the word play cards as it is typed |
+| the dossier does not hold its height | the start sheet keeps space for it so that choosing a name does not move the deck row under a thumb already on its way to it. Emptied and put back, rather than by clicking each chip — with one name in the roster, clicking the only chip re-renders the same sentence and nothing can move. It caught a real one: four lines is Tressette's number, and Franco's dossier is six at 320x568 |
+| the tally counts […], the history holds […] | asserted against a win, a loss and a draw, because against one smazzata every cell is 1 and three of the four can be wired to the wrong list and still agree |
+| N points box(es) still drawn with show-points off | measured at the table, not from the settings sheet: every box on a hidden screen has no height whatever the setting says |
+| #plateOpp spills Npx past its own width, in the fallback-font pass | `--plate-w` was `7.5 × --t-pick`, the size of the name, when what sets the plate's minimum is `avversario` beneath it at `--t-tiny`. The two agree until both hit their floors — 16px and 12.5px at 320 and 360 — and then the box is 120px against 125px of content, in a fallback wider than the one this machine picks |
+| the sheets could not be driven to the end | not a rule about the page — it is the pass admitting a click timed out. Without it an exception took every finding the pass had already made with it, and the mutation harness saw eight failures with nothing in them |
 
 If you believe a threshold is genuinely wrong, change it — then run the check
 against the commit that introduced the bug it names and confirm it still fails

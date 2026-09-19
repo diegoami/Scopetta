@@ -39,7 +39,20 @@
 //     was chosen by tapping / by accepting`, `the driver never reached the end
 //     of a round`, `the deal could not be driven to the end`, `the posed
 //     position offers only one capture`, `nothing on the crowded table is
-//     marked`, `the say line has no box while a card is raised`;
+//     marked`, `the say line has no box while a card is raised`, `Gioca did not
+//     deal`, `#icon did not open #view`, `the confirm did not open over the
+//     deal that was about to end`, and `"Ancora" asked whether to abandon a
+//     smazzata that was already over` — the last of those is a rail because
+//     "Ancora" does not go through `askAbandon` at all, and the rule that it
+//     must not is the one `the confirm opens over a smazzata that is over`
+//     breaks;
+//   - the SOUND. `blip` and the scopa's second, brighter `chime` need an audio
+//     device, and a headless Chromium has none; the whole of both is inside a
+//     try/catch for exactly that reason, so a break in them cannot be told
+//     from a machine with no sound card. What IS asserted is the setting that
+//     turns them off reaching the state and surviving a reload;
+//   - `prefers-reduced-motion`, which this check turns motion off for anyway,
+//     by hand, in every pass;
 //   - the deal-in ANIMATION, as opposed to the mark the page puts on a card it
 //     has just dealt, which is asserted: this check runs with motion off on
 //     purpose, so no pass can watch an animation run;
@@ -81,6 +94,20 @@
 //     card that takes it has landed", asserted at both of the plays that have
 //     a landing beat.
 //
+// Iteration 4 adds three of the same kind, all of them one rule asserted at
+// two doors:
+//
+//   - `Back from #viewSettings / #viewHistory did not return to the table` with
+//     `the rules go back to the start sheet whatever they were opened from`,
+//     whose EXPECT names the rules pass's phrasing. One `cameFrom`, four
+//     screens;
+//   - `"Cambia" did not land on the start sheet` with `changing opponent goes
+//     back to the table`, whose EXPECT names the settings sheet's door. One
+//     rule — leaving the table for the start sheet lands there — and two
+//     buttons that do it;
+//   - `the smazzata ended behind the confirm and the points were never counted
+//     out` with `the points are not counted out`.
+//
 // The sixth review found three assertions in the sweep pass with no break at
 // all and two of the breakdown's six rows never read back; those are breaks
 // now, not entries in the list above. It also found two assertions that could
@@ -121,6 +148,7 @@ const EXPECT = {
   // name plates, and the player's own is what goes off the edge, so that is
   // what the entry names: one assertion, one element, tied to this defect
   // rather than to any overflow anywhere.
+  "the plate is sized from the type it does not have to hold": "past its own width",
   "the plates are left out of the card budget": "#plateYou runs off",
   "the plates are squeezed instead of budgeted": "lands on the cards",
   "the plate is laid out as a flex row again": "past its own width",
@@ -210,6 +238,86 @@ const EXPECT = {
   "the first hand of a session is not dealt in": "start neither empty nor full",
   "the beat is entered and not held": "did not hold the beat",
 
+  // --- what the fresh-context review of PR #8 found had no assertion --------
+  "the last result is drawn at a label size": "want 14.5",
+  "the last result is shown with nothing behind it": "with an empty history",
+  "the last result says nothing about the smazzata": "says nothing about the smazzata behind it",
+  "the last result names the wrong winner": "the start sheet reads",
+  "show-points moves the table": "it stands in a column the budget",
+  "the way on is not pinned": "below the fold inside a dialog",
+  "the number keys stop playing cards": "did not raise a card",
+  "space stops cycling the proposal": "Space did not cycle",
+  "enter stops playing the raised card": "Enter did not play",
+  "escape stops putting the card back": "Escape did not put the raised card back",
+  "escape stops backing out of a sheet": "Escape did not back out",
+  "clearing the history clears nothing": "smazzate in storage",
+  "the record against each opponent counts wrong": "the record against",
+  "the dossier is reserved once and never again": "after turning, the dossier",
+  "a new deal does not clear the record flag": "played to the last card was lost",
+
+  // --- what each side has taken, and the box it goes in --------------------
+  "the plate takes whatever width it wants in portrait again": "of scrolling",
+  "the points box is squeezed narrower than its content": "past its own width",
+  "the points box outlives show-points": "still drawn with show-points off",
+
+  // --- the start sheet ------------------------------------------------------
+  "the opponents are a list written on the sheet": "the roster is",
+  "the chosen opponent is not marked as chosen": "chips are pressed",
+  "the dossier is left empty": "has no dossier",
+  "the deck row loses a deck": "the deck row offers",
+  "the deck row does not say which deck": "the deck row names",
+  "the dossier stops holding its height": "does not hold its height",
+  "the settings sheet is not told which deck was picked": "the settings sheet still says",
+
+  // --- the settings sheet ---------------------------------------------------
+  "the weights disclosure loses a weight": "the engine has",
+  "the weights disclosure shows the wrong numbers": "plays with",
+  "show-points does not reach the state": "show-points did not turn off",
+  "the rhythm slider stores what it reads": "the rhythm slider set speed to",
+  "the felt is stored and not applied": "the setting says",
+  "the settings are never written down": "did not survive a reload",
+  "the controls are not set from what was restored": "disagrees with the setting",
+
+  // --- abandoning, and what it must not write down --------------------------
+  "the card keys reach the table through a dialog": "played a card through the confirm",
+  "the reload icon throws the deal away without asking": "without asking",
+  "continuing to play throws the deal away anyway": "threw the deal away anyway",
+  "abandoning goes to the start sheet instead of dealing": "left the table",
+  "an abandoned smazzata is written down": "was recorded",
+  "changing opponent does not ask": "changing opponent threw the deal away",
+  "changing opponent goes back to the table": "did not land on the start sheet",
+
+  // --- the result, and the partita around it --------------------------------
+  "the confirm survives the smazzata it was asking about": "still asking whether to abandon",
+  "the smazzata is never written down": "smazzate in the history after one deal",
+  "the smazzata is written down once the table has finished showing it": "played to the last card was lost",
+  "the score is written down backwards": "the history recorded",
+  "the history is told the wrong opponent": "the deal was",
+  "the confirm opens over a smazzata that is over": "already recorded",
+  "the verdict is not read off the totals": "the result says",
+  "nothing says what decided the smazzata": "nothing says what decided it",
+  "the deciding point is picked rather than computed": "leaves the same player winning",
+  "the note names no component at all": "names no component",
+  "a draw is described as a win": "and the note says",
+  "the result offers one way on": "the result offers",
+  "the result panel is never taken down": "still over the table",
+  "the say line keeps the score after the smazzata": "the score is the result panel",
+
+  // --- the history of smazzate ---------------------------------------------
+  "the history grows without a bound": "it is capped at 100",
+  "a smazzata is added to the end of the history": "the one just recorded was",
+  "the history sheet draws only some of it": "rows for",
+  "the history row reads the score backwards": "the smazzata was",
+  "the history row always reads as a win": "is marked V, want",
+  "the tally counts something else": "the tally counts",
+  "a row this build did not write is rendered anyway": "took the history sheet down",
+
+  // --- the easter egg -------------------------------------------------------
+  "the 1997 word does nothing": "did not turn the opponent",
+  "the face-up hand is drawn face down anyway": "of the opponent",
+  "the face-up hand says nothing about itself": "nothing says so",
+  "the card keys eat the letters of the word": "typing the word played",
+
   // --- the last play of the deal, and the window before a beat --------------
   "the points are counted out over the last play": "before it has been drawn",
   "the last play sends the played card to whoever played it": "with the leftovers",
@@ -221,6 +329,8 @@ const EXPECT = {
   "the pile badge stops counting": "badges say",
   "the deck badge stops counting": "the deck badge says",
   "the scopa marks stop counting": "scopa marks",
+  "the primiera counter reads the wrong pile": "counters say",
+  "the counters stop at three points": "counters say",
   "the middle draws a card the engine does not hold": "cards, the engine holds",
   "the denari are counted for the wrong player": "denari, the piles hold",
   "the primiera is read from the wrong pile": "of primiera, the piles make",
@@ -229,13 +339,24 @@ const EXPECT = {
   "the leftovers are left on the table": "still shows",
   "a played card keeps its face": "shows a card",
   "a slot you hold is drawn empty": "holds a card and shows none",
-  "the final score is read out backwards": "scoreDeal returned",
 };
 
 // A break that cannot change what the page does, with how that was measured.
 // Marking one equivalent is a claim, so it carries its evidence; and a mutant
 // claimed equivalent that IS caught means the claim was wrong, which is red.
 const EQUIVALENT = {
+  "the result is drawn wherever the player happens to be":
+    "`show(\"table\")` in `finish` is Tressette's rule — the result closes " +
+    "whatever sheet is in front of it — and in this game there is never one in " +
+    "front. `show` HOLDS the table's clock on the way to every screen, so a " +
+    "pending `finish` cannot run while a sheet is up; and the only other thing " +
+    "that can cover the table when a deal ends is the confirm, which is a " +
+    "scrim OVER the table rather than a screen instead of it. So the call " +
+    "cannot differ in any state this game can reach, which is why the break " +
+    "survived the whole check. The assertion written for it is deleted rather " +
+    "than kept as cover; the call stays, because it is what keeps the rule " +
+    "true if the clock-holding one is ever narrowed to fewer screens than the " +
+    "four it covers today.",
   "the table row grows the table instead of overlapping":
     "On a correct page it changes nothing, measured with and without at " +
     "360x800, 500x425, 980x385, 768x1024 and 1440x900 with thirteen cards " +
@@ -267,6 +388,14 @@ const BREAKS = [
   // Without the plates the seat row needs more width than the screen has, the
   // table grows to fit it, and `overflow: hidden auto` carries the deck and
   // your own plate off the right edge with no sideways scroll to show for it.
+  // The defect CI caught and this machine could not: 7.5 x --t-pick is 120px
+  // where --t-pick is on its 16px floor, against 125px of `avversario` in a
+  // fallback wider than the one Windows picks. The pass that catches it renders
+  // the plates in five real label faces rather than in whichever one the
+  // machine happens to have.
+  ["the plate is sized from the type it does not have to hold",
+   "  --plate-w: calc(var(--t-tiny) * 10.8);",
+   "  --plate-w: calc(var(--t-pick) * 7.5);"],
   ["the plates are left out of the card budget",
    "  --seat-extra: calc(2 * var(--plate-w) + 2 * var(--step));",
    "  --seat-extra: 0px;"],
@@ -385,14 +514,29 @@ const BREAKS = [
   ["the say line says the whole capture however long it is",
    "  for (const rung of rungs){\n    el.selName.textContent = rung;\n    if (rung.length <= LABEL_CHARS\n        && el.selName.getBoundingClientRect().height <= oneLine) break;\n  }",
    "  el.selName.textContent = rungs[0];"],
+  // TWO edits since iteration 4, and the second one is the finding. The say
+  // line is bounded twice over now: by `width: 100%` on `.say`, which is what
+  // iteration 3 added, and by `flex: 0 0 100%` on it in portrait, which arrived
+  // with the seat becoming a flex row so that the plate and the points box
+  // could share a line. Either one alone holds the plaque inside the seat, so
+  // removing either one alone changes nothing and the one-edit break SURVIVED
+  // — measured: with and without `width: 100%` the line is 16..304 at 320x568,
+  // identical to the pixel.
+  //
+  // With both gone the original defect is back exactly: at 320x568 the line
+  // runs **-22px to 342px** on a 320px screen, off both edges, where iteration
+  // 3 measured -8 to 328. Portrait only — in landscape `.say` is a grid item
+  // spanning the seat and stretches whatever happens here.
   ["the say line is sized by its content",
-   "  width: 100%;\n  height: var(--say);\n  display: flex;",
-   "  height: var(--say);\n  display: flex;"],
+   ["  width: 100%;\n  height: var(--say);\n  display: flex;",
+    "  .say, .seat__cards{ flex: 0 0 100%; }"],
+   ["  height: var(--say);\n  display: flex;",
+    "  .seat__cards{ flex: 0 0 100%; }"]],
   ["the say line is cut by a character count alone",
    "    if (rung.length <= LABEL_CHARS\n        && el.selName.getBoundingClientRect().height <= oneLine) break;",
    "    if (rung.length <= LABEL_CHARS) break;"],
   ["the page never draws itself again when the screen changes",
-   "window.addEventListener(\"resize\", () => {\n  if (redraw) return;\n  redraw = requestAnimationFrame(() => { redraw = 0; render(); });\n});",
+   "window.addEventListener(\"resize\", () => {\n  if (redraw) return;\n  redraw = requestAnimationFrame(() => { redraw = 0; render(); reserveDossier(); });\n});",
    ""],
   ["the hand stays live while the table sweeps",
    "    node.disabled = !yourTurn || !card || !!sweeping;",
@@ -425,8 +569,8 @@ const BREAKS = [
    "const mano = who => state.hands[who] || [null, null, null];"],
 
   ["a new hand appears between one frame and the next",
-   "    dealt(node, was);\n  });\n\n  // --- the table",
-   "  });\n\n  // --- the table"],
+   "    dealt(node, was);\n  });\n  el.cheatNote.hidden = !state.cheat;",
+   "  });\n  el.cheatNote.hidden = !state.cheat;"],
   ["the say line goes back to being the smallest type on the page",
    "  --t-say:   clamp(15px, 4.2vw, 34px);", "  --t-say:   clamp(12.5px, 3.2vw, 28px);"],
   ["the points are not counted out",
@@ -435,12 +579,12 @@ const BREAKS = [
    "    const pts = who => won === \"scope\" ? r.scope[who] : (won === who ? 1 : 0);",
    "    const pts = who => 0;"],
   ["the rule the total comes from is not stated",
-   "      <p class=\"result__rule\">Un punto per le carte, i denari, il settebello e la\n        primiera, più un punto per ogni scopa.</p>\n",
+   "        <p class=\"result__rule\">Un punto per le carte, i denari, il settebello e la\n          primiera, più un punto per ogni scopa.</p>\n",
    ""],
   ["the rules are Italian only",
    "      <section lang=\"en\">", "      <section>"],
   ["the rules go back to the start sheet whatever they were opened from",
-   "  cameFrom = el.viewTable.hidden ? \"start\" : \"table\";",
+   "  cameFrom = onScreen === \"table\" ? \"table\" : \"start\";",
    "  cameFrom = \"start\";"],
   ["the settebello is counted for the wrong player",
    "  const has = w => piles[w].some(isSettebello) ? 1 : 0;",
@@ -475,7 +619,7 @@ const BREAKS = [
    "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;",
    "  for (const i of (r.presa.length ? (presa || []).slice(0, 1) : [])) dir[i] = who;"],
   ["the toast announces the wrong thing",
-   "  if (r.scopa) toast(\"Scopa!\");", "  if (r.scopa) toast(\"Presa!\");"],
+   "  if (r.scopa){ toast(\"Scopa!\"); chime(); }", "  if (r.scopa){ toast(\"Presa!\"); chime(); }"],
   ["the capture sweeps toward the wrong player",
    "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = who;",
    "  for (const i of (r.presa.length ? (presa || []) : [])) dir[i] = 1 - who;"],
@@ -487,6 +631,14 @@ const BREAKS = [
   ["the deck badge stops counting",
    "  el.countMazzo.textContent = String(left);",
    "  el.countMazzo.textContent = String(left + 1);"],
+  // The four counters the owner plays off. Primiera above all: it is the one
+  // number on this table nobody can check by looking at the cards.
+  ["the primiera counter reads the wrong pile",
+   "  const prim = state.prese ? primieraTotale(pile) : null;",
+   "  const prim = state.prese ? primieraTotale(state.prese[1 - who]) : null;"],
+  ["the counters stop at three points",
+   "    [\"primiera\", prim === null || prim === undefined ? \"—\" : String(prim),\n      prim !== null && prim !== undefined],\n",
+   ""],
   ["the scopa marks stop counting",
    "  const s = state.scope ? state.scope[who] : 0;",
    "  const s = 0;"],
@@ -502,9 +654,12 @@ const BREAKS = [
   ["a slot you hold is drawn empty",
    "    const card = mano(BASSO)[slot];\n    const was = node.dataset.empty;",
    "    const card = slot === 2 ? null : mano(BASSO)[slot];\n    const was = node.dataset.empty;"],
-  ["the final score is read out backwards",
-   "    el.selName.textContent = `Fine: ${r.punti[BASSO]} a ${r.punti[ALTO]}`;",
-   "    el.selName.textContent = `Fine: ${r.punti[ALTO]} a ${r.punti[BASSO]}`;"],
+  // "the final score is read out backwards" was here, against the say line's
+  // `Fine: N a N`. That line is gone — the result panel is the one place the
+  // score is said now, and a second copy of it was a second thing that could be
+  // wrong about the same deal. What replaces it is three breaks rather than
+  // one: the say line keeping the score at all, the verdict over the panel, and
+  // the score written down backwards in the history.
 
   // --- the three beats, the breaks the sixth review found missing -----------
   ["nothing is drawn as the card that has just landed",
@@ -561,6 +716,287 @@ const BREAKS = [
   // --- reading the rules ----------------------------------------------------
   ["the rules let the deal play on behind them",
    "  if (name === \"table\") releaseClock(); else holdClock();", ""],
+
+  // --- what each side has taken, and the box the budget pays for ------------
+  // The defect this iteration shipped into its own first measurement: with the
+  // points box beside it, a plate that takes whatever width its content wants
+  // needs 195px, the pair needs 323px of a 288px seat at 320x568, the row wraps,
+  // and each seat costs a plate row nobody budgeted for.
+  ["the plate takes whatever width it wants in portrait again",
+   "  .seat--you .plate, .seat--you .points{ margin-top: var(--seat-gap); }",
+   "  .plate{ width: auto; }\n  .seat--you .plate, .seat--you .points{ margin-top: var(--seat-gap); }"],
+  ["the points box is squeezed narrower than its content",
+   "  width: var(--plate-w);\n  height: var(--plate-h);\n  display: grid;\n  align-content: center;",
+   "  width: calc(var(--plate-w) * .45);\n  height: var(--plate-h);\n  display: grid;\n  align-content: center;"],
+  ["the points box outlives show-points",
+   "  box.hidden = !state.showPoints || !state.dealt;",
+   "  box.hidden = !state.dealt;"],
+
+  // --- the start sheet ------------------------------------------------------
+  ["the opponents are a list written on the sheet",
+   "  el.opponents.replaceChildren(...Object.keys(PROFILES).map(name => {",
+   "  el.opponents.replaceChildren(...[\"Franco\", \"Piero\"].map(name => {"],
+  ["the chosen opponent is not marked as chosen",
+   "  for (const b of el.opponents.children)\n    b.setAttribute(\"aria-pressed\", String(b.dataset.name === name));",
+   ""],
+  // With `state.opponent` above it, because `reserveDossier` writes the same
+  // line when it measures each name in turn and a find has to match once.
+  ["the dossier is left empty",
+   "  state.opponent = name;\n  el.dossier.textContent = DOSSIER[name] || \"\";",
+   "  state.opponent = name;"],
+  ["the deck row loses a deck",
+   "  el.decks.replaceChildren(...Object.keys(SHEET).map(name => {",
+   "  el.decks.replaceChildren(...Object.keys(SHEET).slice(0, 4).map(name => {"],
+  ["the deck row does not say which deck",
+   "  if (el.deckName) el.deckName.textContent = name;", ""],
+  ["the settings sheet is not told which deck was picked",
+   "  if (el.deckSel) el.deckSel.value = name;", ""],
+  // Four lines held open, so that choosing a name does not move the deck row
+  // under a thumb already on its way to it.
+  // The reservation is a measured height now rather than a count of lines, so
+  // the break is the measurement not being written back. It used to be
+  // `min-height: calc(--t-body * 1.5 * 4)` set to 0 — and that number was
+  // itself the defect the repaired assertion found on the good page.
+  ["the dossier stops holding its height",
+   "  el.dossier.style.minHeight = `${Math.ceil(tallest)}px`;", ""],
+
+  // --- the settings sheet ---------------------------------------------------
+  ["the weights disclosure loses a weight",
+   "  el.weightsTable.tBodies[0].replaceChildren(...WEIGHT_KEYS.map(k => {",
+   "  el.weightsTable.tBodies[0].replaceChildren(...WEIGHT_KEYS.slice(1).map(k => {"],
+  ["the weights disclosure shows the wrong numbers",
+   "    value.textContent = String(P[k]);",
+   "    value.textContent = String(P[k] + 1);"],
+  ["show-points does not reach the state",
+   "  state.showPoints = el.pointsSel.checked; render(); save();",
+   "  render(); save();"],
+  ["the rhythm slider stores what it reads",
+   "  state.speed = 2200 - Number(el.speedSel.value);",
+   "  state.speed = Number(el.speedSel.value);"],
+  ["the felt is stored and not applied",
+   "  root.style.setProperty(\"--felt\", hex);", ""],
+  ["the settings are never written down",
+   "    localStorage.setItem(KEY, JSON.stringify({",
+   "    if (0) localStorage.setItem(KEY, JSON.stringify({"],
+  ["the controls are not set from what was restored",
+   "  el.pointsSel.checked = state.showPoints;", ""],
+
+  // --- abandoning, and what it must not write down --------------------------
+  // Tressette's: Enter is what you press to answer a dialog whose safe button
+  // already has focus, and it played the raised card on the way through.
+  ["the card keys reach the table through a dialog",
+   "  const dialog = !el.confirmScrim.hidden || !el.result.hidden;",
+   "  const dialog = false;"],
+  ["the reload icon throws the deal away without asking",
+   "el.again.addEventListener(\"click\", () => askAbandon(() => newDealHere()));",
+   "el.again.addEventListener(\"click\", () => newDealHere());"],
+  ["continuing to play throws the deal away anyway",
+   "el.confirmNo.addEventListener(\"click\", closeConfirm);",
+   "el.confirmNo.addEventListener(\"click\", () => { discard(); closeConfirm(); });"],
+  // Tressette's own defect: discarding went to the start sheet and dealt the
+  // new hand behind it, a live deal nobody could see or play.
+  ["abandoning goes to the start sheet instead of dealing",
+   "  const after = pendingAbandon;\n  discard();\n  if (after) after();",
+   "  const after = pendingAbandon;\n  abandon();\n  if (after) after();"],
+  ["an abandoned smazzata is written down",
+   "  state.dealt = false;\n  state.selected = null;\n  state.scelta = 0;",
+   "  recordDeal(0, 0);\n  state.dealt = false;\n  state.selected = null;\n  state.scelta = 0;"],
+  ["changing opponent does not ask",
+   "el.changeOpponent.addEventListener(\"click\", () => askAbandon(() => show(\"start\")));",
+   "el.changeOpponent.addEventListener(\"click\", () => show(\"start\"));"],
+  ["changing opponent goes back to the table",
+   "el.changeOpponent.addEventListener(\"click\", () => askAbandon(() => show(\"start\")));",
+   "el.changeOpponent.addEventListener(\"click\", () => askAbandon(() => show(\"table\")));"],
+
+  // --- the result, and the partita around it --------------------------------
+  ["the confirm survives the smazzata it was asking about",
+   "  closeConfirm();\n  // And the result belongs over the table it came from.", "  //"],
+  ["the result is drawn wherever the player happens to be",
+   "  show(\"table\");\n  render();\n}\n\nfunction newDealHere(){", "  render();\n}\n\nfunction newDealHere(){"],
+  // Recording where the table finishes SHOWING the deal end rather than where
+  // it ends. `gioca` sets `over` on the 36th play and three beats of drawing
+  // follow it — during which the reload icon does not ask, because there is
+  // nothing left to lose — so a write behind that timer is a write the same
+  // click cancels, and a smazzata played to the last card is lost.
+  ["the smazzata is written down once the table has finished showing it",
+   ["  if (state.over && !recorded){\n    recorded = true;\n    const fine = scoreDeal(state);\n    recordDeal(fine.punti[BASSO], fine.punti[ALTO]);\n  }\n",
+    "function finish(){\n  // The question"],
+   ["",
+    "function finish(){\n  if (state.over && !recorded){\n    recorded = true;\n    const fine = scoreDeal(state);\n    recordDeal(fine.punti[BASSO], fine.punti[ALTO]);\n  }\n  // The question"]],
+  ["the smazzata is never written down",
+   "    recordDeal(fine.punti[BASSO], fine.punti[ALTO]);", ""],
+  ["the score is written down backwards",
+   "    recordDeal(fine.punti[BASSO], fine.punti[ALTO]);",
+   "    recordDeal(fine.punti[ALTO], fine.punti[BASSO]);"],
+  ["the history is told the wrong opponent",
+   "  list.unshift({ t: Date.now(), o: state.opponent, d: state.deck, y: you, a: them });",
+   "  list.unshift({ t: Date.now(), o: \"Valerio\", d: state.deck, y: you, a: them });"],
+  ["the confirm opens over a smazzata that is over",
+   "  if (!state.dealt || state.over){ after(); return; }",
+   "  if (!state.dealt){ after(); return; }"],
+  ["the verdict is not read off the totals",
+   "  el.resultTitle.textContent =\n    win === BASSO ? \"Hai vinto\" : win === ALTO ? \"Hai perso\" : \"Pareggio\";",
+   "  el.resultTitle.textContent = \"Hai vinto\";"],
+  ["nothing says what decided the smazzata",
+   "  el.resultNote.textContent = notaFinale(r);", ""],
+  // The whole of what this line is: not a phrase chosen from a table, but the
+  // one component that, taken out of the score, changes who won.
+  ["the deciding point is picked rather than computed",
+   "  const decise = [...PUNTI_SEMPLICI, \"scope\"].filter(k => senza(k) !== finale);",
+   "  const decise = [\"primiera\"];"],
+  // The other direction, and the one that walked straight through the guard:
+  // stop naming components at all and every note falls back to the margin.
+  // "2 punti di scarto." on a 5-3 deal is non-empty, is not a draw, and names
+  // nothing — so the property rule was skipped and the whole check stayed
+  // green. The break above cannot catch it; it makes the note name something.
+  ["the note names no component at all",
+   "  const decise = [...PUNTI_SEMPLICI, \"scope\"].filter(k => senza(k) !== finale);\n  if (decise.length === 1) return DECISE[decise[0]];",
+   "  const decise = [];"],
+  ["a draw is described as a win",
+   "  if (finale === 0){", "  if (false){"],
+  // Two edits, and not for the usual reason. Taking the button out of the
+  // markup alone leaves `el.resultChange.addEventListener` reading a null at
+  // module scope, which throws before `boot()` runs: the hands are never built,
+  // every pass fails with the same TypeError, and the mutant stops being a
+  // statement about the result panel at all. A break has to break ONE thing.
+  ["the result offers one way on",
+   ["        <button class=\"btn\" id=\"resultChange\" type=\"button\">Cambia avversario o mazzo</button>\n",
+    "el.resultChange.addEventListener(\"click\", abandon);\n"],
+   ["", ""]],
+  ["the result panel is never taken down",
+   "  el.result.hidden = !over;", "  if (over) el.result.hidden = false;"],
+  // Iteration 3's say line kept the score, and the panel it duplicates is held
+  // back while the last play is still being drawn — so this line read the score
+  // out over the last card as it landed.
+  ["the say line keeps the score after the smazzata",
+   "  if (state.selected === null){\n    el.selName.hidden = true;\n    el.selName.textContent = \"\";\n    return;\n  }",
+   "  if (state.over && state.dealt){\n    const r = scoreDeal(state);\n    el.selName.hidden = false;\n    el.selName.textContent = `Fine: ${r.punti[BASSO]} a ${r.punti[ALTO]}`;\n    return;\n  }\n  if (state.selected === null){\n    el.selName.hidden = true;\n    el.selName.textContent = \"\";\n    return;\n  }"],
+
+  // --- the history of smazzate ---------------------------------------------
+  ["the history grows without a bound",
+   "    localStorage.setItem(HKEY, JSON.stringify(list.slice(0, HCAP)));",
+   "    localStorage.setItem(HKEY, JSON.stringify(list));"],
+  ["a smazzata is added to the end of the history",
+   "  list.unshift({ t: Date.now(), o: state.opponent, d: state.deck, y: you, a: them });",
+   "  list.push({ t: Date.now(), o: state.opponent, d: state.deck, y: you, a: them });"],
+  ["the history sheet draws only some of it",
+   "  for (const m of list){\n    const vinta = m.y > m.a, pari = m.y === m.a;",
+   "  for (const m of list.slice(1)){\n    const vinta = m.y > m.a, pari = m.y === m.a;"],
+  ["the history row reads the score backwards",
+   "    score.textContent = `${m.y}–${m.a}`;",
+   "    score.textContent = `${m.a}–${m.y}`;"],
+  ["the history row always reads as a win",
+   "    res.textContent = pari ? \"P\" : vinta ? \"V\" : \"S\";",
+   "    res.textContent = \"V\";"],
+  ["the tally counts something else",
+   "  for (const [n, label] of [[list.length, \"smazzate\"], [vinte, \"vinte\"], [perse, \"perse\"],",
+   "  for (const [n, label] of [[vinte, \"smazzate\"], [vinte, \"vinte\"], [perse, \"perse\"],"],
+  // One entry of another shape took Tressette's history sheet down along with
+  // the button that clears it, so there was no way out from inside the game.
+  ["a row this build did not write is rendered anyway",
+   "    return Array.isArray(list) ? list.filter(usable) : [];",
+   "    return Array.isArray(list) ? list : [];"],
+
+  // --- the 1997 easter egg --------------------------------------------------
+  ["the 1997 word does nothing",
+   "  if (buffer === CHEAT){ state.cheat = !state.cheat; render(); }", ""],
+  ["the face-up hand is drawn face down anyway",
+   "    else if (state.cheat) faceOf(node, card);", "    else if (false) faceOf(node, card);"],
+  ["the face-up hand says nothing about itself",
+   "  el.cheatNote.hidden = !state.cheat;", ""],
+  // Tressette had to take this off the table because a hand of ten gave every
+  // digit to a card and four of the word's characters are digits. Here only
+  // 1-3 are card keys; widen them and the word plays cards as it is typed.
+  ["the card keys eat the letters of the word",
+   "    if (e.key >= \"1\" && e.key <= \"3\"){ tapped(Number(e.key) - 1); return; }",
+   "    if (e.key >= \"1\" && e.key <= \"6\"){ tapped((Number(e.key) - 1) % 3); return; }"],
+
+  // --- what the fresh-context review of PR #8 found had no assertion --------
+  // Each of these is behaviour this iteration added with nothing watching it.
+  // The review found them by reading; these are what make the finding stick.
+  //
+  // Note what is NOT here: the `.hero .last-result` specificity fix itself. A
+  // rule that loses to `.hero p` draws the line LARGER, in body copy, which no
+  // threshold can call a defect — the check is not a design opinion. What is
+  // assertable is the size the rule asks for, and that it clears the floor for
+  // something somebody reads, which is this break.
+  ["the last result is drawn at a label size",
+   "  font-size: var(--t-say);\n  color: var(--brass);\n}",
+   "  font-size: var(--t-label);\n  color: var(--brass);\n}"],
+  ["the last result is shown with nothing behind it",
+   "  if (!last){ el.lastResult.hidden = true; return; }",
+   "  if (!last){ el.lastResult.hidden = false; return; }"],
+  // The other direction, which the row rendering the state did not assert: the
+  // line has to be shown, and to say what happened. `audit` skips anything
+  // invisible, so a regression that left it hidden rendered an empty start
+  // sheet and reported `pass`.
+  ["the last result says nothing about the smazzata",
+   "  el.lastResult.textContent =\n    `Ultima smazzata: hai ${verbo} ${last.y}–${last.a} contro ${last.o}`;\n  el.lastResult.hidden = false;",
+   "  el.lastResult.hidden = true;"],
+  ["the last result names the wrong winner",
+   "  const verbo = last.y > last.a ? \"vinto\" : last.y < last.a ? \"perso\" : \"pareggiato\";",
+   "  const verbo = last.y > last.a ? \"perso\" : last.y < last.a ? \"vinto\" : \"pareggiato\";"],
+
+  // The argument for putting the counters opposite the plate rather than on it
+  // is that --seat-extra had already bought the column. Put them anywhere the
+  // budget does not pay for and the table moves when a setting is toggled.
+  ["show-points moves the table",
+   "  .say, .seat__cards{ flex: 0 0 100%; }",
+   "  .say, .seat__cards, .points{ flex: 0 0 100%; }"],
+
+  // The end-of-deal panel's two ways on, unpinned — which is how iteration 4
+  // shipped it, with `Ancora` 10px below the fold at 980x385.
+  //
+  // Three edits, because it takes three to get the defect back, and finding
+  // that out cost a SURVIVED: removing the explicit `grid-template-rows` alone
+  // changes nothing, and neither does adding `overflow: auto` back. The panel
+  // has a definite height from `inset: 0`, so two auto rows STRETCH to fill it,
+  // the body row gets a bounded height, and `.result__body` scrolls and pins
+  // the actions whatever the rows say. The wrapper is the fix; the rows only
+  // say so out loud. So the break removes the wrapper, which is what this
+  // iteration actually shipped — measured on the rebuilt page: `Cambia` 28px
+  // below the fold at 500x425, `Ancora` 10px and `Cambia` 60px at 980x385, the
+  // same numbers issue #6 reports.
+  ["the way on is not pinned",
+   ["  grid-template-rows: minmax(0, 1fr) auto;\n  justify-items: center;",
+    "      <!-- The counting scrolls; the two ways on below it do not. -->\n      <div class=\"result__body\">\n        <h2",
+    "        <p class=\"result__note\" id=\"resultNote\"></p>\n      </div>\n"],
+   ["  align-content: center;\n  overflow: auto;\n  justify-items: center;",
+    "      <h2",
+    "      <p class=\"result__note\" id=\"resultNote\"></p>\n"]],
+
+  // The keys, whose suppression under a dialog was asserted and whose working
+  // was not. Four promises the rules screen makes to the player.
+  ["the number keys stop playing cards",
+   "    if (e.key >= \"1\" && e.key <= \"3\"){ tapped(Number(e.key) - 1); return; }",
+   "    if (false){ tapped(Number(e.key) - 1); return; }"],
+  ["space stops cycling the proposal",
+   "        if (opts.length > 1){ state.scelta = (state.scelta + 1) % opts.length; render(); }",
+   "        if (opts.length > 99){ state.scelta = (state.scelta + 1) % opts.length; render(); }"],
+  ["enter stops playing the raised card",
+   "        play(BASSO, state.selected, propostaCorrente());", ""],
+  ["escape stops putting the card back",
+   "      if (e.key === \"Escape\"){ state.selected = null; state.scelta = 0; render(); return; }", ""],
+  ["escape stops backing out of a sheet",
+   "  if (e.key === \"Escape\" && onScreen !== \"table\" && onScreen !== \"start\"){ back(); return; }", ""],
+
+  // The history sheet's own two, which were rendered and never read back.
+  ["clearing the history clears nothing",
+   "  try{ localStorage.removeItem(HKEY); } catch (e){}", "  try{ } catch (e){}"],
+  ["the record against each opponent counts wrong",
+   "    if (m.y > m.a) riga.v++;", "    riga.v++;"],
+
+  // The reservation is a measured height, so it is a width question, so it is
+  // a rotation question — and it was measured at one size and never again.
+  ["the dossier is reserved once and never again",
+   "  redraw = requestAnimationFrame(() => { redraw = 0; render(); reserveDossier(); });",
+   "  redraw = requestAnimationFrame(() => { redraw = 0; render(); });"],
+
+  // `recorded` is set in `play` and cleared in `newDealHere`, which is a flag
+  // with two owners — CLAUDE.md's rule, paid for by `beat` at iteration 3. The
+  // argument that it is safe here is only worth what this break says it is.
+  ["a new deal does not clear the record flag",
+   "  beat = false;\n  recorded = false;", "  beat = false;"],
 
   // --- the numbers under the breakdown that had no break -------------------
   ["the denari are counted for the wrong player",
