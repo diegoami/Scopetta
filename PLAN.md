@@ -8,9 +8,12 @@ above, the house's named opponents, who share one formula and differ only in
 their weights, and a UI check calibrated against the defects that actually
 ship.
 
-**Status: iterations 0 to 3 are merged** — the scaffold, the rules with their
-tests, the opponent with its harness and its golden fixture, and the table. The
-sheets, the result dialog and the settings are iteration 4. This document is the plan, and it becomes `SPEC.md` once the game
+**Status: iterations 0 to 4 are built** — the scaffold, the rules with their
+tests, the opponent with its harness and its golden fixture, the table, and the
+partita around it: the start sheet, the settings, the history of smazzate, the
+rules screen finished, the confirm and the result with its computed note. What
+is left is the roster (iteration 5) and the handover (iteration 6). This
+document is the plan, and it becomes `SPEC.md` once the game
 exists, the way Discola's and Tressette's did. Where an iteration measured
 something the plan had guessed, the plan says so at the place it guessed.
 
@@ -695,13 +698,53 @@ settings ──Cambia avversario──► confirm ─► start
 
 - **start** — opponent chips and dossier, deck row, Gioca pinned in the
   footer. Unchanged in structure.
+
+  **The space held for the dossier is measured, not counted in lines.** It
+  exists so that choosing a name does not move the deck row under a thumb
+  already on its way to it, and Tressette holds four lines for it. Measured,
+  Franco's dossier is four lines on a laptop, five at 360x800 and **six at
+  320x568** — so four was already wrong on the narrowest screen the game claims
+  to work on, before the roster has grown at all. `reserveDossier` sets it to
+  the tallest dossier the roster produces at this width, and runs again when
+  the phone turns and when the webfont lands. Which also means iteration 5's
+  job is to write three dossiers, not to write them and re-tune a constant.
+
+  It was found by the assertion firing on the *good* page, and the assertion
+  only exists because the break written for the old one survived: with one name
+  in the roster, clicking the only chip re-renders the same sentence and nothing
+  can move. What holds the row still is the space kept for a paragraph that is
+  not there, so that is what is measured — emptied and put back.
 - **table** — the icon bar; the opponent's seat (their pile, three cards face
   down, the deck with its count); the table; your seat (the line that names
   the proposed capture, three cards, your pile); the plates in the corners,
-  with a *mazziere* tag on whoever dealt. Each plate shows that player's
-  scope always — a scopa is public — and, with show-points on, carte and
-  denari taken and whether the settebello is in. A transient toast for
-  "Scopa!", floating, out of the budget, as Tressette's declarations are.
+  with a *mazziere* tag on whoever dealt. Each pile shows that player's
+  scope always — a scopa is public, and §3.7 puts them face up across the top
+  of the pile where tradition puts the cards that made them. With show-points
+  on, carte, *ori* and the settebello, **in the column opposite the plate
+  rather than on the plate**, which is iteration 4's correction. A transient
+  toast for "Scopa!", floating, out of the budget, as Tressette's declarations
+  are.
+
+  **Why not on the plate.** The plate's height is derived from the three rows
+  it can hold — the name, the role beneath it where the plate is narrow, and
+  the mazziere tag — and a fourth row costs `2 × --plate-row` out of both
+  `--plates` and `--seat-overhang`, which is every card on the table at every
+  viewport. At 320x568 the budget already wants 32.1px against a 32px floor.
+  The space it goes in instead is one the budget has been paying for since
+  iteration 3 and nothing was using: the seat is `1fr auto 1fr`, `--seat-extra`
+  buys two plate widths, and only one of them had a plate in it. So the box is
+  `--plate-w` wide and `--plate-h` tall, and turning show-points on and off
+  changes no geometry at all — which is what makes it free.
+
+  **And the plate is bounded in portrait now, where it used to take whatever
+  its content wanted.** It could, while it was alone on its row. With a second
+  box beside it the row is two boxes and a gap, and `Graziano / avversario /
+  mazziere` at max-content is 195px: 323px of a 288px seat at 320x568. The row
+  wrapped, each seat cost a plate row nobody had budgeted for, and the table
+  handed back **72px of scrolling with your own seat 63px below the fold**.
+  Both boxes are `--plate-w` in both orientations now, and the plate's text
+  fitting inside it is asserted in portrait for the first time — a `width:
+  auto` box cannot fail a `scrollWidth` test.
 - **settings** — deck, felt, rhythm, show points, sound, change opponent,
   and the weights disclosure: seven — the count iteration 2's ladder left, which
   is not the seven this plan drafted — with a note that the sixth round uses
@@ -729,6 +772,25 @@ settings ──Cambia avversario──► confirm ─► start
   deciso le scope", "La primiera ha deciso la smazzata" — falling back to the
   margin. A phrase that can be wrong about the deal it describes is worse
   than no phrase.
+
+  **And it names one only when exactly one flips**, which iteration 4 added
+  and which is the same rule one turn further: at a margin of a single point
+  *every* point the winner holds is decisive, so naming one of them is picking
+  a favourite among equals and the honest line there is the margin. A draw has
+  a line of its own, because the thing worth saying about a drawn smazzata is
+  Scopa's own peculiarity — a tie on carte, denari or primiera gives that point
+  to **nobody**, so a deal can be settled by points that were never awarded.
+  The check asserts the *property* rather than the string: take the component
+  the line names out of `scoreDeal`'s answer, and the other player has to win.
+
+  **The score is said here and nowhere else.** Iteration 3 put `Fine: 5 a 3` in
+  the say line because there was nowhere else for it, and iteration 4 took it
+  out rather than leaving a duplicate. The reason is a defect rather than
+  tidiness: this panel is deliberately held back while the last play is still
+  being drawn — a result over an unfinished play was iteration 3's own bug and
+  its fix — and the say line is not under the panel until the panel goes up. So
+  the same defect survived in a second element, and read the deal's score out
+  over the last card as it landed.
 
 **Leaving the table stops its clock, and coming back starts it again.** The
 table runs on one timer, and a screen laid over it does not stop that timer by
@@ -1311,8 +1373,10 @@ least once by each path, and both jobs are green.
 The result dialog with its five lines and computed note, the start,
 settings, history and about sheets, the confirm scrim, keys, sound, the easter
 egg at the table, `RULES.md` and `REGOLE.md` from §2. The sheets are
-Tressette's, forked with the stylesheet; what changes is the result's shape
-and the history counting *smazzate*.
+Tressette's, forked with the stylesheet **at `374789f`**, checked against the
+remote first as §7.5 says to: it had moved twice since iteration 3's fork at
+`dec1c74`, both times on its own rules screen. What changes is the result's
+shape and the history counting *smazzate*.
 
 Decisions 3, 4 and 6 are the ones to have confirmed before this iteration
 starts, because the result dialog, the about screen and the tap rhythm
@@ -1321,6 +1385,73 @@ depend on them.
 **Done when** a deal can be played end to end, abandoned with the confirm,
 and shows up in history with the right score; and every dialog-over-sheet
 path Tressette's iteration 4 found has its row here.
+
+**What this iteration found, and where each of them is written down.** Three
+of the four are §3.6's, above; the fourth is a rule and is in `CLAUDE.md`.
+
+- The plan put carte, denari and the settebello **on the plate**, and the
+  budget cannot pay for it: a fourth plate row is every card on the table. They
+  go in the column opposite it, which `--seat-extra` was already buying and
+  nothing was using — so the setting costs nothing at all.
+- A box that shares a row with another box **is bounded by the same token**.
+  The plate took whatever width it wanted in portrait, which was fine while it
+  was alone there; beside the points box it wrapped the row and cost 72px of
+  scrolling at 320x568, with the seat 63px below the fold.
+- **The score was being said in two places**, and the second one still had the
+  defect the first one's fix removed.
+- Tressette's three rules for these screens are forked rather than
+  rediscovered: the reload icon deals again **at the table**, the result closes
+  whatever is in front of it, and the confirm never opens over a smazzata that
+  is already recorded. The middle one is reachable here only because the
+  confirm is a scrim and not a screen — `show` holds the table's clock, so a
+  deal cannot end behind a *sheet*, and the check's row for it plays the
+  opponent's last card with the confirm open.
+
+**One thing the check itself could not do**, found by running it: with no
+argument it resolved its own page through a `file://` pathname and
+`path.resolve`, which on Windows is `C:\C:\Users\…`. CI is Linux and never saw
+it, and neither did any iteration before this one. `fileURLToPath` and
+`pathToFileURL` both ways, which is identical on Linux and correct on both.
+
+**And the mutation run found more than the review would have.** The first full
+pass of `tools/break_ui.mjs` caught 126 of 141 and left fifteen: six survivors
+and nine caught by an assertion other than the one written for them. Every one
+was a defect in the *check* rather than in the page, and the rule each teaches
+is in `CLAUDE.md`. Two are worth repeating here because they are about this
+iteration's own design:
+
+- **the portrait seat becoming a flex row bounded the say line a second time**,
+  so the break protecting iteration 3's worst say-line defect could no longer
+  fail. Neither `width: 100%` nor `flex: 0 0 100%` matters on its own now;
+  removing both puts the line back at −22px to 342px on a 320px screen.
+- **eight of the nine mismatches were one cause** — the new pass drives more of
+  the page than any other, and a click that times out on a broken page threw
+  out of it and took every finding it had already made with it. `checkDeal` has
+  had that guard since iteration 3.
+
+And one of the repairs found a defect in the page after all: the assertion
+written for the dossier's reserved height fired on the *good* page. See §3.6.
+
+**And CI found the one neither could.** The first pull request went up with the
+check green here and the `ui` job red: `#plateOpp spills 3px past its own width`
+at every 360x800 case in all five decks. Blocking the webfont pins the font the
+page *asks for*; it says nothing about the fallback, and `--font-label` ends in
+`system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
+Linux runner — wider by exactly that much.
+
+The page defect was `--plate-w`, and it is §3.7's own rule missed by one token:
+it was `7.5 × --t-pick`, the size of the NAME, when what sets the plate's
+minimum is `avversario` beneath it at `--t-tiny` — which §5 measured as longer
+than any name in §0's roster. The two agree until the scales come apart, and
+they come apart where both hit their floors: at 320 and 360 `--t-pick` is 16px
+and `--t-tiny` is 12.5px, so the token bought 120px against 125px of content.
+It is `10.8 × --t-tiny` now, measured across five label faces at eight shapes;
+it costs about 2.5px of card width where the width term binds.
+
+The check gained the pass that would have caught it — *the plates in a fallback
+font*, six shapes × five real label stacks — because a check whose answer
+depends on which fonts the machine has is not a check, which is the same
+sentence the webfont blocking was written under.
 
 ### 5 — The opponents (1 day)
 
@@ -1582,10 +1713,20 @@ and the next iteration that forks checks for movement first.
 | decks, tools, skill, `netlify.toml`, `check.yml` | Tressette | `ed445bd` | iteration 0 |
 | CSS and table markup | Tressette | `dec1c74` | iteration 3 |
 | selfplay harness | Tressette | `dec1c74` | iteration 2 |
+| the sheets, the confirm, the history and the settings | Tressette | `374789f` | iteration 4 |
 
 Iteration 0 checked for movement before forking, as the paragraph above says
 to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
 the fork is the one the table names. Iterations 2 and 3 check again.
+
+**And again between iterations 3 and 4**, from `dec1c74` to `374789f` — one
+merge and the four commits under it (`git log --oneline dec1c74..374789f`), all
+of them its about screen gaining the rules in both languages, and one of them
+moving `lang` onto each half of that screen. Which is the screen this game
+brought forward to iteration 3 and finished here, with the same `section[lang]`
+rule, arrived at independently and then confirmed by the ancestor. Four moves
+now, and the check before iteration 4's fork was the fourth time it was worth
+running.
 
 **Tressette moved again during iteration 1**, from `ed445bd` to `dec1c74` —
 the hand sort of §2.2, which landed the other way round from this game's. What

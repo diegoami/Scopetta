@@ -26,12 +26,12 @@ pull request as well, and a red check does not merge.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
-and `check.yml` has the job that runs it. Nine passes: the document, every
+and `check.yml` has the job that runs it. Ten passes: the document, every
 screen, the table at every viewport in every deck, the table again with the
 spacing inflated and no slack, the capture choice and the toast, the states
 only playing can reach — a card landing, a sweep, a lay and the beat between
 rounds — turning the phone over, the rules in both languages and both ways in,
-and one whole deal.
+the sheets and the partita around the deal, and one whole deal.
 
 **Which card a tap lands on, and which words a player can read, are decided by
 paint order, and nothing about paint order moves a box.** Four of iteration 3's
@@ -192,12 +192,81 @@ a Back that always lands on the start sheet abandons the deal of anyone who
 opened the rules mid-hand. A screen the check only ever enters by one door is
 half-checked, so both doors are in `SCREENS` and both are walked back.
 
+**And a box that shares a row with another box is bounded by the same token
+that pays for it.** In portrait the name plate took whatever width its content
+wanted, and that was right for as long as it was alone on its row. Iteration 4
+put the show-points box beside it, and the row became two boxes and a gap:
+`Graziano / avversario / mazziere` at max-content is 195px, the pair is 323px of
+a 288px seat at 320x568, the row wrapped, each seat cost a plate row nobody had
+budgeted for, and the table handed back **72px of scrolling with your own seat
+63px below the fold**. Both boxes are `--plate-w` in both orientations now.
+There is a second half to it: a `width: auto` box **cannot fail a `scrollWidth`
+test**, so "the plate's text fits the width the budget bought" had never been
+asserted in portrait at all, in either game.
+
+**And a number said in two places is a second thing that can be wrong about the
+same deal.** Iteration 3 put `Fine: 5 a 3` in the say line because the result
+had nowhere else to go. Iteration 4 gave it a panel and took the say line's copy
+out rather than leaving a duplicate, and the reason is a defect rather than
+tidiness: the panel is deliberately held back while the last play is still being
+drawn — that was iteration 3's own bug and its fix — and the say line is not
+under the panel until the panel goes up. **The same defect was still there, in
+the other element**, reading the score out over the last card as it landed. A
+duplicate does not merely drift; it keeps the bug the original was fixed for.
+
+**And a line that names a cause has to be able to be wrong about it.** The
+result says what decided the smazzata by scoring the deal again without each
+component and seeing which removal changes who won — and it names one only when
+**exactly one** does. At a margin of a single point every point the winner holds
+is decisive, so naming one is picking a favourite among equals, and the honest
+line there is the margin. The check asserts the property rather than the string:
+take the component the line names out of `scoreDeal`'s answer, and the other
+player has to win. A table of phrases passes that test only by accident.
+
 **And an assertion about a page's language belongs on the element that carries
 it.** "The rules are in both languages" asserted as *a `lang` attribute exists
 somewhere* passes a page whose English paragraphs are tagged Italian — the break
 written for it survived, because deleting one `lang="en"` left six English
 paragraphs behind. Each language is a `section[lang]` now and each section is
 measured on its own, which is also what a screen reader and a hyphenator read.
+
+**And a break that survives is the check confessing.** Iteration 4's mutation
+run caught 126 of 141, and every one of the fifteen it did not is the same
+family: an assertion that was never in a position to see its own subject. They
+are worth more than the breaks that passed, and the shapes repeat.
+
+- **A box bounded twice cannot be failed by removing one bound.** The say line
+  is held inside the seat by `width: 100%` *and*, since the portrait seat became
+  a flex row, by `flex: 0 0 100%`. Measured with and without the first: 16..304
+  at 320x568, identical to the pixel. Both gone, and iteration 3's defect is
+  back at −22px to 342px on a 320px screen. `break_ui.mjs` takes arrays for
+  exactly this, and a survivor is how you find out you need one.
+- **A hidden screen measures zero.** Show-points was turned off on the settings
+  sheet and the points boxes were measured *there*, where every box on the table
+  has no height whatever the setting says. An assertion has to look at the
+  screen its subject is on.
+- **A count is discriminating only when the numbers differ.** The history's
+  tally was asserted against one smazzata, so *smazzate*, *vinte*, *perse* and
+  *pari* were 1, 1, 0, 0 and three of the four cells could be wired to the wrong
+  list and still agree. It is asserted against a win, a loss and a draw now.
+- **An assertion made before anything has changed asks whether X equals X.**
+  The deck row's name was read while the deck was still the one the markup
+  ships, so the rule that writes it could be deleted entirely.
+- **And a pass that drives the page has to survive the page being broken.**
+  Eight of the nine mismatches were one cause: a click that times out on a
+  broken page threw out of the pass and took every finding it had already made
+  with it, so the harness saw eight failures with nothing in them. `checkDeal`
+  has carried that guard since iteration 3; every pass that drives needs it.
+
+**And a reservation for text is a height, and a height is measured.** The start
+sheet holds space for the dossier so that choosing an opponent does not move the
+deck row under a thumb already on its way to it. Tressette reserves four lines;
+Franco's dossier is four lines on a laptop, five at 360x800 and **six at
+320x568**, so the number was already wrong on the narrowest screen the game
+claims to work on, before the roster has even grown. It is measured now — the
+tallest dossier the roster produces at this width, re-measured when the phone
+turns and when the webfont lands — which is the same rule the say line's rung
+follows, and the same rule `--chrome` follows.
 
 **And a new assertion is made to fail before it is made to pass.** Write it
 against a deliberately broken page first and watch it go red, because an
@@ -218,6 +287,34 @@ still on its way. And **`node tools/check_ui.mjs` passing locally is not the
 same claim as CI being green** — read the job before saying a pull request is
 green, because `break_ui.mjs` refuses to run at all against a page the check
 fails, so a red check takes the mutation harness with it.
+
+The environment includes the machine the work is done on. With no argument the
+check resolved its own page through a `file://` URL's `pathname` and
+`path.resolve`, which on Windows is `C:\C:\Users\…`, so it could not open the
+page it exists to measure. CI is Linux and never saw it, and neither did three
+iterations. `fileURLToPath` and `pathToFileURL` are identical on Linux and
+correct on both.
+
+**And blocking the webfont pins the font the page ASKS for, not the one it gets.**
+Iteration 4 shipped a name plate that fitted here and spilled 3px in CI at every
+360x800 case in all five decks, with the local check green — the same shape as
+the defect that made the blocking necessary, one level down. `--font-label` ends
+in `system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
+Linux runner, and the second is wider. **A check whose answer depends on which
+fonts the machine happens to have is not a check**, so it asks the question
+against a spread of real metrics instead: the pass *the plates in a fallback
+font* renders the plates in five label faces at six shapes. Anything sized to
+fit text needs that treatment, not just a measurement taken once on one machine.
+
+**And a box is derived from the type it has to hold, not from the type next to
+it.** `--plate-w` was `7.5 × --t-pick` — the size of the NAME — when what sets
+the plate's minimum is `avversario` beneath it at `--t-tiny`, which §5 measured
+as longer than any name in the roster. The two agree until the scales come
+apart, and they come apart exactly where both hit their floors: at 320 and 360
+`--t-pick` is 16px and `--t-tiny` is 12.5px, so the token bought 120px against
+125px of content. Deriving from the wrong one of two tokens is a coincidence
+that holds until it does not, which is the same failure as hard-coding, wearing
+a derivation.
 
 The `ui-check` skill explains what it covers and how to read a failure.
 
@@ -401,7 +498,11 @@ ran from `FormCreate`. It is a house tradition now, not a Delphi accident.
 - Player-facing text is Italian, except on the rules screen, which says
   everything twice — the owner asked for both languages, and the check measures
   each `section[lang]` on its own. Comments, commit messages and documents are
-  English.
+  English, and `REGOLE.md` is the exception that proves it: it is the rules
+  screen's long form, for a player, so it is in the language the game is played
+  in. Those two documents **cite the screen's wording rather than restating
+  it** — a rule written twice in two places drifts, and the screen is the copy
+  a player actually reads.
 - No build step and no runtime dependencies. `playwright-core` is for the UI
   check only and is gitignored.
 - The card art is the original 1997 bitmaps, copied byte for byte from
