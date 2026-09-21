@@ -70,6 +70,10 @@ run as a subagent with that model. PLAN.md §7.2 and §7.3 say why, and §7.3 sa
 what the reviewer is given and what it checks. The reviewer reports; the builder
 fixes in the same pull request and the reviewer looks once more.
 
+**The review is posted to the pull request itself** — `gh pr review`/`gh pr
+comment`, signed as the reviewer — not handed back to the builder alone. A review
+only a conversation can see is one the owner cannot.
+
 ## After any UI change, run the UI check
 
 ```sh
