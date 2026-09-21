@@ -499,10 +499,11 @@ sheet discloses what is left. There is one structural reason to expect better th
 risk terms are multiplied by a probability that varies continuously through
 the deal, so a change to `SCOPA_RISK_PENALTY` changes an argmax somewhere in
 most deals, where Tressette's control penalties changed an argmax almost
-nowhere. The temperaments were written against that dial — Graziano goes for
-scope and risks them, Franco does not — and **the measurement said the dial is
-not real**: the risk corners are too close to each other and a low-gift corner
-is under the floor. §3.4's roster table is what iteration 5 found instead.
+nowhere. The temperaments were written against that dial — the plan guessed
+Graziano would go for scope and risk them, and Franco would not — and **the
+measurement said the dial is not real**: the risk corners are too close to each
+other and a low-gift corner is under the floor. §3.4's roster table is what
+iteration 5 found instead.
 
 **The sixth round is played exactly, not weighed.** When `giro` is 5 the deck
 is empty and `fuori` is their hand exactly. `compGioca` enumerates the six

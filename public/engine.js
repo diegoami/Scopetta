@@ -533,9 +533,10 @@ const FRANCO_WEIGHTS = weights([1, 2, 6, 0.4, 6, 0.5, 5]);
 // make away from Franco.
 const GRAZIANO_WEIGHTS = weights([4, 8, 6, 0.4, 6, 0.5, 5]);
 
-// Valerio plays the card count and ignores the ori (DENARI 0): the denari point
-// and the settebello's primiera pull are both priced as nothing. 59.4% / 78.8%
-// on seeds 20001+, 8.4% away from Franco.
+// Valerio plays the card count and treats a denaro like any other card
+// (DENARI 0). The settebello is still a point on its own and keeps its bonus, so
+// what he ignores is the denari POINT, not the card. 59.4% / 78.8% on seeds
+// 20001+, 8.4% away from Franco.
 const VALERIO_WEIGHTS = weights([1, 0, 6, 0.4, 6, 0.5, 5]);
 
 // Piero is rolled once per session, as Discola's was — a house tradition, not a

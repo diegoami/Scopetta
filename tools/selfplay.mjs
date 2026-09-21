@@ -439,20 +439,18 @@ function differ(n){
   let decisions = 0;
 
   for (let seed = SEED_FROM; seed < SEED_FROM + n; seed++){
-    for (const swap of [false, true]){
-      const rng = rngSeed(seed);
-      const s = newDeal({}, rng);
-      const driver = P4[names[seed % names.length]];
-      while (!s.over){
-        const who = s.deveGiocare;
-        if (isDecision(s, who)){
-          decisions++;
-          const chose = Object.fromEntries(names.map(k => [k, compGioca(s, P4[k])]));
-          for (const [a, b] of pairs) if (!sameMove(chose[a], chose[b])) count[`${a} vs ${b}`]++;
-        }
-        const m = compGioca(s, driver);
-        gioca(s, who, m.slot, m.presa);
+    const rng = rngSeed(seed);
+    const s = newDeal({}, rng);
+    const driver = P4[names[seed % names.length]];
+    while (!s.over){
+      const who = s.deveGiocare;
+      if (isDecision(s, who)){
+        decisions++;
+        const chose = Object.fromEntries(names.map(k => [k, compGioca(s, P4[k])]));
+        for (const [a, b] of pairs) if (!sameMove(chose[a], chose[b])) count[`${a} vs ${b}`]++;
       }
+      const m = compGioca(s, driver);
+      gioca(s, who, m.slot, m.presa);
     }
   }
   console.log(`\nthe roster's pairwise difference, ${n} seeds from ${SEED_FROM}, ${decisions} decisions\n`);
@@ -554,8 +552,8 @@ function piero(rolls, n){
   for (let i = 0; i < rolls; i++){
     const P = rollProfiles(rngSeed(20000 + i)).Piero;
     PLAYERS.__try = profile(P);
-    const g = match(Math.min(n, 400), "__try", "greedy");
-    const r = match(Math.min(n, 400), "__try", "random");
+    const g = match(n, "__try", "greedy");
+    const r = match(n, "__try", "random");
     const diff = {}; let decisions = 0;
     match(Math.min(n, 200), "franco", "greedy", (state, who) => {
       if (!isDecision(state, who)) return;
@@ -565,8 +563,9 @@ function piero(rolls, n){
         if (!sameMove(mine, compGioca(state, fixed[nm]))) diff[nm] = (diff[nm] || 0) + 1;
     });
     const away = names.map(nm => `${nm} ${(100 * (diff[nm] || 0) / decisions).toFixed(1)}%`).join("  ");
-    console.log(`  session ${String(i).padStart(2)}  CARTE ${P.CARTE_WEIGHT.toFixed(2)} DENARI ${P.DENARI_WEIGHT.toFixed(2)}` +
-      `  vs greedy ${(100 * scoreRate(g)).toFixed(1)}%  vs random ${(100 * scoreRate(r)).toFixed(1)}%  away: ${away}`);
+    console.log(`  session ${String(i).padStart(2)}  GIFT ${P.GIFT_FACTOR.toFixed(2)} PRIMIERA ${P.PRIMIERA_WEIGHT.toFixed(2)} SCOPA_RISK ${P.SCOPA_RISK_PENALTY.toFixed(1)}` +
+      `  vs greedy ${(100 * scoreRate(g)).toFixed(1)}%  vs random ${(100 * scoreRate(r)).toFixed(1)}%` +
+      `  away (${decisions} decisions): ${away}`);
   }
 }
 
