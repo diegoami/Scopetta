@@ -303,10 +303,11 @@ it is written, and one that still passes is decoration.
 Fonts for its type, and whether that request succeeds decides how wide every
 string on the table is. An assertion calibrated against the fallback metrics
 passed here — no network — and failed in CI, where the real font loaded and the
-string was narrower. A check whose answer depends on the network is not a
-check: `check_ui.mjs` blocks the font on every page, which is deterministic and
-is also the worst case, since the page has to be correct while the font is
-still on its way. And **`node tools/check_ui.mjs` passing locally is not the
+string was narrower. A check whose answer depends on the network is not a check,
+so the three faces are served from `fonts/` and a fonts pass asserts that every
+character is inside the shipped subset, that every `@font-face` loads with the
+network cut, and that no subresource comes from the network. And **`node
+tools/check_ui.mjs` passing locally is not the
 same claim as CI being green** — read the job before saying a pull request is
 green, because `break_ui.mjs` refuses to run at all against a page the check
 fails, so a red check takes the mutation harness with it.
@@ -318,11 +319,11 @@ page it exists to measure. CI is Linux and never saw it, and neither did three
 iterations. `fileURLToPath` and `pathToFileURL` are identical on Linux and
 correct on both.
 
-**And blocking the webfont pins the font the page ASKS for, not the one it gets.**
-Iteration 4 shipped a name plate that fitted here and spilled 3px in CI at every
-360x800 case in all five decks, with the local check green — the same shape as
-the defect that made the blocking necessary, one level down. `--font-label` ends
-in `system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
+**And the font a plate falls back to is not the one the page ships.** Iteration 4
+shipped a name plate that fitted here and spilled 3px in CI at every 360x800
+case in all five decks, with the local check green — the same shape as the
+defect that made blocking necessary, one level down. `--font-label` ends in
+`system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
 Linux runner, and the second is wider. **A check whose answer depends on which
 fonts the machine happens to have is not a check**, so it asks the question
 against a spread of real metrics instead: the pass *the plates in a fallback
