@@ -62,6 +62,14 @@ short handoff:
 Durable facts belong in the repository (this file, the docs, the PR body), not
 in the conversation.
 
+## Who builds and who reviews
+
+The builder is DeepSeek V4.1 Flash. Every pull request gets one review from a
+**fresh context** by GPT-5.6 Luna at high effort (`opencode/gpt-5.6-luna#high`),
+run as a subagent with that model. PLAN.md §7.2 and §7.3 say why, and §7.3 says
+what the reviewer is given and what it checks. The reviewer reports; the builder
+fixes in the same pull request and the reviewer looks once more.
+
 ## After any UI change, run the UI check
 
 ```sh
