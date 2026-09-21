@@ -1,12 +1,8 @@
-# Local tooling for tools/check_ui.mjs (npm i playwright-core)
+# The dev dependency of tools/check_ui.mjs (npm run setup). The game itself
+# still has none: nothing under public/ imports anything.
 # No trailing slash: this is often a symlink, which "node_modules/" would miss.
 node_modules
 
 # The two harnesses' own output, when a run is redirected to a file rather than
 # read off the terminal. Neither is a record of anything: re-run them.
 *.log
-
-# That npm install also writes these. They are not dependencies of the game —
-# there are none — and committing them would say otherwise.
-package.json
-package-lock.json

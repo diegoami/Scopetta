@@ -31,6 +31,7 @@ jobs:
       # asserted anything. That is the scaffold's honest state, not a pass:
       # the job starts meaning something the moment tools/engine.test.mjs
       # exists, and nothing here needs changing when it does.
+      # No install first: the engine and its tests still have no dependencies.
       - run: node --test 'tools/**/*.test.mjs'
 
   ui:
@@ -40,19 +41,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      # playwright-core is deliberately not committed — the game has no
-      # dependencies and a package.json would say otherwise — so it is
-      # installed here rather than restored from a lockfile. --with-deps is
-      # what makes Chromium start on a bare runner.
+      # playwright-core is the one dependency this repo has, and it is a dev
+      # one: it belongs to the check, not to the game. `npm ci` restores the
+      # exact version the lockfile names, so CI and a local run measure the
+      # page with the same browser build. --with-deps is what makes Chromium
+      # start on a bare runner.
       #
       # No CHROME here: check_ui.mjs falls back to the browser this install
       # puts in playwright's own cache, which is the only one CI has.
-      # Pinned, because the check's environment is part of the check. An
-      # unpinned playwright-core installs whatever Chromium is current, and
-      # text metrics and layout do move across Chromium majors — so "green on
-      # my machine" and "green here" would be two claims again, which is how
-      # iteration 3 shipped a red job while reporting a green one. This is the
-      # version the development container carries.
-      - run: npm i --no-save playwright-core@1.63.0
+      - run: npm ci
       - run: npx playwright-core install --with-deps chromium
-      - run: node tools/check_ui.mjs
+      - run: npm run check
