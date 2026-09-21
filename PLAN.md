@@ -1691,17 +1691,20 @@ repo, clone them:
 | 5 The opponents | medium | the harness does the work; the builder reads numbers |
 | 6 Ship | medium | docs in the house voice |
 
-The builder is the Opus tier throughout. Do not drop to a smaller model on the
-cheap iterations: a missed layout defect costs more than it saves.
-Exploration subagents the builder spawns to read the ancestors can be the
-small tier. Iterations 2 and 3 run alone.
+**The builder is DeepSeek V4.1 Flash** (`opencode/deepseek-v4.1-flash`)
+throughout. Do not drop to a smaller model on the cheap iterations: a missed
+layout defect costs more than it saves. Exploration subagents the builder spawns
+to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 
 ### 7.3 The reviewer
 
 Every pull request gets one review from a **fresh context** — a new session or
-a subagent that has not seen the work — at high effort, same tier as the
-builder. Fresh matters more than different: the builder cannot see its own
-diff, and a reviewer that shares its context cannot either.
+a subagent that has not seen the work. **The reviewer is GPT-5.6 Luna at high
+effort** (`opencode/gpt-5.6-luna#high`), run as a subagent with that model; the
+builder is DeepSeek V4.1 Flash. A fresh context matters more than a different
+model — the builder cannot see its own diff, and a reviewer that shares its
+context cannot either — but the two roles are deliberately different models, so
+one model's blind spot is not the other's.
 
 The reviewer is given three things: this document, the diff, and the check
 output pasted into the pull request. It checks, in order:
@@ -1834,6 +1837,33 @@ iteration 3 if the one-tap rhythm hides the capture rule rather than teaching
 it. Start each iteration. Play the game after iterations 3 and
 5 — the harness measures strength, and only a player can measure whether it
 is fun — and file what you find as `defect` issues.
+
+### 7.7 What remains after the divergence review
+
+The reconciliation with discola-web and Tressette (issue #9) is done: the
+divergences that applied here were adopted as one pull request each, and all of
+them are merged. Three things came out of it and are not built:
+
+- **Android packaging — issue #9 item 3.** Tressette wraps `public/` unchanged
+  with Capacitor and publishes a signed APK from a separate releases repo; its
+  `ANDROID.md` is the reference, and the icons tool there is the model for this
+  one. Its one precondition is now in place: the fonts are local, so the app can
+  run with the radio off. What is left is the wrapper, the launcher icons, the
+  signing and the release scripts. **It starts with the owner, not the builder:**
+  a public releases repo, a permanent `appId`, and a signing key are his to
+  make, and a different `appId` is a different app that cannot upgrade an
+  installed copy.
+- **The 1100x320 viewport question — issue #5.** The shape was dropped from the
+  grid when `--t-say` grew, and at that size `--cw` sits on its clamp floor, so
+  the no-scrolling assertion tests the clamp rather than the derivation. #5
+  leaves three ways and does not pick one: leave it, since scrolling is the
+  designed fallback; put it back with an exemption where `--cw` is on its floor;
+  or put it back and assert the scroll is bounded. It is a question about what
+  the check covers, not a defect.
+- **The CI action versions.** `actions/checkout@v4` and `actions/setup-node@v4`
+  target Node 20, which GitHub is forcing onto Node 24 and warns about on every
+  run. A warning today and not a failure; the bump belongs in the next change
+  to `check.yml`, not in a change of its own.
 
 ## 8. Glossary
 
