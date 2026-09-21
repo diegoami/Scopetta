@@ -2380,6 +2380,44 @@ async function checkSheets(browser) {
     await page.addStyleTag({ content: STILL });
     const bad = [];
 
+    // The start sheet's own tools, which it did not have: the settings and the
+    // history were reachable only from the table, so changing the deck or
+    // reading the record meant dealing a hand first and abandoning it. This
+    // drives the two buttons rather than counting them — a bar whose buttons
+    // open nothing looks identical to a working one — and presses Back after
+    // each, because a sheet opened before the deal has to return HERE, not to a
+    // table that does not exist yet.
+    bad.push(...await page.evaluate(() => {
+      const out = [];
+      const shown = () => [...document.querySelectorAll('.view')]
+        .filter(v => !v.hidden).map(v => v.id).join(',');
+      // The bar needs a grid row of its own. Given one, the sheet starts where
+      // the bar ends; given none, the bar takes the 1fr row and leaves a band
+      // of bare rail under it, which is not an overflow and clips nothing.
+      const bar = document.querySelector('#viewStart .topbar');
+      const body = document.querySelector('#viewStart .sheet-body');
+      if (!bar) out.push('the start sheet has no icon bar');
+      else if (body) {
+        const gap = Math.round(body.getBoundingClientRect().top - bar.getBoundingClientRect().bottom);
+        if (gap > 1) out.push(`${gap}px of nothing between the icon bar and the start sheet`);
+      }
+      for (const [nav, view] of [['history', 'viewHistory'], ['settings', 'viewSettings']]) {
+        const tool = document.querySelector(`#viewStart [data-nav="${nav}"]`);
+        if (!tool){ out.push(`the start sheet has no ${nav} tool`); continue; }
+        const r = tool.getBoundingClientRect();
+        if (Math.min(r.width, r.height) < 32)
+          out.push(`the start sheet's ${nav} tool is ${Math.round(r.width)}x${Math.round(r.height)}, want 32`);
+        tool.click();
+        if (shown() !== view){ out.push(`the start sheet's ${nav} tool opened ${shown() || 'nothing'}`); continue; }
+        const back = document.querySelector(`#${view} [data-back]`);
+        if (!back){ out.push(`${view} has no Back button`); continue; }
+        back.click();
+        if (shown() !== 'viewStart')
+          out.push(`Back from ${nav}, opened before a deal, landed on ${shown() || 'nothing'}`);
+      }
+      return out;
+    }));
+
     // This pass DRIVES more of the page than any other, and driving can throw:
     // a button that should be there and is not, a scrim that should have closed
     // and has not, and Playwright waits for it and then gives up. That is

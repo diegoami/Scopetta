@@ -1016,7 +1016,16 @@ button.card:disabled{ cursor: default; }
    phone, but the primary action never leaves the screen — Tressette made the
    text readable and pushed the button past the fold at 393px, and the answer
    to that is to pin the button rather than to shrink the text again. */
-#viewStart{ grid-template-rows: minmax(0,1fr) auto; }
+/* Three rows now, not two: the icon bar, the sheet, the Gioca footer. With two,
+   the bar took the 1fr row and left a band of bare rail under it — the felt
+   started a third of the way down the screen, and nothing errored, because an
+   empty grid row is not an overflow, clips nothing and is not text. */
+#viewStart{ grid-template-rows: auto minmax(0,1fr) auto; }
+
+/* The start screen's copy of the icon bar. It carries no wordmark, so the tools
+   go to the right on their own; the table's bar keeps space-between because it
+   has the wordmark to separate them from. */
+.topbar--start{ justify-content: flex-end; }
 .start-foot{
   display: grid;
   padding: .85rem 16px;
@@ -1689,6 +1698,24 @@ button.card:disabled{ cursor: default; }
 
 <!-- ============================ start ============================ -->
 <div class="view" id="viewStart">
+  <!-- The two tools the start sheet lacked: the settings and the history were
+       reachable only from the table, so changing the deck or reading the record
+       meant dealing a hand first and abandoning it. They go by data-nav rather
+       than by new ids, so they open the same screens the table's bar does and
+       the two cannot drift apart. No wordmark — the hero below is the title —
+       and no "nuova smazzata", which is what Gioca already is. Back from either
+       sheet lands here again, because openSheet remembers the screen that
+       opened it. -->
+  <header class="topbar topbar--start">
+    <nav class="tools">
+      <button class="tool" data-nav="history" type="button" title="Storico smazzate" aria-label="Storico smazzate">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.4 2"/></svg>
+      </button>
+      <button class="tool" data-nav="settings" type="button" title="Impostazioni" aria-label="Impostazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.1"/><circle cx="16" cy="12" r="2.1"/><circle cx="8" cy="17" r="2.1"/></svg>
+      </button>
+    </nav>
+  </header>
   <div class="sheet-body">
     <div class="sheet-inner">
       <div class="hero">
@@ -3112,6 +3139,10 @@ el.about.addEventListener("click", () => openSheet("rules"));
 el.aboutStart.addEventListener("click", () => openSheet("rules"));
 el.btnHistory.addEventListener("click", () => openSheet("history"));
 el.btnSettings.addEventListener("click", () => openSheet("settings"));
+// The start sheet's two, by attribute rather than by id: they open the same
+// screens as the table's, and naming each one twice is how two bars drift apart.
+for (const b of document.querySelectorAll("#viewStart [data-nav]"))
+  b.addEventListener("click", () => openSheet(b.dataset.nav));
 for (const b of document.querySelectorAll("[data-back], #rulesBack"))
   b.addEventListener("click", back);
 
