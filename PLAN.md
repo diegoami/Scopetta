@@ -1847,16 +1847,19 @@ them are merged. Three things came out of it and are not built:
 - **Android packaging — issue #9 item 3.** Tressette wraps `public/` unchanged
   with Capacitor and publishes a signed APK from a separate releases repo; its
   `ANDROID.md` is the reference, and the icons tool there is the model for this
-  one. The two things it needed are now in place — the fonts are local and the
-  sixth deck ships — so what is left is the wrapper, the launcher icons, the
+  one. Its one precondition is now in place: the fonts are local, so the app can
+  run with the radio off. What is left is the wrapper, the launcher icons, the
   signing and the release scripts. **It starts with the owner, not the builder:**
   a public releases repo, a permanent `appId`, and a signing key are his to
   make, and a different `appId` is a different app that cannot upgrade an
   installed copy.
-- **The 1100x320 viewport question — issue #5.** Whether to put that shape back
-  in the grid with an explicit exemption where `--cw` is on its clamp floor. It
-  is a question about what the check covers, not a defect, and #5 lays out the
-  three options with the measurement behind each.
+- **The 1100x320 viewport question — issue #5.** The shape was dropped from the
+  grid when `--t-say` grew, and at that size `--cw` sits on its clamp floor, so
+  the no-scrolling assertion tests the clamp rather than the derivation. #5
+  leaves three ways and does not pick one: leave it, since scrolling is the
+  designed fallback; put it back with an exemption where `--cw` is on its floor;
+  or put it back and assert the scroll is bounded. It is a question about what
+  the check covers, not a defect.
 - **The CI action versions.** `actions/checkout@v4` and `actions/setup-node@v4`
   target Node 20, which GitHub is forcing onto Node 24 and warns about on every
   run. A warning today and not a failure; the bump belongs in the next change
