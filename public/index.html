@@ -2835,7 +2835,12 @@ const HCAP = 100;
 // clears it, so there was no way out from inside the game.
 function usable(m){
   return m !== null && typeof m === "object"
-    && Number.isFinite(m.t) && Number.isFinite(m.y) && Number.isFinite(m.a)
+    // `Number.isFinite(m.t)` alone is not enough: 1e100 is finite but outside
+    // Date's range, so `new Date(m.t).getTime()` is NaN and `WHEN.format(...)`
+    // throws RangeError — mid-render, before the button that clears the bad
+    // row. "Inside Date's range" is exactly what the second test asks.
+    && Number.isFinite(m.t) && Number.isFinite(new Date(m.t).getTime())
+    && Number.isFinite(m.y) && Number.isFinite(m.a)
     && typeof m.o === "string";
 }
 

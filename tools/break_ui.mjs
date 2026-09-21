@@ -312,6 +312,7 @@ const EXPECT = {
   "the history row always reads as a win": "is marked V, want",
   "the tally counts something else": "the tally counts",
   "a row this build did not write is rendered anyway": "took the history sheet down",
+  "the history formats a timestamp outside Date's range": "want the one with a real date",
 
   // --- the easter egg -------------------------------------------------------
   "the 1997 word does nothing": "did not turn the opponent",
@@ -904,6 +905,13 @@ const BREAKS = [
   ["a row this build did not write is rendered anyway",
    "    return Array.isArray(list) ? list.filter(usable) : [];",
    "    return Array.isArray(list) ? list : [];"],
+  // The other half of the same filter, and the shape it cannot see: `1e100` is
+  // finite, passes the first test, and is outside Date's range — so
+  // `WHEN.format(new Date(m.t))` throws mid-render, before the button that
+  // clears the bad row. "Inside Date's range" is the second test.
+  ["the history formats a timestamp outside Date's range",
+   "    && Number.isFinite(m.t) && Number.isFinite(new Date(m.t).getTime())",
+   "    && Number.isFinite(m.t)"],
 
   // --- the 1997 easter egg --------------------------------------------------
   ["the 1997 word does nothing",
