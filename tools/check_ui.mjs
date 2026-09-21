@@ -831,6 +831,32 @@ const SCREENS = [
       await p.click('#play');
       await p.click('#btnHistory');
     } },
+  // A row written by something else is dropped, but one with a timestamp
+  // OUTSIDE Date's range — 1e100 is finite — passed the old `usable` and threw
+  // in `renderHistory`, before the button that clears the bad data: the exact
+  // unrecoverable failure the filter exists to prevent. The page error is
+  // caught by this pass, which would make any throw visible; the check below
+  // names the drop and the draw, so the assertion is about this defect rather
+  // than about "something threw".
+  { name: 'history, a timestamp that is not a date', open: async p => {
+      await p.evaluate(`localStorage.setItem("scopetta.history", JSON.stringify([
+        { t: 1e100, o: "Franco", d: "Trevisane", y: 5, a: 3 },
+        { t: Date.parse("2026-02-11"), o: "Graziano", d: "Romagnole", y: 2, a: 5 }
+      ]))`);
+      await p.reload();
+      await p.click('#play');
+      await p.click('#btnHistory');
+    },
+    check: () => {
+      const rows = [...document.querySelectorAll('#historyBody .log li')];
+      const out = [];
+      if (rows.length !== 1) out.push(`the history drew ${rows.length} rows, want the one with a real date`);
+      else if (!rows[0].textContent.includes('Graziano'))
+        out.push(`the history drew "${rows[0].textContent.trim()}", want the row with a real date`);
+      if (!document.querySelector('#historyBody button'))
+        out.push('the history lost the button that clears it');
+      return out;
+    } },
   // The one question this game asks, over the table it is asking about.
   { name: 'the confirm, over a deal in progress', open: async p => {
       await p.click('#play');
@@ -972,7 +998,8 @@ async function checkScreens(browser) {
       await page.addStyleTag({ content: STILL });
       await screen.open(page);
       await page.waitForTimeout(60);
-      const bad = await page.evaluate(audit);
+      const bad = [...await page.evaluate(audit),
+        ...(screen.check ? await page.evaluate(screen.check) : [])];
       const all = [...bad, ...errs];
       if (all.length) {
         failed++;
