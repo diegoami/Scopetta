@@ -17,6 +17,11 @@
  * 0. DOCUMENT — the four document facts that cannot be expressed as a layout
  *    assertion: the viewport meta, the doctype, the charset and <html lang>.
  *
+ * 0b. FONTS — the three faces are served from fonts/, so the page needs no
+ *    network at all: every character in the page and the engine is inside the
+ *    shipped latin subset, every @font-face loads with the network cut, and no
+ *    subresource comes from the network.
+ *
  * 1. SCREENS — every screen and every state worth looking at, at a handful of
  *    real device shapes. Catches what is wrong anywhere: more than one screen
  *    visible at once, text too small to read, clipped labels, tap targets under
@@ -59,7 +64,7 @@
  */
 import { chromium } from 'playwright-core';
 import path from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // `fileURLToPath` and `pathToFileURL` rather than `.pathname` and a `file://`
@@ -551,21 +556,21 @@ const SWEEP_MS = 1050;
 
 /* ---- opening a page -------------------------------------------------------- */
 
-// Every page in this check is opened here, and the reason is the webfont.
+// Every page in this check is opened here.
 //
-// The page asks Google Fonts for Bodoni Moda and Barlow. Whether that request
-// succeeds decides how wide every string on the table is — and it succeeds on a
-// CI runner and fails on a developer's machine with no network. Iteration 3
-// shipped an assertion calibrated against the fallback metrics: it passed here
-// and failed in CI, where the real font loaded and the string was narrower.
-// A check whose answer depends on the network is not a check.
+// The fonts used to be a <link> to Google, and this function blocked that
+// request so the check would be deterministic whether or not the machine had a
+// network: iteration 3 shipped an assertion calibrated against the fallback
+// metrics, which passed here and failed in CI, where the real font loaded and
+// the string was narrower. A check whose answer depends on the network is not a
+// check.
 //
-// So the font is blocked, always, and that is the worst case as well as the
-// deterministic one: the page has to be correct while the webfont is still on
-// its way, and every player sees that state first.
+// The fonts are served from fonts/ now, so there is nothing to block: every
+// request the page makes is a file:// one and the metrics are the ones that
+// ship. The page still has to be correct while the fonts are on their way,
+// which is the worst case and the state every player sees first.
 async function openPage(browser, viewport) {
   const page = await browser.newPage({ viewport });
-  await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   return page;
 }
 
@@ -756,15 +761,10 @@ const audit = () => {
   return out;
 };
 
-// The Google Fonts stylesheet never loads — openPage blocks it on purpose, and
-// a machine with no network fails it anyway — so neither its request nor the
-// console line about it is a defect. Matched on the URL as well as the text,
-// because an aborted subresource says only "Failed to load resource:
-// net::ERR_FAILED" and names itself nowhere but its location.
-const FONTS = /fonts\.(googleapis|gstatic)\.com/;
-const noise = m => /ERR_CERT_AUTHORITY_INVALID|ERR_CONNECTION|ERR_NAME_NOT_RESOLVED/.test(m)
-                || FONTS.test(m);
-const noisy = m => noise(m.text()) || FONTS.test((m.location() || {}).url || '');
+// The fonts are served from fonts/ now, so every request the page makes is a
+// file:// one and a network error means the page reached for the internet,
+// which is a defect rather than noise. Nothing is filtered.
+const noisy = () => false;
 
 /* ---- getting to each screen ----------------------------------------------- */
 
@@ -951,6 +951,100 @@ async function checkDocument(browser) {
   console.log(`  ${bad.length ? 'FAIL' : 'pass'}  head tags`);
   bad.forEach(b => console.log(`        ${b}`));
   return bad.length ? 1 : 0;
+}
+
+/* ---- pass 0b: the fonts ---------------------------------------------------- */
+
+// The three faces used to be a <link> to fonts.googleapis.com. Nothing failed
+// when they did not load: the browser fell back to a generic serif and the
+// wordmark set some 12% narrower than every threshold below is calibrated
+// against. This check never saw it, because this check has always had the
+// network up — and an offline build is where that fallback would have shipped.
+// These three assertions are why it cannot come back, and the first of them is
+// why the copy cannot outgrow the subset without saying so.
+
+// The latin subset the woff2 files were cut to. A character outside it has no
+// glyph in what we ship and falls back on its own, mid-word.
+const LATIN = (cp) =>
+  cp <= 0xFF || cp === 0x131 || (cp >= 0x152 && cp <= 0x153) || (cp >= 0x2BB && cp <= 0x2BC) ||
+  cp === 0x2C6 || cp === 0x2DA || cp === 0x2DC || cp === 0x304 || cp === 0x308 || cp === 0x329 ||
+  (cp >= 0x2000 && cp <= 0x206F) || cp === 0x20AC || cp === 0x2122 || cp === 0x2191 ||
+  cp === 0x2193 || cp === 0x2212 || cp === 0x2215 || cp === 0xFEFF || cp === 0xFFFD;
+
+// Only the ones the page uses; an unknown entity is left alone and will read as
+// ASCII, which is harmless here because ASCII is inside the subset anyway.
+const ENTITIES = {
+  rsquo: 0x2019, lsquo: 0x2018, ldquo: 0x201C, rdquo: 0x201D, laquo: 0xAB, raquo: 0xBB,
+  middot: 0xB7, nbsp: 0xA0, mdash: 0x2014, ndash: 0x2013, hellip: 0x2026,
+};
+
+async function checkFonts(browser) {
+  console.log('\nfonts');
+  let failed = 0;
+
+  // Both files that ship, and every kind of entity. engine.js holds the
+  // opponents' names and the em dashes of its own comments, so "every
+  // character in the page" that reads only index.html is a claim about half
+  // the source; and a numeric reference is a character the page sets just as
+  // much as a named one is.
+  const source = [FILE, path.join(path.dirname(FILE), 'engine.js')]
+    .filter(f => existsSync(f))
+    .map(f => readFileSync(f, 'utf8'))
+    .join('\n')
+    .replace(/&#x([0-9a-f]+);/gi, (m, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g, (m, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&([a-z]+);/gi, (m, name) => (ENTITIES[name] ? String.fromCodePoint(ENTITIES[name]) : m));
+  const outside = new Map();
+  for (const ch of source) {
+    const cp = ch.codePointAt(0);
+    if (cp > 0x7F && !LATIN(cp)) outside.set(ch, 'U+' + cp.toString(16).toUpperCase().padStart(4, '0'));
+  }
+  console.log(`  ${outside.size ? 'FAIL' : 'pass'}  every character is in the latin subset`);
+  if (outside.size) {
+    failed++;
+    for (const [ch, cp] of outside)
+      console.log(`        ${cp} ${ch} — no glyph in fonts/; widen the subset or do not use it`);
+  }
+
+  // Everything but the page itself is cut off, which is what an offline build
+  // sees.
+  const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+  const external = [];
+  await page.route('**', (route) => {
+    const url = route.request().url();
+    if (url.startsWith('file://') || url.startsWith('data:') || url.startsWith('blob:')) return route.continue();
+    external.push(url);
+    return route.abort();
+  });
+  await page.goto(URL_);
+  // Ask for each face explicitly. A browser only fetches a face when something
+  // on the current screen uses it, so reading .status after load tells you
+  // which weights the start screen happens to draw with — not whether the
+  // files are there. load() is the question we actually mean.
+  const faces = await page.evaluate(async () => {
+    const declared = [...document.fonts];
+    return Promise.all(declared.map(async (f) => {
+      try { await f.load(); } catch { /* status below carries the verdict */ }
+      return { family: f.family, weight: f.weight, status: f.status };
+    }));
+  });
+  await page.close();
+
+  const unloaded = faces.filter((f) => f.status !== 'loaded');
+  const ok = faces.length > 0 && unloaded.length === 0;
+  console.log(`  ${ok ? 'pass' : 'FAIL'}  all ${faces.length} @font-face rules load with the network down`);
+  if (!ok) {
+    failed++;
+    if (!faces.length) console.log('        no @font-face rules at all — the page is on system fonts');
+    unloaded.forEach((f) => console.log(`        ${f.family} ${f.weight}: ${f.status}`));
+  }
+
+  console.log(`  ${external.length ? 'FAIL' : 'pass'}  no subresource comes from the network`);
+  if (external.length) {
+    failed++;
+    [...new Set(external)].forEach((u) => console.log(`        ${u}`));
+  }
+  return failed;
 }
 
 /* ---- pass 1: every screen -------------------------------------------------- */
@@ -1887,11 +1981,11 @@ async function checkStates(browser) {
     }));
     if (!reached) between.push('the driver never reached the end of a round');
 
-    // And the FIRST hand of a session, which no pass could see. This check
-    // blocks the webfont, so `document.fonts.ready` resolves at once and the
-    // boot render always leaves the slots in a state `dealt` can work from; on
-    // a real phone with the font still on its way it does not, and the first
-    // hand a player ever sees APPEARS. Measured that way: {"drawn":6,"dealt":0}
+    // And the FIRST hand of a session, which no pass could see. The faces are
+    // local now, so `document.fonts.ready` resolves almost at once on file://
+    // and the boot render always leaves the slots in a state `dealt` can work
+    // from; on a real phone with a face still on its way it does not, and the
+    // first hand a player ever sees APPEARS. Measured that way: {"drawn":6,"dealt":0}
     // against a settled-font control of {"drawn":6,"dealt":6}.
     //
     // So the rule is asserted on `buildHands` itself, called here with no
@@ -2191,13 +2285,13 @@ async function checkRules(browser) {
 
 /* ---- pass 2ee: the plates in a fallback font ------------------------------- */
 
-// Blocking the webfont made the check deterministic about the font it ASKS for
-// and said nothing about the one it falls back to — and the fallback is not the
-// same on two machines. `system-ui` is Segoe UI on Windows and DejaVu or
-// Liberation Sans on a Linux runner, and the second is wider. So iteration 4
-// shipped a plate that fitted here and spilled 3px in CI at every 360x800 case
-// in all five decks, with the local check green: the same shape as the
-// iteration-3 defect that made the font blocking necessary, one level down.
+// The faces are local now, but `--font-label` still ends in `system-ui`, so the
+// font a plate falls back to when its face does not load is not the same on two
+// machines. `system-ui` is Segoe UI on Windows and DejaVu or Liberation Sans on
+// a Linux runner, and the second is wider. So iteration 4 shipped a plate that
+// fitted here and spilled 3px in CI at every 360x800 case in all five decks,
+// with the local check green: the same shape as the iteration-3 defect that
+// made webfont blocking necessary, one level down.
 //
 // A check whose answer depends on which fonts the machine happens to have is
 // not a check. This one asks the question against a spread of real metrics
@@ -3445,11 +3539,12 @@ async function checkDeal(browser) {
 
 const browser = await chromium.launch({ ...(CHROME && { executablePath: CHROME }), args: ['--no-sandbox'] });
 // Printed, because every measurement below is this browser's. check.yml pins
-// playwright-core for the same reason the fonts are blocked: two runs that do
-// not agree about the environment are not two runs of the same check.
+// playwright-core for the same reason: two runs that do not agree about the
+// environment are not two runs of the same check.
 console.log(`chromium ${browser.version()}`);
 let failed = 0;
 failed += await checkDocument(browser);
+failed += await checkFonts(browser);
 failed += await checkScreens(browser);
 failed += await checkTable(browser, null, false);
 failed += await checkTable(browser, TIGHT, true);

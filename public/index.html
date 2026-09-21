@@ -3,11 +3,49 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scopetta</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600;6..96,700&family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap">
 
 <style>
+/* ---------------------------------------------------------------------------
+   The three faces, served from fonts/ rather than fonts.googleapis.com.
+
+   They used to be a <link> to Google, forked from Tressette along with the rest
+   of this sheet. That is fine on the web and wrong everywhere else: with the
+   network down none of them loaded, Bodoni Moda fell back to a generic serif,
+   and the wordmark set some 12% narrower than every threshold in
+   tools/check_ui.mjs is calibrated against — silently, because a font that
+   does not arrive throws nothing. It also made "nothing leaves the device"
+   untrue, since every cold start told Google's CDN the device's IP.
+
+   The files are the latin subset, ~0.2 MB for all six faces; Bodoni Moda is
+   one variable file covering 400 to 700. The fonts pass of the UI check keeps
+   them honest: every character on the page is inside the subset, every rule
+   below loads with the network cut, and no subresource comes from the network.
+   --------------------------------------------------------------------------- */
+@font-face{
+  font-family:'Bodoni Moda'; font-style:normal; font-weight:400 700; font-display:swap;
+  src:url(fonts/bodoni-moda.woff2) format('woff2');
+}
+@font-face{
+  font-family:'Barlow'; font-style:normal; font-weight:400; font-display:swap;
+  src:url(fonts/barlow-400.woff2) format('woff2');
+}
+@font-face{
+  font-family:'Barlow'; font-style:normal; font-weight:500; font-display:swap;
+  src:url(fonts/barlow-500.woff2) format('woff2');
+}
+@font-face{
+  font-family:'Barlow'; font-style:normal; font-weight:600; font-display:swap;
+  src:url(fonts/barlow-600.woff2) format('woff2');
+}
+@font-face{
+  font-family:'Barlow Condensed'; font-style:normal; font-weight:500; font-display:swap;
+  src:url(fonts/barlow-condensed-500.woff2) format('woff2');
+}
+@font-face{
+  font-family:'Barlow Condensed'; font-style:normal; font-weight:600; font-display:swap;
+  src:url(fonts/barlow-condensed-600.woff2) format('woff2');
+}
+
 /* ---------------------------------------------------------------------------
    Scopetta — a card table, lit from above. Forked from Tressette's sheet at
    dec1c74, which forked Discola's: the same committed visual world, green

@@ -18,19 +18,19 @@ calibrated, and in Tressette, which inherited the check and added the rest.
 node tools/check_ui.mjs
 ```
 
-Exit code 0 means clean. It takes about twenty-five minutes — ten passes, and
+Exit code 0 means clean. It takes about twenty-five minutes — twelve passes, and
 the sheets pass iteration 4 added drives more of the page than any other; let it
 finish rather than interrupting it. It prints the Chromium it used, because that is part of
 the answer — `check.yml` pins `playwright-core` so CI runs the same one.
 
-**And then read the `ui` job on the pull request.** Locally the Google Fonts
-request fails, in CI it succeeds, and the type metrics decide how wide every
-string on the table is — so `All checks pass.` here is a claim about here. The
-check blocks the font on every page for exactly that reason, which makes it
-deterministic and makes it the worst case, but the habit still matters: an
-iteration once reported green while the job was red on the same commit, and
-`break_ui.mjs` refuses to run against a page the check fails, so a red check
-takes the mutation harness with it.
+**And then read the `ui` job on the pull request.** Locally the browser, its
+fonts and the fallback faces are this machine's; in CI they are the runner's,
+and the type metrics decide how wide every string on the table is — so `All
+checks pass.` here is a claim about here. The fonts pass makes the page need no
+network and the fallback-font pass measures a spread of real faces, but the
+habit still matters: an iteration once reported green while the job was red on
+the same commit, and `break_ui.mjs` refuses to run against a page the check
+fails, so a red check takes the mutation harness with it.
 
 It needs `playwright-core` and a Chromium binary:
 
@@ -77,6 +77,14 @@ a `lang` on `<html>`. These cannot be layout assertions, because Playwright's
 `viewport` option sets the layout viewport directly and the tag is only
 consulted under mobile emulation — the page measures identically with or without
 it.
+
+**Fonts pass** — the three faces are served from `fonts/`, so the page needs no
+network at all. Asserts that every character in `index.html` and `engine.js` is
+inside the shipped latin subset (entities decoded, named and numeric), that all
+six `@font-face` rules load with the network cut, and that no subresource comes
+from the network. The first of the three is why the copy cannot outgrow the
+subset without saying so; the other two are why a Google Fonts `<link>` cannot
+come back.
 
 **Screens pass** — every screen, and **every state that exists only in the
 middle of a deal**, at seven real device shapes: the start sheet; the rules,
