@@ -60,10 +60,11 @@ acceptance floors.
 | **Valerio** — the count | plays the carte point; a denaro is any other card, but the settebello is still a point he takes |
 | **Piero** — rolled fresh every session | the cautious corner: leaves nothing cheap |
 
-On seeds nothing was tuned on — `SEED_FROM=5001 node tools/selfplay.mjs
---roster 1000` and the same at `SEED_FROM=20001`, 2,000 deals a matchup, and
-`SEED_FROM=5001 node tools/selfplay.mjs --differ 300` (again at 20001) for the
-last column:
+On seeds nothing was tuned on, 2,000 deals a matchup: the three fixed players
+from `SEED_FROM=5001 node tools/selfplay.mjs --roster 1000` and the same at
+`SEED_FROM=20001`; Piero's row from `node tools/selfplay.mjs --piero 8 400` at
+both ranges; and the last column from `SEED_FROM=5001 node tools/selfplay.mjs
+--differ 300` (again at 20001):
 
 | | vs greedy-take | vs random-legal | choices differing from Franco |
 |---|---|---|---|
