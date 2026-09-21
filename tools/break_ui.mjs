@@ -268,6 +268,7 @@ const EXPECT = {
   "the deck row does not say which deck": "the deck row names",
   "the dossier stops holding its height": "does not hold its height",
   "the settings sheet is not told which deck was picked": "the settings sheet still says",
+  "the start sheet has no row for its icon bar": "of nothing between the icon bar and the start sheet",
 
   // --- the settings sheet ---------------------------------------------------
   "the weights disclosure loses a weight": "the engine has",
@@ -751,6 +752,13 @@ const BREAKS = [
    "  if (el.deckName) el.deckName.textContent = name;", ""],
   ["the settings sheet is not told which deck was picked",
    "  if (el.deckSel) el.deckSel.value = name;", ""],
+  // The bar the start sheet gained needs a grid row of its own. With two rows
+  // and three children the bar takes the 1fr row and leaves a band of bare rail
+  // under it — the felt starts a third of the way down the screen, and nothing
+  // errors, because an empty grid row is not an overflow and is not text.
+  ["the start sheet has no row for its icon bar",
+   "#viewStart{ grid-template-rows: auto minmax(0,1fr) auto; }",
+   "#viewStart{ grid-template-rows: minmax(0,1fr) auto; }"],
   // Four lines held open, so that choosing a name does not move the deck row
   // under a thumb already on its way to it.
   // The reservation is a measured height now rather than a count of lines, so
