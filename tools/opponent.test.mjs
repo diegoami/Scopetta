@@ -537,8 +537,8 @@ test("it never offers a play the rules refuse", () => {
 
 /* --- the golden fixture ------------------------------------------------------ */
 
-// §4: seeds 1..20, both seats compGioca, the sequence of plays and captures
-// frozen. Re-recorded only by
+// §4: seeds 1..20 for every fixed player, both seats compGioca, the sequence of
+// plays and captures frozen. Re-recorded only by
 //   node tools/selfplay.mjs --golden > tools/golden.json
 // and from v1.0 a change to the formula invalidates it, which is the whole
 // reason §3.4's contract says change a weight, not the formula.
@@ -546,26 +546,27 @@ test("the golden fixture still plays out exactly as recorded", () => {
   const golden = JSON.parse(
     readFileSync(fileURLToPath(new URL("./golden.json", import.meta.url)), "utf8"));
 
-  assert.deepEqual(golden.weights, FRANCO,
-    "the fixture was recorded against different weights — re-record it deliberately or not at all");
+  assert.deepEqual(golden.profiles, rollProfiles(rngSeed(1)),
+    "the fixture was recorded against a different roster — re-record it deliberately or not at all");
   assert.equal(golden.codaFrom, CODA_FROM, "the fixture was recorded with a different CODA_FROM");
-  assert.equal(golden.deals.length, 20);
+  assert.equal(golden.deals.length, 60);
 
   for (const want of golden.deals){
+    const P = golden.profiles[want.who];
     const s = newDeal({}, rngSeed(want.seed));
     const plays = [];
     while (!s.over){
       const who = s.deveGiocare;
-      const m = compGioca(s, FRANCO);
+      const m = compGioca(s, P);
       const c = s.hands[who][m.slot];
       plays.push(`${who}:${c.s}-${c.n}:${m.presa.join(".")}`);
       gioca(s, who, m.slot, m.presa);
     }
     // The plays, not just the score: two different deals can score alike, and
     // §4's point is that the fixture freezes what was played.
-    assert.deepEqual(plays, want.plays, `seed ${want.seed}: the plays have changed`);
+    assert.deepEqual(plays, want.plays, `${want.who} seed ${want.seed}: the plays have changed`);
     const r = scoreDeal(s);
-    assert.deepEqual(r.punti, want.punti, `seed ${want.seed}: the score has changed`);
+    assert.deepEqual(r.punti, want.punti, `${want.who} seed ${want.seed}: the score has changed`);
     assert.deepEqual(r.scope, want.scope);
     assert.equal(r.settebello, want.settebello);
     assert.equal(r.primiera, want.primiera);
@@ -578,10 +579,70 @@ test("the fixture is not trivially satisfiable", () => {
   // the test above while asserting nothing worth having.
   const golden = JSON.parse(
     readFileSync(fileURLToPath(new URL("./golden.json", import.meta.url)), "utf8"));
-  assert.equal(golden.deals.length, 20);
-  for (const d of golden.deals) assert.equal(d.plays.length, 36, `seed ${d.seed}`);
-  assert.ok(golden.deals.some(d => d.scope[0] + d.scope[1] > 0), "no scopa in twenty deals");
+  assert.equal(golden.deals.length, 60);
+  for (const d of golden.deals) assert.equal(d.plays.length, 36, `${d.who} seed ${d.seed}`);
+  assert.ok(golden.deals.some(d => d.scope[0] + d.scope[1] > 0), "no scopa in sixty deals");
   assert.ok(golden.deals.some(d => d.punti[0] !== d.punti[1]), "every recorded deal was a draw");
-  assert.ok(new Set(golden.deals.map(d => d.plays.join(""))).size === 20,
+  assert.equal(new Set(golden.deals.map(d => `${d.who}:${d.plays.join("")}`)).size, 60,
     "two recorded deals played out identically");
+});
+
+/* --- the roster -------------------------------------------------------------- */
+
+// §4 iteration 5's "done when", made checkable: a roster where two names choose
+// the same card is two names for one player, which is what dropped Tressette's
+// Valerio. The floor is a guard against sameness and nothing else — what the
+// roster is worth against the baselines is measured by `tools/selfplay.mjs`,
+// not here.
+test("four players, and each one plays a different game", () => {
+  const P4 = rollProfiles(rngSeed(1));
+  const names = ["Franco", "Graziano", "Valerio", "Piero"];
+  assert.deepEqual(Object.keys(P4).sort(), [...names].sort());
+
+  const same = (a, b) => a.slot === b.slot && a.presa.length === b.presa.length
+    && a.presa.every((x, i) => x === b.presa[i]);
+  const pairs = names.flatMap((a, i) => names.slice(i + 1).map(b => [a, b]));
+  const differ = Object.fromEntries(pairs.map(p => [p.join(" vs "), 0]));
+  let decisions = 0;
+
+  for (let seed = 1; seed <= 24; seed++){
+    const s = newDeal({}, rngSeed(seed));
+    // A different profile drives each deal: one driver's positions are one
+    // player's positions, and asking every question about Franco's hands
+    // flatters the pairs that play like Franco.
+    const driver = P4[names[seed % names.length]];
+    while (!s.over){
+      const who = s.deveGiocare;
+      // The decisions the weights actually make: not the forced moves, and not
+      // the endgame, where compGioca enumerates the rest of the deal and all
+      // four play the same card whatever their weights say.
+      if (s.giro < CODA_FROM && mosse(s, who).length > 1){
+        decisions++;
+        const chose = Object.fromEntries(names.map(k => [k, compGioca(s, P4[k])]));
+        for (const [a, b] of pairs) if (!same(chose[a], chose[b])) differ[`${a} vs ${b}`]++;
+      }
+      const m = compGioca(s, driver);
+      gioca(s, who, m.slot, m.presa);
+    }
+  }
+
+  // Measured on seeds 5001+ and 20001+ over the whole roster (`--differ`-style,
+  // ~16k decisions): the tightest pair, Franco and Graziano, ran 7.2–7.9% and
+  // every other pair 8.7–16.6%. The floor is 5%, a guard against sameness on a
+  // different (24-seed) window rather than a target.
+  for (const [pair, count] of Object.entries(differ))
+    assert.ok(count / decisions >= 0.05,
+      `${pair} choose the same card ${(100 * (1 - count / decisions)).toFixed(1)}% of the time: ` +
+      `that is one player with two names`);
+});
+
+test("Piero is rolled once per session, and the same roll twice is the same Piero", () => {
+  // The 1997 behaviour §0 keeps: SetProfiles ran from FormCreate. Two sessions
+  // get two Pieros; one seed gets one Piero, which is what makes the fixture and
+  // these tests possible at all.
+  const a = rollProfiles(rngSeed(1)).Piero;
+  const b = rollProfiles(rngSeed(1)).Piero;
+  const c = rollProfiles(rngSeed(2)).Piero;
+  assert.deepEqual(a, b, "the same seed has to give the same Piero");
+  assert.notDeepEqual(a, c, "two sessions have to give two Pieros");
 });

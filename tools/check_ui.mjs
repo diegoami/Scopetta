@@ -195,8 +195,9 @@ const setTavola = n => `(() => {
   const all = ${TAVOLA_13};
   state.tavola = all.slice(0, ${n});
   // The longest name in §0's roster, on every case of the pass that measures
-  // plates. Only Franco exists until iteration 5, and a plate asserted against
-  // one name is a plate asserted against one name.
+  // plates. Only Franco existed until iteration 5; the roster is four now, and
+  // Graziano is the longest name in it, so the plate is asserted against the
+  // longest rather than against whichever name the page happens to start on.
   state.opponent = "Graziano";
   state.selected = null; state.scelta = 0;
   render();

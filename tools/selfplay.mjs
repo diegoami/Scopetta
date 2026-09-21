@@ -6,6 +6,7 @@
 //   node tools/selfplay.mjs --ladder-all         every weight across its range
 //   node tools/selfplay.mjs --try KEY=V,KEY=V    a whole candidate at once
 //   node tools/selfplay.mjs --differ 200         how often two profiles differ
+//   node tools/selfplay.mjs --piero 12 400      Piero's rolls, and what each is
 //   node tools/selfplay.mjs --tempo 400          the tempo question
 //   node tools/selfplay.mjs --paired KEY=V       what one change is worth, paired
 //   node tools/selfplay.mjs --fifth 200          what the fifth round would cost
@@ -421,23 +422,40 @@ function fifth(n){
   console.log(`  CODA_FROM stays at ${CODA_FROM} unless one of these fits and the weights are re-laddered with it.`);
 }
 
-/* ---- do two profiles play differently? --------------------------------------- */
+/* ---- do the roster's players play differently? ------------------------------- */
 
-function differ(n, spec){
-  const P = { ...FRANCO };
-  for (const pair of spec.split(",")){
-    const [k, v] = pair.split("=");
-    if (!WEIGHT_KEYS.includes(k)) throw new Error(`no such weight: ${k}`);
-    P[k] = Number(v);
+// The pairwise difference table §4 iteration 5 asks for: how often every pair of
+// the roster chooses a different play, over the decisions the weights actually
+// make and driven by each profile in turn. A different driver matters because
+// one driver's positions are one player's positions, and asking every question
+// about Franco's hands flatters the pairs that play like Franco.
+//
+//   node tools/selfplay.mjs --differ 200
+function differ(n){
+  const P4 = rollProfiles(rngSeed(1));
+  const names = Object.keys(P4);
+  const pairs = names.flatMap((a, i) => names.slice(i + 1).map(b => [a, b]));
+  const count = Object.fromEntries(pairs.map(p => [p.join(" vs "), 0]));
+  let decisions = 0;
+
+  for (let seed = SEED_FROM; seed < SEED_FROM + n; seed++){
+    const rng = rngSeed(seed);
+    const s = newDeal({}, rng);
+    const driver = P4[names[seed % names.length]];
+    while (!s.over){
+      const who = s.deveGiocare;
+      if (isDecision(s, who)){
+        decisions++;
+        const chose = Object.fromEntries(names.map(k => [k, compGioca(s, P4[k])]));
+        for (const [a, b] of pairs) if (!sameMove(chose[a], chose[b])) count[`${a} vs ${b}`]++;
+      }
+      const m = compGioca(s, driver);
+      gioca(s, who, m.slot, m.presa);
+    }
   }
-  let differs = 0, decisions = 0;
-  match(n, "franco", "greedy", (state, who) => {
-    if (!isDecision(state, who)) return;
-    decisions++;
-    if (!sameMove(compGioca(state, P), compGioca(state, FRANCO))) differs++;
-  });
-  console.log(`\n${spec} differs from Franco in ${(100 * differs / decisions).toFixed(2)}%` +
-              ` of ${decisions} decisions, over ${n} seeds mirrored`);
+  console.log(`\nthe roster's pairwise difference, ${n} seeds from ${SEED_FROM}, ${decisions} decisions\n`);
+  for (const [pair, c] of Object.entries(count))
+    console.log(`  ${pair.padEnd(24)} ${(100 * c / decisions).toFixed(1)}%`);
 }
 
 /* ---- paired comparison -------------------------------------------------------- */
@@ -520,32 +538,68 @@ function tune(n){
   return P;
 }
 
+/* ---- Piero's rolls ----------------------------------------------------------- */
+
+// Piero is rolled once a session from bands that are supposed to hold his
+// corner. A band is a claim about plays, so it is measured: what each roll is
+// worth against the baselines, and how far it is from every fixed player.
+//
+//   node tools/selfplay.mjs --piero 12 400
+function piero(rolls, n){
+  const fixed = rollProfiles(rngSeed(1));
+  const names = ["Franco", "Graziano", "Valerio"];
+  console.log(`\nPiero rolled ${rolls} times, ${n} seeds from ${SEED_FROM}, mirrored\n`);
+  for (let i = 0; i < rolls; i++){
+    const P = rollProfiles(rngSeed(20000 + i)).Piero;
+    PLAYERS.__try = profile(P);
+    const g = match(n, "__try", "greedy");
+    const r = match(n, "__try", "random");
+    const diff = {}; let decisions = 0;
+    match(Math.min(n, 200), "franco", "greedy", (state, who) => {
+      if (!isDecision(state, who)) return;
+      decisions++;
+      const mine = compGioca(state, P);
+      for (const nm of names)
+        if (!sameMove(mine, compGioca(state, fixed[nm]))) diff[nm] = (diff[nm] || 0) + 1;
+    });
+    const away = names.map(nm => `${nm} ${(100 * (diff[nm] || 0) / decisions).toFixed(1)}%`).join("  ");
+    console.log(`  session ${String(i).padStart(2)}  GIFT ${P.GIFT_FACTOR.toFixed(2)} PRIMIERA ${P.PRIMIERA_WEIGHT.toFixed(2)} SCOPA_RISK ${P.SCOPA_RISK_PENALTY.toFixed(1)}` +
+      `  vs greedy ${(100 * scoreRate(g)).toFixed(1)}%  vs random ${(100 * scoreRate(r)).toFixed(1)}%` +
+      `  away (${decisions} decisions): ${away}`);
+  }
+}
+
 /* ---- the golden fixture ------------------------------------------------------ */
 
-// Seeds 1..20, both seats compGioca with Franco's weights, every play frozen.
-// Re-recorded only by `node tools/selfplay.mjs --golden > tools/golden.json`,
-// and a change to the formula or to rngSeed invalidates it — which is the whole
-// reason §3.4's contract says change a weight, not the formula, from v1.0.
+// Twenty deals per fixed player, and every weight of the whole roster frozen —
+// Piero's rolled three included. Re-recorded only by
+// `node tools/selfplay.mjs --golden > tools/golden.json`, and a change to the
+// formula or to rngSeed invalidates it — which is the whole reason §3.4's
+// contract says change a weight, not the formula, from v1.0.
 function goldenFixture(){
+  const recorded = ["Franco", "Graziano", "Valerio"];
   const deals = [];
-  for (let seed = 1; seed <= 20; seed++){
-    const rng = rngSeed(seed);
-    const s = newDeal({}, rng);
-    const plays = [];
-    while (!s.over){
-      const who = s.deveGiocare;
-      const m = compGioca(s, FRANCO);
-      const card = s.hands[who][m.slot];
-      plays.push(`${who}:${card.s}-${card.n}:${m.presa.join(".")}`);
-      gioca(s, who, m.slot, m.presa);
+  for (const who of recorded){
+    const P = PROFILES[who];
+    for (let seed = 1; seed <= 20; seed++){
+      const rng = rngSeed(seed);
+      const s = newDeal({}, rng);
+      const plays = [];
+      while (!s.over){
+        const seat = s.deveGiocare;
+        const m = compGioca(s, P);
+        const c = s.hands[seat][m.slot];
+        plays.push(`${seat}:${c.s}-${c.n}:${m.presa.join(".")}`);
+        gioca(s, seat, m.slot, m.presa);
+      }
+      const r = scoreDeal(s);
+      deals.push({ who, seed, mazziere: s.mazziere, plays,
+                   punti: r.punti, scope: r.scope,
+                   carte: r.carte, denari: r.denari,
+                   settebello: r.settebello, primiera: r.primiera });
     }
-    const r = scoreDeal(s);
-    deals.push({ seed, mazziere: s.mazziere, plays,
-                 punti: r.punti, scope: r.scope,
-                 carte: r.carte, denari: r.denari,
-                 settebello: r.settebello, primiera: r.primiera });
   }
-  return { weights: FRANCO, codaFrom: CODA_FROM, deals };
+  return { profiles: PROFILES, codaFrom: CODA_FROM, deals };
 }
 
 /* ---- run --------------------------------------------------------------------- */
@@ -557,11 +611,12 @@ if (argv[0] === "--probe") probe(n(1) || 1000);
 else if (argv[0] === "--ladder") ladder(argv[1], argv[2].split(",").map(Number), n(3) || 500);
 else if (argv[0] === "--ladder-all") ladderAll(n(1) || 500);
 else if (argv[0] === "--try") tryCandidate(argv[1], n(2) || 1000);
-else if (argv[0] === "--differ") differ(n(2) || 200, argv[1]);
+else if (argv[0] === "--differ") differ(n(1) || 200);
 else if (argv[0] === "--tempo") tempo(n(1) || 400);
 else if (argv[0] === "--fifth") fifth(n(1) || 200);
 else if (argv[0] === "--paired") paired(argv[1], n(2) || 1500);
 else if (argv[0] === "--tune") tune(n(1) || 400);
+else if (argv[0] === "--piero") piero(n(1) || 12, n(2) || 400);
 else if (argv[0] === "--golden") console.log(JSON.stringify(goldenFixture(), null, 1));
 else {
   console.log(readFileSync(fileURLToPath(import.meta.url), "utf8")

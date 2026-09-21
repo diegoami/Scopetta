@@ -515,12 +515,53 @@ function weights(values){
   return P;
 }
 
-// Iteration 2 tunes one profile. The roster — how many names, and which corners
-// they sit in — is iteration 5's measurement, per §0 decision 5, and this
-// returns whatever that turns out to be. Franco is the house standard either
-// way.
+// The roster: §0 decision 5, and iteration 5's measurement. Three fixed
+// vectors, one name each, and Piero rolled once per session. Values are in
+// WEIGHT_KEYS order:
+//   CARTE, DENARI, SETTEBELLO, PRIMIERA, SCOPA_RISK, GIFT, TEMPO
+//
+// The plan guessed the two risk terms would make four corners. They do not:
+// GIFT_FACTOR=0 is 55.8% against greedy-take, under §3.4's 57.7 floor, and the
+// risk corners leave Graziano 1.78% from Piero — two names, one player. What
+// separates players and keeps them strong is the two value weights and the
+// cautious corner. The measurement is in PLAN.md §3.4 and the iteration's PR.
+const FRANCO_WEIGHTS = weights([1, 2, 6, 0.4, 6, 0.5, 5]);
+
+// Graziano is the value-hunter: carte and denari both priced high, so he plays
+// to take and does not much mind what he leaves. 60.2% / 78.8% against
+// greedy-take / random-legal on seeds 20001+, 7.1% of the decisions the weights
+// make away from Franco.
+const GRAZIANO_WEIGHTS = weights([4, 8, 6, 0.4, 6, 0.5, 5]);
+
+// Valerio plays the card count and treats a denaro like any other card
+// (DENARI 0). The settebello is still a point on its own and keeps its bonus, so
+// what he ignores is the denari POINT, not the card. 59.4% / 78.8% on seeds
+// 20001+, 8.4% away from Franco.
+const VALERIO_WEIGHTS = weights([1, 0, 6, 0.4, 6, 0.5, 5]);
+
+// Piero is rolled once per session, as Discola's was — a house tradition, not a
+// Delphi accident. His corner is the cautious one, the opposite of Graziano's
+// value-hunting: he leaves nothing cheap, weights a high card in a suit he is
+// weak in, and fears a sweepable table. The bands hold the corner; the three
+// values are drawn, and the other four stay Franco's so that every roll is a
+// strong player and none lands on Franco, Graziano or Valerio.
+const PIERO_STANCE = {
+  GIFT_FACTOR: [1.7, 2.5],
+  PRIMIERA_WEIGHT: [1.5, 2.1],
+  SCOPA_RISK_PENALTY: [22, 30],
+};
+function rollPiero(rng){
+  const P = { ...FRANCO_WEIGHTS };
+  for (const k in PIERO_STANCE){
+    const [a, b] = PIERO_STANCE[k];
+    P[k] = a + (b - a) * rng();
+  }
+  return P;
+}
+
 function rollProfiles(rng){
-  return { Franco: weights([1, 2, 6, 0.4, 6, 0.5, 5]) };
+  return { Franco: FRANCO_WEIGHTS, Graziano: GRAZIANO_WEIGHTS,
+           Valerio: VALERIO_WEIGHTS, Piero: rollPiero(rng) };
 }
 
 // §3.4, the one quantity every term is built from. `mine` is my captured pile:
