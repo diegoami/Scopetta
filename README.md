@@ -60,27 +60,29 @@ acceptance floors.
 | **Valerio** — the count | plays the carte point; a denaro is any other card, but the settebello is still a point he takes |
 | **Piero** — rolled fresh every session | the cautious corner: leaves nothing cheap |
 
-On seeds nothing was tuned on, 2,000 deals a matchup —
-`SEED_FROM=5001 node tools/selfplay.mjs --probe 1000` and the same at
-`SEED_FROM=20001` — and `node tools/selfplay.mjs --differ 300` for the last
-column:
+On seeds nothing was tuned on — `SEED_FROM=5001 node tools/selfplay.mjs
+--roster 1000` and the same at `SEED_FROM=20001`, 2,000 deals a matchup, and
+`SEED_FROM=5001 node tools/selfplay.mjs --differ 300` (again at 20001) for the
+last column:
 
 | | vs greedy-take | vs random-legal | choices differing from Franco |
 |---|---|---|---|
-| Franco | 59.7% / 59.8% | 79.6% / 78.9% | — |
-| Graziano | 59.4% / 60.2% | 79.5% / 78.8% | 7.7% / 7.2% |
-| Valerio | 59.2% / 59.4% | 79.1% / 78.8% | 8.8% / 8.7% |
-| Piero\* | 58.3–58.8% / 58.4–59.3% | 79.3–79.6% / 78.0–78.5% | 9.2% / 8.7% |
+| Franco | 60.6% / 60.1% | 80.2% / 78.8% | — |
+| Graziano | 59.7% / 59.9% | 80.0% / 78.7% | 7.7% / 7.3% |
+| Valerio | 59.7% / 59.6% | 79.7% / 78.9% | 8.8% / 8.9% |
+| Piero\* | 58.4–58.8% / 58.4–59.3% | 79.3–79.7% / 78.0–78.5% | 8.3–9.3% / 8.3–8.9% |
 
 The two figures are seeds 5001+ and 20001+; both are ranges nothing was tuned
 on. Head to head the six pairs run about 48% to 52% — characters, not difficulty
 tiers. The closest two, Franco and Graziano, still play a different card in
-7.2–7.7% of the decisions the weights actually make, and the floors every player
+7.3–7.7% of the decisions the weights actually make, and the floors every player
 is held to are 57.7% against greedy-take and 76.9% against random-legal.
 
 \* rolled once per session, as Discola's was: he draws three weights from bands
-narrow enough that he cannot roll into somebody else's game. Twenty rolls —
-`node tools/selfplay.mjs --piero 8 400` — stay 8.3% to 9.3% away from Franco.
+narrow enough that he cannot roll into somebody else's game. Eight rolls —
+`node tools/selfplay.mjs --piero 8 400`, at both `SEED_FROM` values — stay 8.3%
+to 9.3% away from Franco, 58.4% to 59.3% against greedy-take and 78.0% to 79.7%
+against random-legal.
 
 In the last round the weights stop mattering: the deck is empty, the opponent's
 hand can be deduced, and the opponent enumerates the six remaining plays and

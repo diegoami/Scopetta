@@ -7,6 +7,7 @@
 //   node tools/selfplay.mjs --try KEY=V,KEY=V    a whole candidate at once
 //   node tools/selfplay.mjs --differ 200         how often two profiles differ
 //   node tools/selfplay.mjs --piero 12 400      Piero's rolls, and what each is
+//   node tools/selfplay.mjs --roster 1000       every player vs both baselines
 //   node tools/selfplay.mjs --tempo 400          the tempo question
 //   node tools/selfplay.mjs --paired KEY=V       what one change is worth, paired
 //   node tools/selfplay.mjs --fifth 200          what the fifth round would cost
@@ -538,6 +539,24 @@ function tune(n){
   return P;
 }
 
+/* ---- the roster against the baselines ---------------------------------------- */
+
+// Every player in the roster against both baselines, so the README's table can
+// be produced by a command rather than remembered.
+//
+//   SEED_FROM=5001 node tools/selfplay.mjs --roster 1000
+function roster(n){
+  const P4 = rollProfiles(rngSeed(1));
+  console.log(`\nthe roster against the baselines, ${n} seeds from ${SEED_FROM}, mirrored\n`);
+  for (const name of Object.keys(P4)){
+    PLAYERS.__try = profile(P4[name]);
+    const g = match(n, "__try", "greedy");
+    const r = match(n, "__try", "random");
+    console.log(`${name.padEnd(9)} vs greedy ${(100 * scoreRate(g)).toFixed(1)}% ± ${(100 * floor95(scoreRate(g), g.deals)).toFixed(1)}` +
+      `   vs random ${(100 * scoreRate(r)).toFixed(1)}% ± ${(100 * floor95(scoreRate(r), r.deals)).toFixed(1)}`);
+  }
+}
+
 /* ---- Piero's rolls ----------------------------------------------------------- */
 
 // Piero is rolled once a session from bands that are supposed to hold his
@@ -617,6 +636,7 @@ else if (argv[0] === "--fifth") fifth(n(1) || 200);
 else if (argv[0] === "--paired") paired(argv[1], n(2) || 1500);
 else if (argv[0] === "--tune") tune(n(1) || 400);
 else if (argv[0] === "--piero") piero(n(1) || 12, n(2) || 400);
+else if (argv[0] === "--roster") roster(n(1) || 1000);
 else if (argv[0] === "--golden") console.log(JSON.stringify(goldenFixture(), null, 1));
 else {
   console.log(readFileSync(fileURLToPath(import.meta.url), "utf8")
