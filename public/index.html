@@ -1963,12 +1963,13 @@ const PROFILES = rollProfiles(Math.random);
 // roster does not have gets no chip, and a name with no line here gets an empty
 // dossier rather than a broken sheet.
 //
-// Only Franco exists until iteration 5, whose measurement decides how many
+// Only Franco existed until iteration 5, whose measurement decided how many
 // corners the weights make and therefore how many names go on this sheet.
-// §3.4's ladder priced the levers; the roster is what iteration 5 does with
-// them, and this map grows with it.
 const DOSSIER = {
-  Franco: "Lo standard della casa. Equilibrato: conta le carte uscite, non lascia in tavola una somma che tu possa spazzare, e l'ultimo giro lo gioca esatto — come tutti gli altri, perché lì i pesi non servono più."
+  Franco: "Lo standard della casa. Equilibrato: conta le carte uscite, non lascia in tavola una somma che tu possa spazzare, e l'ultimo giro lo gioca esatto — come tutti gli altri, perché lì i pesi non servono più.",
+  Graziano: "Il prudente: non lascia in tavola una carta che valga qualcosa, dà peso ai sette e ai sei dei semi dove sei corto, e teme la scopa più di chiunque altro. Non ti regala niente.",
+  Valerio: "Gioca sulle carte, non sugli ori: per lui un denaro vale come qualunque altra carta e il settebello non lo smuove. Prende molto, ma il punto dei denari lo lascia spesso a te.",
+  Piero: "Tirato a sorte a ogni sessione, come nel Discola: è un giocatore diverso ogni volta. Stavolta dà molto peso alle carte e ai denari, e gioca per prendere — l'angolo che gli altri tre lasciano vuoto."
 };
 
 const state = {

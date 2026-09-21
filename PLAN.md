@@ -37,7 +37,7 @@ and the sections below say what moves.
 | 2 | Which Scopa? | **Scopa a due**: two players, three cards each, four on the table, the game the owner asked for. | Scopone (ten cards each, four players, partners) is a different game and a different table. See §5. |
 | 3 | What is a *partita*? | **One deal, as in Discola and Tressette.** Four points plus scope, the higher total wins. Chosen twice already by the owner; kept for the house's rhythm. | The traditional match to 11 across deals would add a running score, a second result dialog and a match saved between deals. `scoreDeal` is per-deal already, so it plugs in; see §5. A draw is more common here than in Tressette — two points each and no scope is a draw — and a match to 11 is the traditional answer to that. |
 | 4 | House rules | **Plain Scopa.** Capture is compulsory; a single card of equal value must be taken before any sum; a scopa with the last card of the deal does not count; three or four *re* among the first four cards is a redeal. **No** napola, no *asso piglia tutto*, no *re bello*, no *scopa d'assi*. | Napola is one scoring branch and one line in the result; each of the others is a rule branch. Every one is a named constant in the engine so a change is one line, and the about screen states what is played. |
-| 5 | The opponents | **The house's four names — Franco, Valerio, Graziano and Piero — with as many of them at the table as the formula has corners for.** Tressette's iteration 5 ended with four, one to each corner of the two weights that turned out to decide the game a profile plays, after a first pass had cut the roster to three by pricing one lever and missing the other. So the count here is what iteration 2's ladder finds: two levers make four corners and four names; one lever makes two, and the roster says so. Franco is the house standard whatever the count, and Piero is rolled once per session. | Nothing in the code moves either way — `rollProfiles` returns whatever the roster is — but a name that is not a different player by measurement does not go on the start sheet. |
+| 5 | The opponents | **The house's four names — Franco, Graziano, Valerio and Piero — one to each corner iteration 5's measurement finds.** Iteration 2's ladder priced the weights; iteration 5 asked which of them make *different* players and **the plan's guess was wrong**: the two risk terms do not. `GIFT_FACTOR=0` is 55.8% against greedy-take, under §3.4's floor, and the risk corners put two names 1.78% apart. What separates and stays strong is the **value-hunting corner** (carte and denari both priced high), the **count-only corner** (`DENARI_WEIGHT=0`) and the **cautious corner** (gift, primiera and sweep-risk all high); the fourth corner of that grid is a handicap, so it is empty and **Piero is rolled into it once per session**. Franco is the house standard whatever the count. | Nothing in the code moves either way — `rollProfiles` returns whatever the roster is — but a name that is not a different player by measurement does not go on the start sheet. |
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
 | 8 | What *scopa d'assi* means, if it is ever wanted | **Not built, and not guessed at.** Raised by iteration 1: §5 lists it among the variants left out, but this plan never says what it does, and the house rule genuinely differs — in some it is another name for *asso piglia tutto*, in others a scopa scored for an asso played to an empty table. The other three variants are live branches behind constants that are off; this one is a documented gap instead, because a constant guessing between two rules would be worse than none. | Nothing, unless the owner wants it. If so, say which of the two it is and it becomes a fourth constant like the others. |
@@ -80,7 +80,9 @@ its iteration 5 found a second lever — in the form the row has now, in the
 owner's words: *four, if the players are different enough*. What "different
 enough" means is §3.4's pairwise difference table, and a name that does not
 earn a measured distance from every other does not go on the start sheet.
-Decision 6 is the one the owner is most likely to feel at the table, and it
+**Iteration 5 measured it, and the four corners are the row above and §3.4's
+roster table; the count stayed four, but the levers are not the ones this plan
+guessed.** Decision 6 is the one the owner is most likely to feel at the table, and it
 is the one to revisit after playing iteration 3 if it turns out to hide the
 rule rather than teach it.
 
@@ -497,9 +499,10 @@ sheet discloses what is left. There is one structural reason to expect better th
 risk terms are multiplied by a probability that varies continuously through
 the deal, so a change to `SCOPA_RISK_PENALTY` changes an argmax somewhere in
 most deals, where Tressette's control penalties changed an argmax almost
-nowhere. The temperaments are written against that dial — Graziano goes for
-scope and risks them, Franco does not — and the measurement decides whether
-the dial is real.
+nowhere. The temperaments were written against that dial — Graziano goes for
+scope and risks them, Franco does not — and **the measurement said the dial is
+not real**: the risk corners are too close to each other and a low-gift corner
+is under the floor. §3.4's roster table is what iteration 5 found instead.
 
 **The sixth round is played exactly, not weighed.** When `giro` is 5 the deck
 is empty and `fuori` is their hand exactly. `compGioca` enumerates the six
@@ -540,18 +543,19 @@ so the formula plays the lower slot; only playing it out finds the 5. Over
 gave away six or more cards in about one ending in sixteen, which is what the
 sixth round's search is worth before anyone tunes a weight.
 
-**The temperaments.** Franco balanced and the default, the house standard
-under the same name as Tressette's. The others are the corners of the levers
-the ladder finds. In Tressette the two levers were "opens the long suit" and
-"keeps its lisci"; here the candidates are the two risk terms, so that
-Graziano goes for scope and risks them, Valerio takes what is there and leaves
-the table low, and Piero is rolled once per session by `rollProfiles` into
-the corner the fixed names leave empty — from bands narrow enough that he
-cannot roll into somebody else's game, because Tressette found that a corner
-of weight space is not a promise about plays, and measured what the bands
-cost him. How many corners exist, and so how many names, is §4 iteration 5's
-measurement, as it was in Tressette twice, and the dossier says what was
-measured.
+**The temperaments.** Franco balanced and the default, the house standard under
+the same name as Tressette's. The others are the corners of the levers iteration
+5 measured. In Tressette the two levers were "opens the long suit" and "keeps
+its lisci"; **this plan guessed the two risk terms, and the measurement said
+no** — `GIFT_FACTOR=0` is under the floor and the risk corners leave two names
+1.78% apart. The corners that are real are the value-hunting one (Graziano),
+the count-only one (`DENARI_WEIGHT=0`, Valerio) and the cautious one, which the
+fixed names leave empty and Piero is rolled into once per session from bands
+narrow enough that he cannot roll into somebody else's game — because Tressette
+found that a corner of weight space is not a promise about plays, and measured
+what the bands cost him. The count is still four names, but three are named
+directions and the fourth is rolled, not a symmetric grid; §3.4's roster table
+has the numbers and the dossier says what was measured.
 
 **The contract, from v1.0 on.** Tressette's rule: the formula is ours until it
 ships; after that, *change a weight, not the formula*, because the golden
@@ -584,6 +588,31 @@ random-legal**. Iteration 5 holds every fixed player and every roll of Piero to
 them, on both held-out ranges. (Not the seeds-1+ row: those seeds have been
 tuned against and reported on, so they are the one range a floor must not be
 drawn from.)
+
+**The roster, measured — and the plan's guess was wrong.** Iteration 5 asked
+which weights make *different* players. The two risk terms do not: `GIFT_FACTOR=0`
+measures 55.8% against greedy-take, under the floor, so a low-gift corner is not
+a player; and the risk corners put Graziano 1.78% from Piero, one player under
+two names. What separates players *and* holds the floor is the two value weights
+and the cautious corner:
+
+| player | vector | 5001+ greedy / random | 20001+ greedy / random | away from Franco |
+|---|---|---|---|---|
+| Franco | `[1, 2, 6, 0.4, 6, 0.5, 5]` | 59.7 / 79.6 | 59.8 / 78.9 | — |
+| Graziano | `[4, 8, 6, 0.4, 6, 0.5, 5]` | 59.4 / 79.5 | 60.2 / 78.8 | 7.2–7.9% |
+| Valerio | `[1, 0, 6, 0.4, 6, 0.5, 5]` | 59.2 / 79.1 | 59.4 / 78.8 | 8.1–8.5% |
+| Piero | rolled: `GIFT∈[1.7,2.5]`, `PRIMIERA∈[1.5,2.1]`, `SCOPA_RISK∈[22,30]` | 58.3–58.8 / 79.3–79.6 | 58.4–59.3 / 78.0–78.5 | 8.3–9.3% |
+
+Values are in `WEIGHT_KEYS` order: carte, denari, settebello, primiera, scopa
+risk, gift, tempo. The fourth corner of the (carte, denari) grid — both off —
+is a **handicap**: 54.9–55.8% against greedy-take, and no compensation lifts it
+back over the floor, so it is empty and Piero rolls in the cautious corner
+instead. Pairwise, over the decisions the weights make (seeds 5001+ / 20001+,
+~16k decisions), the tightest pair is Franco and Graziano at 7.9% / 7.2% and
+every other pair runs 8.7–16.6%. Every fixed player and every roll of Piero
+clears the floors on both ranges, and no pair is near the 65% head-to-head
+ceiling — all are about 50%. The command behind each figure is in the
+iteration's pull request.
 
 **Two identical players score exactly 50.0%, and that is an identity rather
 than a measurement.** `match` plays every seed from both seats, so two
@@ -1561,7 +1590,26 @@ on both seed ranges, no pair is further apart than 65% head to head, each
 name is a measured distance from every other, and the count of names is the
 count of corners, written into §0 with the dossier telling the truth about
 each. The fixture grows with the roster: twenty deals per fixed player and
-every weight of the whole roster, Piero's rolled five included.
+every weight of the whole roster, Piero's rolled three included.
+
+**What this iteration found.** The measurement contradicted the plan, which is
+what it was there for. The guessed levers (the two risk terms) do not make four
+corners: `GIFT_FACTOR=0` is under the floor, and the risk corners put two names
+1.78% apart. The (carte, denari) grid does make four corners, but the fourth —
+both off — is a handicap that fails the floor, so the roster is **three named
+directions and Piero rolled into the fourth**, not a symmetric grid. The corners
+are recorded in §0 and §3.4, and the dossiers say what each player was *measured*
+to do rather than what the plan guessed.
+
+Two things learned about the harness, not the game:
+
+- **A band is a claim about plays, so it is measured.** `--piero` reports what
+  each roll is worth and how far it is from every fixed player. The bands were
+  tightened twice on what it printed — once because a roll came within 6.5% of
+  Franco, once because a roll's random-legal rate sat on the floor.
+- **The fixture grows with the roster.** Twenty deals per fixed player
+  (`golden.json` is 60 deals now) and the whole roster's weights frozen, so a
+  change to a corner moves the fixture and the test says so.
 
 ### 6 — Ship (½ day)
 
