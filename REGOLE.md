@@ -161,8 +161,9 @@ delle smazzate resta in questo browser, su questo dispositivo, e non esce di lì
 
 ## Da dove vengono le carte
 
-> Le figure sono le immagini originali del **Discola** del 1997, in cinque
-> mazzi: Trevisane, Piacentine, Napoletane, Romagnole e Francesi. Sono copiate
-> carta per carta, senza ridisegnarle. L'avversario invece è di questo gioco:
-> una scopa del 1997 da cui copiarlo non c'era, e i suoi pesi si vedono nelle
-> impostazioni.
+> Le carte dei cinque mazzi originali — Trevisane, Piacentine, Napoletane,
+> Romagnole e Francesi — sono le immagini del **Discola** del 1997. A queste si
+> aggiunge un sesto mazzo, le Bresciane, una scansione di un mazzo Dal Negro.
+> Sono copiate carta per carta, senza ridisegnarle. L'avversario invece è di
+> questo gioco: una scopa del 1997 da cui copiarlo non c'era, e i suoi pesi si
+> vedono nelle impostazioni.

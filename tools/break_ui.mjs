@@ -265,6 +265,7 @@ const EXPECT = {
   "the chosen opponent is not marked as chosen": "chips are pressed",
   "the dossier is left empty": "has no dossier",
   "the deck row loses a deck": "the deck row offers",
+  "the deck picker loses its one row": "rows, not one",
   "the deck row does not say which deck": "the deck row names",
   "the dossier stops holding its height": "does not hold its height",
   "the settings sheet is not told which deck was picked": "the settings sheet still says",
@@ -749,6 +750,12 @@ const BREAKS = [
   ["the deck row loses a deck",
    "  el.decks.replaceChildren(...Object.keys(SHEET).map(name => {",
    "  el.decks.replaceChildren(...Object.keys(SHEET).slice(0, 4).map(name => {"],
+  // A sixth deck against a hard-coded column count wraps onto a second row and
+  // pushes the settings sheet's controls down — no overflow, no clipped text, no
+  // small tap target, so every other rule passes a picker folded in half.
+  ["the deck picker loses its one row",
+   ".decks{ display: grid; grid-template-columns: repeat(var(--deck-cols, 6), 1fr); gap: .4rem; }",
+   ".decks{ display: grid; grid-template-columns: repeat(5, 1fr); gap: .4rem; }"],
   ["the deck row does not say which deck",
    "  if (el.deckName) el.deckName.textContent = name;", ""],
   ["the settings sheet is not told which deck was picked",

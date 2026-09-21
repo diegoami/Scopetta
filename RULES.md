@@ -156,7 +156,8 @@ smazzate stays in this browser, on this device, and nothing leaves it.
 
 ## Where the cards come from
 
-> The faces are the original bitmaps from **Discola** of 1997, in five decks:
-> Trevisane, Piacentine, Napoletane, Romagnole and Francesi. They are copied
-> card for card and not redrawn. The opponent is this game's own: there was no
-> 1997 scopa to copy it from, and its weights are shown in the settings.
+> The cards of the five original decks — Trevisane, Piacentine, Napoletane,
+> Romagnole and Francesi — are the bitmaps of **Discola** of 1997. A sixth,
+> Bresciane, is added to them, a scan of a Dal Negro deck. They are copied card
+> for card and not redrawn. The opponent is this game's own: there was no 1997
+> scopa to copy it from, and its weights are shown in the settings.
