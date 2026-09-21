@@ -154,7 +154,7 @@ const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
 // a geometry question and it is at its worst where the cards are most crowded.
 const CHOICE_VIEWPORTS = [...SCREEN_VIEWPORTS, 'narrow and tall', 'iPad'];
 
-const DECKS = ['Trevisane', 'Romagnole', 'Napoletane', 'Piacentine', 'Francesi'];
+const DECKS = ['Trevisane', 'Romagnole', 'Napoletane', 'Piacentine', 'Francesi', 'Bresciane'];
 
 // tools/break_ui.mjs breaks the page on purpose and needs to run the check
 // dozens of times. QUICK trims the grid to the shapes that actually catch
@@ -633,6 +633,23 @@ const audit = () => {
     const r = el.getBoundingClientRect();
     out.push(`${name(el)} runs off the screen (${Math.round(r.left)}…${Math.round(r.right)} `
       + `vs 0…${window.innerWidth})`);
+  }
+
+  // The deck picker is one row, whatever the deck table holds. A sixth deck
+  // against a hard-coded repeat(5, 1fr) wraps onto a second row and pushes the
+  // controls under it down — no overflow, no clipped text, no small tap target,
+  // so every other rule here passes a picker that has quietly folded in half.
+  // Sharing a top is the whole of "one row", and it is what says the column
+  // count JS sets and the deck table it comes from are still in step. Not the
+  // CSS fallback beside it: buildDecks sets --deck-cols before the element has
+  // any children, so a fallback that disagreed would never be painted, never
+  // mind measured.
+  const opts = [...document.querySelectorAll('.deck-opt')];
+  if (opts.length) {
+    const tops = new Set(opts.map(b => Math.round(b.getBoundingClientRect().top)));
+    if (tops.size !== 1)
+      out.push(`the deck picker is on ${tops.size} rows, not one `
+        + `(${opts.length} decks at tops ${[...tops].join(', ')})`);
   }
 
   // Nothing on the table may sit on a hand card. Against the HAND'S OWN BOX
@@ -2603,8 +2620,9 @@ async function checkSheets(browser) {
       if (!last.hidden)
         out.push('the start-sheet row left its own smazzata behind');
       const decks = [...document.querySelectorAll('#decks .deck-opt')].map(d => d.dataset.deck);
-      if (decks.length !== 5)
-        out.push(`the deck row offers ${decks.length} decks, want 5`);
+      const want = Object.keys(SHEET);
+      if (JSON.stringify(decks) !== JSON.stringify(want))
+        out.push(`the deck row offers ${JSON.stringify(decks)}, the deck table is ${JSON.stringify(want)}`);
       if (document.querySelector('#deckName').textContent !== state.deck)
         out.push(`the deck row names ${document.querySelector('#deckName').textContent}, `
           + `the deck is ${state.deck}`);

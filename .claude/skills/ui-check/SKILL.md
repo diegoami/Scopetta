@@ -6,7 +6,7 @@ description: Run Scopetta's UI checks across every screen, state and viewport. U
 # UI check
 
 Scopetta is one HTML file and it has to work from a 360px phone to a 1920px
-desktop, in both orientations, with five decks whose cards have different
+desktop, in both orientations, with six decks whose cards have different
 aspect ratios. Nearly every UI defect this check was written for was invisible
 to code review and threw no error. It exists because reading the diff was
 repeatedly not enough — in Discola, where most of the thresholds below were
@@ -112,7 +112,7 @@ a check that silently passes. **Two of them are played rather than posed** — t
 sweep and the beat between rounds — because neither is a state the engine will
 sit in; see the pass below.
 
-**Table pass** — the card table at all twenty-five viewports in all five decks,
+**Table pass** — the card table at all twenty-five viewports in all six decks,
 **with the middle row holding 0, 4, 8 and 13 cards**. Asserts that no table card
 lands on a card in either hand, that your whole seat is above the fold, that the
 middle stays inside the table and draws one row in landscape and two in
@@ -410,6 +410,8 @@ was committed:
 | N points box(es) still drawn with show-points off | measured at the table, not from the settings sheet: every box on a hidden screen has no height whatever the setting says |
 | #plateOpp spills Npx past its own width, in the fallback-font pass | `--plate-w` was `7.5 × --t-pick`, the size of the name, when what sets the plate's minimum is `avversario` beneath it at `--t-tiny`. The two agree until both hit their floors — 16px and 12.5px at 320 and 360 — and then the box is 120px against 125px of content, in a fallback wider than the one this machine picks |
 | the sheets could not be driven to the end | not a rule about the page — it is the pass admitting a click timed out. Without it an exception took every finding the pass had already made with it, and the mutation harness saw eight failures with nothing in them |
+| the deck picker is on N rows, not one | a sixth deck against a hard-coded `repeat(5, 1fr)` wraps onto a second row and pushes the settings sheet's controls down — no overflow, no clipped text, no small tap target, so every other rule passes a picker folded in half. `buildDecks` sets `--deck-cols` from the deck table; the CSS fallback beside it cannot fail, because it is set before the element has children. Sharing a top is the whole of "one row" |
+| the history accepts a timestamp it cannot format | `Number.isFinite(m.t)` passes `1e100`, which is outside Date's range, and `Intl.DateTimeFormat.format` then throws `RangeError` mid-render — before the button that clears the bad row. The row seeds it beside a valid timestamp and asserts the drop, the draw and the clear button |
 
 If you believe a threshold is genuinely wrong, change it — then run the check
 against the commit that introduced the bug it names and confirm it still fails
