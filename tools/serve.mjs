@@ -37,8 +37,21 @@ const TYPES = {
 };
 
 const server = createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://localhost');
-  let rel = decodeURIComponent(url.pathname);
+  // Parsing the request line and decoding the path can both throw, and what
+  // throws here is the whole process: an async handler that rejects is an
+  // unhandled rejection, and Node ends the server with it. A path like `/%`
+  // is a malformed percent-escape, `decodeURIComponent` raises URIError, and
+  // one stray request then takes the dev server down — the opposite of what a
+  // local server is for. A request that cannot be parsed is the client's
+  // fault, so it gets a 400 and the server lives on.
+  let rel;
+  try {
+    const url = new URL(req.url, 'http://localhost');
+    rel = decodeURIComponent(url.pathname);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Bad request');
+    return;
+  }
   if (rel.endsWith('/')) rel += 'index.html';
 
   // Resolve first, then confirm the result is still inside public/. Joining a
