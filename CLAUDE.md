@@ -15,6 +15,53 @@ open, and blocks nothing. Tressette is the reference
 for everything the plan does not state, and Discola for everything Tressette
 does not; clone both beside this repo if they are not already there.
 
+## Read this much, and no more
+
+Normally inspect: `public/index.html`, `public/engine.js`, `tools/*`, the root
+`*.md`, `.github/workflows/*`, `.claude/skills/*`.
+
+Normally ignore: `node_modules/`, `.git/`, `public/decks/`, `public/fonts/`,
+`public/icons/`, and any binary. Read `package-lock.json` only when dependencies
+are the task.
+
+Ignoring a path here does not mean it should be deleted or gitignored.
+
+## Change the smallest thing
+
+Prefer targeted reads and diffs to repeating whole files: search first, then read
+the range you need, and show changes as a diff (`git diff -- <path>`,
+`git show HEAD:<path>`) rather than reprinting a file. Make edits with focused
+replacements instead of rewriting a file to change a few lines.
+
+## Keep command output short
+
+Prefer the repository's own commands over ad-hoc exploration, and cap their
+output. On PowerShell:
+
+```powershell
+npm run check 2>&1 | Select-Object -Last 40
+npm test 2>&1 | Select-Object -Last 20
+git diff --stat
+gh pr view <n> --json title,state --jq .
+```
+
+On bash, `| tail -40` instead of `Select-Object -Last 40`. Use `node --check
+<file>` for a syntax check instead of running a script, and scope file searches
+to source directories rather than searching from the repository root.
+
+## Sessions and handoff
+
+Start a fresh session after a completed logical unit — a merged PR, a finished
+fix, a documentation pass — or when a thread has grown long. Carry forward a
+short handoff:
+
+- **Completed:** what is now true (and any verification that ran).
+- **Files / decisions:** the paths touched and the decisions made, with reasons.
+- **Next:** the next task, or "nothing open".
+
+Durable facts belong in the repository (this file, the docs, the PR body), not
+in the conversation.
+
 ## After any UI change, run the UI check
 
 ```sh
@@ -340,6 +387,26 @@ that holds until it does not, which is the same failure as hard-coding, wearing
 a derivation.
 
 The `ui-check` skill explains what it covers and how to read a failure.
+
+## After any engine change, run the unit tests
+
+```sh
+node --test "tools/**/*.test.mjs"
+```
+
+They are deterministic — the shuffle and Piero's roll both arrive as a seeded
+rng — and they cover what the UI check cannot see: the capture rules, the
+scoring of every point, the trap positions, the search that refuses a position
+it cannot deduce, and the golden fixture's frozen deals. They live in
+`tools/engine.test.mjs` and `tools/opponent.test.mjs`.
+
+This rule is not optional for the same reason the UI one is not. The golden
+fixture freezes the plays: a formula change moves them by accident and the test
+says so, and a weight change moves them deliberately and the fixture is
+re-recorded in the same commit — `node tools/selfplay.mjs --golden >
+tools/golden.json`, which is what `tools/golden.json` is. The tests and
+`node tools/check_ui.mjs` are the two jobs in `.github/workflows/check.yml`, on
+every pull request and every push to `main`, and a red one does not merge.
 
 ## The card size is a budget, and it has two terms
 
