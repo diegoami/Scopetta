@@ -1,12 +1,51 @@
-# Working on Scopetta — principles shared by both agents
+> Shared by both tools, through AGENTS.md and CLAUDE.md.
 
-> Read by OpenCode through [`AGENTS.md`](AGENTS.md) and by Claude Code through
-> [`CLAUDE.md`](CLAUDE.md). These principles are the same for both; the
-> cross-model review is OpenCode's alone and lives in `AGENTS.md`, and the
-> verification gates are in `AGENTS.md` too.
+# Scopetta — principles shared by both agents
+
+Read by OpenCode through [`AGENTS.md`](AGENTS.md) and by Claude Code through
+[`CLAUDE.md`](CLAUDE.md). These principles and habits are the same for both; the
+cross-model review and the verification gates are in `AGENTS.md`.
 
 These are the habits that keep a change honest. Each is here because a review or
 a mutation harness found something green and wrong without it.
+
+## One source of truth
+
+| Idea | Owning file |
+|---|---|
+| the working principles and habits | `PRINCIPLES.md` |
+| the review process | `AGENTS.md` |
+| the verification gates (commands, run counts, CI schedule) | `AGENTS.md` |
+| the project's own rules (budget, frozen engine, conventions, check rationale) | `CLAUDE.md` |
+
+**The table is authoritative.** A non-owning file **links** to an idea and does
+not restate it, so an idea lives in one place and cannot drift. If the table does
+not settle a sentence that spans two owners, the fallback order is `AGENTS.md`
+for process and gates, this file for principles, `CLAUDE.md` for project rules. A
+contradiction found between the files is filed as a `defect` issue and fixed in
+the change that found it.
+
+## What counts as non-trivial
+
+A change is **non-trivial** if it can change:
+
+- **(a)** the observable behaviour of the game or any tool;
+- **(b)** what any check measures or asserts;
+- **(c)** the **design or process a builder must follow** — including
+  `AGENTS.md`, `CLAUDE.md`, `PRINCIPLES.md`, `.claude/**`, and `PLAN.md`,
+  `SPEC.md`, `ANDROID.md`, `RULES.md`, `REGOLE.md` where they state design; or
+- **(d)** player-facing copy.
+
+Anything that meets none of (a)–(d) is **trivial**. As a **conservative floor** —
+the checklist a builder uses instead of tracing imports — a diff touching
+`public/**`, `tools/**`, `.claude/**`, `.github/**`, `mobile/**`, `netlify.toml`,
+`package.json`, `package-lock.json`, or the three harness files is non-trivial
+whether or not the author believes the test is met.
+
+Triviality skips **only the design-issue stage** (`AGENTS.md`); it never skips
+the verification gates or the review of a file whose behaviour changed. A pure
+typo in a design document is trivial; a change to what that document says a
+builder must do is (c).
 
 ## Reproduce before you act
 

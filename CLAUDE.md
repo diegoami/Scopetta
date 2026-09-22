@@ -1,6 +1,4 @@
-> Guidance for Claude Code. The OpenCode review process lives in
-> [`AGENTS.md`](AGENTS.md), and the principles both tools share are in
-> [`PRINCIPLES.md`](PRINCIPLES.md).
+> Guidance for Claude Code. The OpenCode review process is in AGENTS.md. Shared principles: PRINCIPLES.md.
 
 # Scopetta
 
@@ -30,18 +28,20 @@ keeps the project's own rules.
 
 ## How changes are reviewed
 
-The principles both tools share are in [`PRINCIPLES.md`](PRINCIPLES.md), and the
-**verification gates** — the commands and how many times the full suite runs
-before a push — are in [`AGENTS.md`](AGENTS.md). Read the principles; run the
-gates.
+The shared principles, the **ownership map** and the test for a **non-trivial**
+change are in [`PRINCIPLES.md`](PRINCIPLES.md); the **verification gates** — the
+commands and how many times the full suite runs before a push — are in
+[`AGENTS.md`](AGENTS.md). Read the principles; run the gates.
 
-**Claude Code does not run the cross-model review.** That mechanism is
-OpenCode's, in `AGENTS.md`, and it needs a subagent from a different model family,
-which Claude Code cannot spawn. Here the process is the lighter one: a change is
-reviewed by a fresh context when one is available, the reviewer reports and the
-builder fixes in the same change — but no model is switched and no reviewer is
-spawned. A finding the builder disagrees with goes to the owner, not around the
-reviewer. Everything in `PRINCIPLES.md` applies either way.
+**Claude Code does not spawn a reviewer** of any family for this process. That
+mechanism is OpenCode's, in `AGENTS.md`, and it needs a subagent from a different
+model family. Here the lighter process applies: for a **non-trivial** change a
+**fresh-context review by a new session is required**; the **owner may also
+review**, as an independent option, but an owner is **not automatically a fresh
+context** — and is not one if they directed or wrote the change. The reviewer
+reports and the builder fixes in the same change; a finding the builder
+disagrees with goes to the owner, not around the reviewer. Everything in
+`PRINCIPLES.md` applies either way.
 
 ## After any UI change, run the UI check
 
