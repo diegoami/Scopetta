@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   EXPECTED_CERT, parseVersion, newestTag, newestBuildTools,
-  parseCertDigest, certificateMatches, signatureVerdict,
+  parseCertDigest, certificateMatches, isPlaceholderCert, signatureVerdict,
   parseChecksums, checksumProblems, releaseCreateArgs,
 } from './release_lib.mjs';
 
@@ -68,8 +68,25 @@ test("a missing verifier fails closed, and so does the wrong key", () => {
     verify: { status: 0, stdout: 'Signer #1 certificate SHA-256 digest: deadbeef' },
   }).ok, false, 'a verified signature on someone else\u2019s key is not ours');
 
-  const good = { status: 0, stdout: 'SHA-256 digest: ' + EXPECTED_CERT };
-  assert.deepEqual(signatureVerdict({ verify: good }), { ok: true, signer: EXPECTED_CERT });
+  // With a recorded key, a matching verify is accepted and a different one is
+  // not. (`expected` is injectable so this can be tested before the repo has a
+  // real key.)
+  const cert = 'a'.repeat(64);
+  const good = { status: 0, stdout: 'SHA-256 digest: ' + cert };
+  assert.deepEqual(signatureVerdict({ verify: good, expected: cert }), { ok: true, signer: cert });
+  assert.equal(signatureVerdict({ verify: good, expected: 'b'.repeat(64) }).ok, false);
+});
+
+test("the all-zero placeholder is refused, not matched", () => {
+  // This repo has no release key yet, so EXPECTED_CERT is the placeholder. A
+  // verifier that printed sixty-four zeros must not be accepted as "the
+  // recorded key" — the comparison has to refuse the placeholder explicitly.
+  assert.equal(isPlaceholderCert(), true, 'this repo still has no release key');
+  assert.equal(isPlaceholderCert('a'.repeat(64)), false);
+  assert.equal(isPlaceholderCert('nonsense'), true);
+
+  const v = signatureVerdict({ verify: { status: 0, stdout: 'SHA-256 digest: ' + EXPECTED_CERT } });
+  assert.equal(v.ok, false, 'the placeholder is never a signer');
 });
 
 // --- checksum validation, with the file reads injected

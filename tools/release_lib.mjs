@@ -75,11 +75,20 @@ export function certificateMatches(digest, expected = EXPECTED_CERT){
   return typeof digest === 'string' && digest.toLowerCase() === expected.toLowerCase();
 }
 
+// Whether the recorded digest is still the placeholder. The all-zero value is
+// not a certificate anybody will ever sign with, but "compare against the
+// constant" would happily accept a verifier that printed zeros, and the value is
+// only there until the owner records the real key. So it is refused explicitly
+// rather than by hoping the comparison fails.
+export function isPlaceholderCert(expected = EXPECTED_CERT){
+  return !/^[0-9a-f]{64}$/i.test(expected) || /^0{64}$/.test(expected);
+}
+
 // The decision step 4 of package_release has to make. `verify` is null when no
 // apksigner could be run at all. Absence used to mean "do not check", and the
 // APK was staged anyway; now it fails closed, and a verified signature on the
 // wrong certificate fails too.
-export function signatureVerdict({ verify }){
+export function signatureVerdict({ verify, expected = EXPECTED_CERT }){
   if (!verify)
     return { ok: false, reason:
       'apksigner was not found under the SDK build-tools, so the APK could not be ' +
@@ -91,13 +100,15 @@ export function signatureVerdict({ verify }){
   const digest = parseCertDigest(verify.stdout);
   if (!digest)
     return { ok: false, reason: 'apksigner printed no SHA-256 certificate digest.' };
-  if (!certificateMatches(digest))
+  if (isPlaceholderCert(expected))
     return { ok: false, reason:
-      `signed with ${digest}, expected ${EXPECTED_CERT}. If the recorded digest is ` +
-      'all zeros the key has never been recorded: paste the one above into ' +
-      'tools/release_lib.mjs and ANDROID.md §3 and run again. Otherwise that is ' +
-      'the wrong key, and an APK signed by anything else cannot update an ' +
-      'installed copy. Stop.' };
+      `no release key is recorded yet — EXPECTED_CERT is still the all-zero ` +
+      `placeholder. This build is signed with ${digest}. Paste that into ` +
+      'tools/release_lib.mjs and ANDROID.md §3, then run again.' };
+  if (!certificateMatches(digest, expected))
+    return { ok: false, reason:
+      `signed with ${digest}, expected ${expected}. That is the wrong key: an APK ` +
+      'signed by anything else cannot update an installed copy. Stop.' };
   return { ok: true, signer: digest };
 }
 

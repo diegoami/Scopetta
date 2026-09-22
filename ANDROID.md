@@ -110,8 +110,11 @@ smazzate live in the WebView's `localStorage`, and they stay on the device.
 off, but on devices from some manufacturers it does not stop device-to-device
 transfer, so the explicit excludes are the part that does —
 `app/src/main/res/xml/data_extraction_rules.xml` for API 31+ and
-`backup_rules.xml` for API 30 and lower, each excluding every domain. That is
-the strongest guarantee Android offers an app here.
+`backup_rules.xml` for API 30 and lower, each excluding **every** domain — the
+five credential-protected ones (`root`, `file`, `database`, `sharedpref`,
+`external`) and their four `device_*` counterparts for device-protected storage,
+which a plain `allowBackup="false"` would otherwise still carry in a backup.
+That is the strongest guarantee Android offers an app here.
 
 ## 3. Signing
 

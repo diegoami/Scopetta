@@ -6,7 +6,8 @@
          rule files exclude the same data from device-to-device migration, which
          on Android 12+ (this app targets 36) some manufacturers do not disable
          from `allowBackup` alone. `data_extraction_rules.xml` is the Android 12
-         format, `backup_rules.xml` the older one. -->
+         format, `backup_rules.xml` the older one; each excludes every domain,
+         credential-protected and device-protected. -->
     <application
         android:allowBackup="false"
         android:fullBackupContent="@xml/backup_rules"

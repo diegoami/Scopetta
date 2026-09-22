@@ -4,7 +4,10 @@
 
   `android:allowBackup="false"` already covers these versions, so this is the
   same policy stated rather than implied, for any device or manufacturer that
-  looks at the rules instead. The domains match data_extraction_rules.xml.
+  looks at the rules instead. The domains match data_extraction_rules.xml,
+  including the four device-protected ones (`device_root`, `device_file`,
+  `device_database`, `device_sharedpref`) that a plain backup would otherwise
+  still carry.
 -->
 <full-backup-content>
     <exclude domain="root" path="." />
@@ -12,4 +15,8 @@
     <exclude domain="database" path="." />
     <exclude domain="sharedpref" path="." />
     <exclude domain="external" path="." />
+    <exclude domain="device_root" path="." />
+    <exclude domain="device_file" path="." />
+    <exclude domain="device_database" path="." />
+    <exclude domain="device_sharedpref" path="." />
 </full-backup-content>
