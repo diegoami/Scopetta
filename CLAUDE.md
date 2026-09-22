@@ -376,9 +376,7 @@ This rule is not optional for the same reason the UI one is not. The golden
 fixture freezes the plays: a formula change moves them by accident and the test
 says so, and a weight change moves them deliberately and the fixture is
 re-recorded in the same commit — `node tools/selfplay.mjs --golden >
-tools/golden.json`, which is what `tools/golden.json` is. The tests and
-`node tools/check_ui.mjs` are the two jobs in `.github/workflows/check.yml`, on
-every pull request and every push to `main`, and a red one does not merge.
+tools/golden.json`, which is what `tools/golden.json` is.
 
 ## The card size is a budget, and it has two terms
 

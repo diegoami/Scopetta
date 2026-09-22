@@ -58,7 +58,8 @@ the reviewer. Reviews propose; the owner decides.
 
 ## The verification gates
 
-A red gate does not merge. CI runs the first two on every pull request.
+A red gate does not merge. CI runs the first two on every pull request and on
+every push to `main`, so a pull request branch does not run twice.
 
 ```sh
 node --test "tools/**/*.test.mjs"   # rules, opponent, roster, release decisions

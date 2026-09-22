@@ -1389,9 +1389,9 @@ that player; one on a shuffle where the case it meant to test never came up;
 one that searched the source for the word `document` and found it in the
 comment promising not to use it.
 
-`check.yml` runs `node --test 'tools/**/*.test.mjs'` — the glob, because
-Node 22 reads a bare directory as a module path — on pull requests and on
-pushes to `main` only, so a pull request branch does not run twice.
+`check.yml` runs the engine tests with a glob rather than a bare directory,
+because Node 22 reads a bare directory as a module path; the CI gate schedule is
+stated in [`AGENTS.md`](AGENTS.md).
 
 **The sort is the engine's, and it is here, not later.** Ties in `compGioca`
 go to the lowest slot, so the order of a hand is part of what the golden
