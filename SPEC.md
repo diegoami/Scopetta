@@ -279,7 +279,9 @@ node --test "tools/**/*.test.mjs"    94 tests, 93 passing, 1 skipped on Windows
 node tools/check_ui.mjs              twelve passes, needs playwright-core + Chromium
 ```
 
-Both run in CI on every pull request; a red check does not merge. The engine
+Both run in CI on every pull request; a red check does not merge. The gates and
+how many times the full suite runs before a push are in
+[`AGENTS.md`](AGENTS.md), which is their home. The engine
 tests cover the rules, the traps, the roster, the release decisions and the
 golden fixture. The UI check's twelve passes: the **document**, the **fonts**
 (every character inside the shipped subset, every `@font-face` loading with the

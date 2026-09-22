@@ -1744,6 +1744,11 @@ with:
 > when": do not start the next one. Finish with every check green, commit,
 > push, and open a pull request with the description in §7.4.
 
+**A non-trivial change may open its design as an issue first**, iterated with the
+reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the
+two stages and the tool split, and `PRINCIPLES.md` the principles both tools
+share. This is the one kind of issue that exists besides a `defect`.
+
 Why one iteration and not several: the defects this kind of page ships are
 invisible in a diff and show up only in the check or at the table, and a
 session that holds the whole of one iteration in context catches them.
@@ -1781,8 +1786,11 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 **The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
 by tool:** OpenCode runs the cross-model review, Claude Code does not (it cannot
 spawn another family as a subagent), and the principles both share are in
-[`PRINCIPLES.md`](PRINCIPLES.md). This section keeps the reasoning; the mechanics
-live in those files so the two do not drift.
+[`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
+an explicit AGREE, then the pull request reviewed the same way — the **signed
+verdict on GitHub**, and the rule that a **BLOCK goes to the owner** are stated
+there; this section keeps the reasoning, and the mechanics live in those files so
+the two do not drift.
 
 Every pull request gets one review from a **fresh context** — a new session or
 a subagent that has not seen the work. **The reviewer is GPT-5.6 Luna at high
@@ -1828,13 +1836,17 @@ the same rate and budget for it.
   verbatim; what was left out and why.
 - **CI on every pull request**: the engine tests from iteration 1, the UI
   check from iteration 3. A red check does not merge. Nothing is skipped or
-  quarantined to get to green.
-- **Issues only for defects found by playing** after an iteration has merged.
-  Label them `defect`. Each is closed by a pull request that fixes the page
-  *and* adds the assertion that would have caught it, written against the
-  broken commit first.
+  quarantined to get to green. The gates and the run count are stated in
+  [`AGENTS.md`](AGENTS.md).
+- **Issues hold a design proposal or a defect.** A non-trivial change may open
+  its design as an issue, iterated with the reviewer to an explicit AGREE before
+  the pull request (`AGENTS.md` states the two stages). A defect found by
+  playing, after an iteration has merged, is an issue too, labelled `defect`,
+  closed by a pull request that fixes the page *and* adds the assertion that
+  would have caught it, written against the broken commit first.
 - **No project board, no milestones, no issue per iteration.** This document
-  holds the plan; a second copy goes stale.
+  holds the plan; a second copy goes stale. A design issue is the exception, and
+  it is one per non-trivial change, not one per iteration.
 - **A pull request does not merge while its review is still running.**
   Tressette's iteration 5 merged with its review in flight, and the review
   then found the iteration's central conclusion wrong, which the next pull

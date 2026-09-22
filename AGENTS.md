@@ -26,19 +26,22 @@ context cannot either.
 ### The verdict goes on GitHub, signed
 
 A review that lives only in a conversation is one the owner cannot see and the
-next session cannot read. **The reviewer posts its verdict on the pull request**
-— `gh pr review <n> --comment --body-file <file>`, or `gh pr comment <n>` — and
-**signs it**, conventionally `— GPT-5.6 Luna, reviewer`, so a reader can tell it
-from the implementer's own comments. The implementer answers in a PR comment.
+next session cannot read. **The reviewer posts its verdict where the work is,
+and signs it** — on the **design issue** with `gh issue comment <n>`, and on the
+**pull request** with `gh pr review <n> --comment --body-file <file>` (or
+`gh pr comment <n>`). The signature is conventionally `— GPT-5.6 Luna, reviewer`,
+so a reader can tell it from the implementer's own comments. The implementer
+answers in a comment there too.
 
 ### Two stages
 
 1. **Design.** A non-trivial change starts as a **GitHub issue** holding the
-   proposal, iterated with the reviewer until an explicit **AGREE**. The issue
-   is the design review.
+   proposal. The reviewer's design verdict is **posted and signed on that
+   issue**, and the stage ends on an explicit **AGREE** in a comment there.
 2. **Implementation.** The **pull request** is reviewed the same way: findings
    are posted on the PR, the implementer fixes them in the same PR, and the
-   reviewer looks once more — until an explicit **AGREE**.
+   reviewer looks once more — until an explicit **AGREE**, posted and signed on
+   the PR.
 
 ### A BLOCK is not overridden
 

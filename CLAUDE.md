@@ -19,52 +19,14 @@ open, and blocks nothing. Tressette is the reference
 for everything the plan does not state, and Discola for everything Tressette
 does not; clone both beside this repo if they are not already there.
 
-## Read this much, and no more
+## How this file relates to the others
 
-Normally inspect: `public/index.html`, `public/engine.js`, `tools/*`, the root
-`*.md`, `.github/workflows/*`, `.claude/skills/*`.
-
-Normally ignore: `node_modules/`, `.git/`, `public/decks/`, `public/fonts/`,
-`public/icons/`, and any binary. Read `package-lock.json` only when dependencies
-are the task.
-
-Ignoring a path here does not mean it should be deleted or gitignored.
-
-## Change the smallest thing
-
-Prefer targeted reads and diffs to repeating whole files: search first, then read
-the range you need, and show changes as a diff (`git diff -- <path>`,
-`git show HEAD:<path>`) rather than reprinting a file. Make edits with focused
-replacements instead of rewriting a file to change a few lines.
-
-## Keep command output short
-
-Prefer the repository's own commands over ad-hoc exploration, and cap their
-output. On PowerShell:
-
-```powershell
-npm run check 2>&1 | Select-Object -Last 40
-npm test 2>&1 | Select-Object -Last 20
-git diff --stat
-gh pr view <n> --json title,state --jq .
-```
-
-On bash, `| tail -40` instead of `Select-Object -Last 40`. Use `node --check
-<file>` for a syntax check instead of running a script, and scope file searches
-to source directories rather than searching from the repository root.
-
-## Sessions and handoff
-
-Start a fresh session after a completed logical unit — a merged PR, a finished
-fix, a documentation pass — or when a thread has grown long. Carry forward a
-short handoff:
-
-- **Completed:** what is now true (and any verification that ran).
-- **Files / decisions:** the paths touched and the decisions made, with reasons.
-- **Next:** the next task, or "nothing open".
-
-Durable facts belong in the repository (this file, the docs, the PR body), not
-in the conversation.
+The tool-agnostic working principles are in
+[`PRINCIPLES.md`](PRINCIPLES.md): reproduce a finding or a claim before acting on
+it, say what a passing check would have caught, treat one measurement as a coin
+toss, flag out-of-scope defects, show diffs, the paths to inspect and ignore,
+keeping command output short, and the session handoff. Read them there; this file
+keeps the project's own rules.
 
 ## How changes are reviewed
 
@@ -83,21 +45,15 @@ reviewer. Everything in `PRINCIPLES.md` applies either way.
 
 ## After any UI change, run the UI check
 
-```sh
-node tools/check_ui.mjs
-```
-
-Not optional, and not only when something looks wrong. It runs in CI on every
-pull request as well, and a red check does not merge.
+The gate — the command and how many times it runs before a push — is in
+[`AGENTS.md`](AGENTS.md). Not optional, and not only when something looks wrong.
+It runs in CI on every pull request as well, and a red check does not merge.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
-and `check.yml` has the job that runs it. Ten passes: the document, every
-screen, the table at every viewport in every deck, the table again with the
-spacing inflated and no slack, the capture choice and the toast, the states
-only playing can reach — a card landing, a sweep, a lay and the beat between
-rounds — turning the phone over, the rules in both languages and both ways in,
-the sheets and the partita around the deal, and one whole deal.
+and `check.yml` has the job that runs it. `SPEC.md` §7 lists what it covers and
+[`AGENTS.md`](AGENTS.md) states the gates; this file does not repeat either, so
+the pass list has one home.
 
 **Which card a tap lands on, and which words a player can read, are decided by
 paint order, and nothing about paint order moves a box.** Four of iteration 3's
@@ -410,11 +366,7 @@ The `ui-check` skill explains what it covers and how to read a failure.
 
 ## After any engine change, run the unit tests
 
-```sh
-node --test "tools/**/*.test.mjs"
-```
-
-They are deterministic — the shuffle and Piero's roll both arrive as a seeded
+The gate is in [`AGENTS.md`](AGENTS.md). They are deterministic — the shuffle and Piero's roll both arrive as a seeded
 rng — and they cover what the UI check cannot see: the capture rules, the
 scoring of every point, the trap positions, the search that refuses a position
 it cannot deduce, and the golden fixture's frozen deals. They live in
