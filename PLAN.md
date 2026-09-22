@@ -246,7 +246,9 @@ the next.
 ```
 public/index.html   markup, CSS, and the UI script: screens, rendering, input, storage
 public/engine.js    rules + opponent. Pure functions over a plain state object. No DOM.
-public/decks/*.png  the five sprite sheets, byte-identical copies from Tressette
+public/decks/*      six sprite sheets: five PNG bitmaps and the Bresciane JPEG
+public/fonts/*.woff2 the latin subset, so the page needs no network
+public/icons/*      the tab and apple-touch icons, cut from a deck sheet
 tools/check_ui.mjs  the UI check, forked from Tressette and extended for the table (§3.7)
 tools/engine.test.mjs   unit tests on node --test, no dependencies
 tools/break.mjs     every rule broken on purpose, and whether a test caught it (§4 iteration 1)
@@ -254,9 +256,15 @@ tools/break_ui.mjs  the same for the page: every defect broken on purpose, and w
 tools/opponent.test.mjs the trap suite and the golden test
 tools/selfplay.mjs  headless matches: profile vs profile, vs baselines; the tuning loop
 tools/golden.json   the frozen plays, re-recorded by `selfplay.mjs --golden`
+tools/serve.mjs     the local dev server (`npm start`)
+tools/make_icons.mjs       cuts the icon from a deck sheet, for the tab and for Android
+tools/import_bresciane.mjs builds the sixth deck's sprite sheet
 tools/pack_cards.py the packer, carried over unchanged in case a deck is ever repacked
-netlify.toml        publish "public", cache decks/* for a year, revalidate index.html
-CLAUDE.md, README.md, RULES.md, REGOLE.md, SPEC.md (when built), .claude/skills/ui-check/
+tools/package_release.mjs, publish_release.mjs, release_lib.mjs, release.test.mjs   the Android release
+netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.html, /android redirect
+assets/             the 1024px icon layers Capacitor's asset tool reads
+mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
+CLAUDE.md, README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md (when built), .claude/skills/ui-check/
 ```
 
 Only `public/` is the site. Tressette's §3.1 says why the engine is a second
@@ -1859,6 +1867,7 @@ and the next iteration that forks checks for movement first.
 | CSS and table markup | Tressette | `dec1c74` | iteration 3 |
 | selfplay harness | Tressette | `dec1c74` | iteration 2 |
 | the sheets, the confirm, the history and the settings | Tressette | `374789f` | iteration 4 |
+| the Android wrapper and the release tooling | Tressette | `a25d0ab` | the owner's request (#9 item 3) |
 
 Iteration 0 checked for movement before forking, as the paragraph above says
 to: Tressette's `main` was still at `ed445bd`, the commit this plan pinned, so
@@ -1908,17 +1917,18 @@ is fun — and file what you find as `defect` issues.
 
 The reconciliation with discola-web and Tressette (issue #9) is done: the
 divergences that applied here were adopted as one pull request each, and all of
-them are merged. Three things came out of it and are not built:
+them are merged. Three things came out of it; two are still not built.
 
-- **Android packaging — issue #9 item 3.** Tressette wraps `public/` unchanged
-  with Capacitor and publishes a signed APK from a separate releases repo; its
-  `ANDROID.md` is the reference, and the icons tool there is the model for this
-  one. Its one precondition is now in place: the fonts are local, so the app can
-  run with the radio off. What is left is the wrapper, the launcher icons, the
-  signing and the release scripts. **It starts with the owner, not the builder:**
-  a public releases repo, a permanent `appId`, and a signing key are his to
-  make, and a different `appId` is a different app that cannot upgrade an
-  installed copy.
+- **Android packaging — issue #9 item 3. Built.** `mobile/` wraps `public/`
+  unchanged with Capacitor, `tools/make_icons.mjs` writes `assets/` for the
+  launcher icons, the release tooling is `tools/package_release.mjs` and
+  `tools/publish_release.mjs`, and `netlify.toml` carries the `/android`
+  redirect. `ANDROID.md` is the record. The debug APK was built and **launched
+  on the emulator with the radio off** — the offline run Tressette could not
+  make — and the table plays. What is left is the owner's, in `ANDROID.md` §6:
+  generate the signing key, create the public `diegoami/scopetta-releases`, and
+  publish; then the about screen gains its link. The `appId` is
+  `com.scopetta.app`, still changeable until the first publish.
 - **The 1100x320 viewport question — issue #5.** The shape was dropped from the
   grid when `--t-say` grew, and at that size `--cw` sits on its clamp floor, so
   the no-scrolling assertion tests the clamp rather than the derivation. #5
