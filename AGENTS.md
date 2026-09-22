@@ -10,9 +10,10 @@ cross-model review — and the verification gates.
 ## A change to this file is itself reviewed
 
 `AGENTS.md`, `CLAUDE.md` and `PRINCIPLES.md` are part of the design a builder
-follows, so a change to any of them is **non-trivial by definition**: it takes
-both stages below, to a signed AGREE on each, before it merges. **The process
-reviews its own amendment.**
+follows, so a change to any of them **that changes what a builder must do or how
+the process works** is non-trivial: it takes both stages below, to a signed AGREE
+on each, before it merges. A pure typo is trivial and takes neither. **The
+process reviews its own amendment.**
 
 ## The cross-model review
 
@@ -55,7 +56,11 @@ GitHub forbids approving your own pull request under one account.
    the stage ends on an explicit **AGREE** in a comment there.
 2. **Implementation.** The **pull request** is reviewed the same way, to an
    explicit **AGREE** posted and signed on the PR. The PR **links the design
-   issue and states the revision the AGREE was given on**.
+   issue and states the revision the AGREE was given on**, and its body carries
+   `Closes #<design issue>` when a design issue exists, and `Closes #<defect
+   issue>` when it fixes a defect, so both records close themselves; nothing is
+   closed by hand. **When one issue is both the design and the defect record, one
+   `Closes` line is enough.**
 
 **The defect path.** A `defect` issue is the record, not automatically a design
 proposal. A fix takes the design stage **unless all four** hold: it is limited to
@@ -64,11 +69,23 @@ defect; it changes no check's *design*; it changes no process. Adding or
 adjusting the assertion **that catches the recorded defect** is part of the fix,
 not check design; changing **what a check measures** is check design.
 
+**What a BLOCK may require.** Every required change in a BLOCK must be
+**necessary to the change as proposed** — directly required for its stated aim,
+its correctness, or its verification — not merely useful, preferred, or unrelated
+cleanup. A requirement that is really a **separate concern** is **filed as its
+own issue and linked**, not swallowed; the reviewer may require the split. If the
+required changes would turn the change into a different, larger one, the
+implementer may **withdraw and re-scope** it with the owner rather than let it
+grow: **the withdrawal and the re-scope are recorded** on the issue, and any
+AGREE already given is invalidated under § *AGREE, materiality, re-review*.
+
 ### A BLOCK is not overridden
 
-A finding the implementer disagrees with goes to the owner, in the pull request;
-it is not merged around. "The check is green" and "the assertion I wrote saw the
-defect it was written for" are different claims, and only the second counts.
+A BLOCK stands wherever it is posted. The implementer either satisfies it or
+takes it to the owner — on the **design issue** for a design BLOCK, on the
+**pull request** for an implementation BLOCK — and it is never merged around.
+"The check is green" and "the assertion I wrote saw the defect it was written
+for" are different claims, and only the second counts.
 
 ### Owner decisions are not the reviewer's
 
@@ -79,6 +96,15 @@ reason, and marked as an owner decision so a later session can tell it from a
 reviewer requirement. Conversation is not a record. The **implementer opens the
 design issue**; if they lack permission, the owner opens it and the implementer
 still presents the proposal.
+
+A required change that is **the owner's to decide** is not the reviewer's to fix.
+The reviewer requires that it be **decided and recorded** using the convention
+above — the recommended default, the reason, and the owner-decision mark. The
+reviewer checks that the record **addresses the BLOCK** and is consistent with
+the proposal, and **may not reject it merely for differing from the reviewer's
+preference**. If the owner **rejects the proposal** rather than deciding a value,
+the issue is **withdrawn or re-scoped**; it receives no AGREE and is not merged
+around.
 
 ### Reviewer unavailable, fallback, waiver
 
@@ -96,14 +122,19 @@ Only the designated reviewer issues the signed verdict, and it covers the
 **current revision**: the verdict marker is a comment ending with an explicit
 `AGREE` or `BLOCK`. **Any change after an AGREE invalidates it and requires a
 fresh signed verdict, except** edits limited to commit messages, whitespace, or a
-typo that changes no behaviour, no assertion and no process text — recorded on
-the PR as "no re-review". If the issue body is edited after an AGREE, or a
-verdict refers to an obsolete revision, the reviewer re-reviews the current
-revision. A stage's **initial** verdict comes from a **new reviewer session**; a
-**re-review after fixes may continue that session**, because the separation the
-gate protects is from the **implementer's** context, and the reviewer re-reads
-the current revision. A fallback reviewer is the designated reviewer for its
-stage.
+typo that changes no behaviour, no assertion and no process text. **This issue's
+body is the proposal**: a **non-material edit** — one that changes no behaviour,
+no assertion and no process text, by the same test — needs no re-review, while a
+**material edit to the body always does**. **A comment exists only to record a
+verdict, a finding, an answer or a recording**: a comment that **changes the
+proposal or records an owner decision the reviewer required** is material and
+triggers re-review; a comment that merely records an answer within the proposal
+does not. A verdict that refers to an obsolete revision is re-reviewed against
+the current one. A stage's **initial** verdict comes from a **new reviewer
+session**; a **re-review after fixes may continue that session**, because the
+separation the gate protects is from the **implementer's** context, and the
+reviewer re-reads the current revision. A fallback reviewer is the designated
+reviewer for its stage.
 
 ## The verification gates
 

@@ -40,12 +40,30 @@ Anything that meets none of (a)–(d) is **trivial**. As a **conservative floor*
 the checklist a builder uses instead of tracing imports — a diff touching
 `public/**`, `tools/**`, `.claude/**`, `.github/**`, `mobile/**`, `netlify.toml`,
 `package.json`, `package-lock.json`, or the three harness files is non-trivial
-whether or not the author believes the test is met.
+whether or not the author believes the test is met — **unless it is a pure typo
+or comment of the kind defined below.**
 
-Triviality skips **only the design-issue stage** (`AGENTS.md`); it never skips
-the verification gates or the review of a file whose behaviour changed. A pure
-typo in a design document is trivial; a change to what that document says a
-builder must do is (c).
+A **trivial** change takes **neither stage**: it needs no design issue, no pull
+request, no reviewer verdict and no AGREE. It may be committed straight to
+`main`. It still runs every gate its diff can affect, by the schedule in
+`AGENTS.md` — **and the two schedules are different, so both sentences matter**.
+The schedule below is the **local** one; **CI is unchanged and unconditional**.
+
+**Locally:** the engine tests on every push; the full UI check only when the diff
+changes the **measured-input tree**, with the rebase exception; a break harness
+**only** when it adds, changes or removes an assertion or a rule test. A
+document-only typo changes no measured input and runs the engine tests alone.
+
+**In CI:** `.github/workflows/check.yml` still runs both jobs on every pull
+request and on every push to `main`. A trivial change pushed to `main` therefore
+**does** get the UI job; this rule says nothing about CI and is not read as
+relaxing it.
+
+A **pure typo or comment** that changes no behaviour, no assertion and no process
+text is trivial **even in the three harness files or the design documents**. A
+change to what a builder must do or how the process works is (c), and
+non-trivial. **When a change is trivial, it does not open a pull request**, so
+the review stages never begin.
 
 ## Reproduce before you act
 
