@@ -28,6 +28,13 @@
  *   public/icons/apple-touch-icon.png  180
  *   public/icons/favicon-32.png    32  <link rel=icon>, and what stops the
  *                                      browser asking for /favicon.ico
+ *   assets/icon-only.png         1024  @capacitor/assets -> every Android density
+ *   assets/icon-foreground.png   1024  the adaptive icon's foreground layer
+ *   assets/icon-background.png   1024  the adaptive icon's background layer
+ *
+ * The three `assets/` files exist for the Android wrapper (mobile/): Capacitor's
+ * asset tool turns them into the launcher icons at every density. Nothing else
+ * reads them, and a web-only checkout can ignore the directory.
  *
  * playwright-core does the drawing, as it does in tools/check_ui.mjs: it is
  * already the one dev dependency, and a browser screenshot is an exact PNG of
@@ -63,6 +70,10 @@ const OUT = [
   ['public/icons/icon-192.png',         192, HALF, 0.12],
   ['public/icons/apple-touch-icon.png', 180, HALF, 0.12],
   ['public/icons/favicon-32.png',        32, COIN, 0.08],
+  // The adaptive icon's foreground needs much more felt around it: Android
+  // masks an adaptive icon to a shape that can cut a quarter off every edge.
+  ['assets/icon-only.png',             1024, HALF, 0.12],
+  ['assets/icon-foreground.png',       1024, HALF, 0.26],
 ];
 
 const square = (size, crop, pad) => {
@@ -80,6 +91,7 @@ const square = (size, crop, pad) => {
 };
 
 mkdirSync(ROOT + 'public/icons', { recursive: true });
+mkdirSync(ROOT + 'assets', { recursive: true });
 
 const browser = await chromium.launch();
 for (const [file, size, crop, pad] of OUT) {
@@ -88,5 +100,17 @@ for (const [file, size, crop, pad] of OUT) {
   await page.screenshot({ path: ROOT + file });
   await page.close();
   console.log(`wrote ${file}  ${size}x${size}`);
+}
+
+// The adaptive icon's background layer is the felt alone — no card, because
+// Android slides the two layers against each other and anything drawn here
+// would drift out from under the foreground.
+{
+  const page = await browser.newPage({ viewport: { width: 1024, height: 1024 }, deviceScaleFactor: 1 });
+  await page.setContent(`<body style="margin:0;width:1024px;height:1024px;
+    background:radial-gradient(120% 120% at 50% 0%, ${FELT_LIT}, ${FELT} 70%)"></body>`);
+  await page.screenshot({ path: ROOT + 'assets/icon-background.png' });
+  await page.close();
+  console.log('wrote assets/icon-background.png  1024x1024');
 }
 await browser.close();

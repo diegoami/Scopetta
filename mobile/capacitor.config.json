@@ -1,0 +1,8 @@
+{
+  "appId": "com.scopetta.app",
+  "appName": "Scopetta",
+  "webDir": "../public",
+  "android": {
+    "allowMixedContent": false
+  }
+}
