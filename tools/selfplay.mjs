@@ -33,7 +33,7 @@ const { BASSO, ALTO, altro, valore, primiera, isSettebello, DENARI,
         fuori, mosse, CODA_FROM, ordina } = globalThis;
 
 const PROFILES = rollProfiles(rngSeed(1));
-const FRANCO = PROFILES.Franco;
+const STANDARD = PROFILES.Graziano;
 
 /* ---- the players ----------------------------------------------------------- */
 
@@ -81,7 +81,7 @@ const profile = P => state => compGioca(state, P);
 const PLAYERS = {
   random: randomLegal,
   greedy: greedyTake,
-  franco: profile(FRANCO),
+  graziano: profile(STANDARD),
 };
 
 /* ---- one deal -------------------------------------------------------------- */
@@ -157,20 +157,20 @@ const sameMove = (a, b) =>
 
 function ladder(key, values, n){
   // Validated, because `--ladder SCOPA_BONUS 0,1000` used to print "from
-  // Franco's undefined" and a confident 0.00%: a silent fake confirmation for
+  // Graziano's undefined" and a confident 0.00%: a silent fake confirmation for
   // anyone re-auditing a weight that had been removed.
   if (!WEIGHT_KEYS.includes(key)) throw new Error(`no such weight: ${key}`);
-  console.log(`\n${key}, from Franco's ${FRANCO[key]}, ${n} seeds mirrored\n`);
-  console.log("  value   vs greedy   differs from Franco");
+  console.log(`\n${key}, from Graziano's ${STANDARD[key]}, ${n} seeds mirrored\n`);
+  console.log("  value   vs greedy   differs from Graziano");
   const rows = [];
   for (const v of values){
-    const P = { ...FRANCO, [key]: v };
+    const P = { ...STANDARD, [key]: v };
     PLAYERS.__try = profile(P);
     let differs = 0, decisions = 0;
     const watch = (state, who) => {
       if (!isDecision(state, who)) return;
       decisions++;
-      if (!sameMove(compGioca(state, P), compGioca(state, FRANCO))) differs++;
+      if (!sameMove(compGioca(state, P), compGioca(state, STANDARD))) differs++;
     };
     const r = match(n, "__try", "greedy", watch);
     const rate = scoreRate(r);
@@ -182,7 +182,7 @@ function ladder(key, values, n){
   return rows;
 }
 
-// Every weight across a range around Franco's value, including any set to zero
+// Every weight across a range around Graziano's value, including any set to zero
 // — which is the hole Tressette's ladder had, and the reason its roster was
 // wrong for an iteration.
 const RANGES = {
@@ -218,7 +218,7 @@ function ladderAll(n){
 }
 
 function tryCandidate(spec, n){
-  const P = { ...FRANCO };
+  const P = { ...STANDARD };
   for (const pair of spec.split(",")){
     const [k, v] = pair.split("=");
     if (!WEIGHT_KEYS.includes(k)) throw new Error(`no such weight: ${k}`);
@@ -232,21 +232,21 @@ function tryCandidate(spec, n){
   match(Math.min(n, 200), "__try", "greedy", (state, who) => {
     if (!isDecision(state, who)) return;
     decisions++;
-    if (!sameMove(compGioca(state, P), compGioca(state, FRANCO))) differs++;
+    if (!sameMove(compGioca(state, P), compGioca(state, STANDARD))) differs++;
   });
-  console.log(`  differs from Franco in ${(100 * differs / decisions).toFixed(2)}% of ${decisions} decisions`);
+  console.log(`  differs from Graziano in ${(100 * differs / decisions).toFixed(2)}% of ${decisions} decisions`);
 }
 
 /* ---- the questions §4 asks before the freeze --------------------------------- */
 
 function probe(n){
   console.log(`\nprobe, ${n} seeds mirrored, from seed ${SEED_FROM}\n`);
-  report(match(n, "franco", "greedy"));
-  report(match(n, "franco", "random"));
+  report(match(n, "graziano", "greedy"));
+  report(match(n, "graziano", "random"));
   report(match(n, "greedy", "random"));
   console.log("\n  the noise floor: two identical players, mirrored\n");
-  PLAYERS.__same = profile({ ...FRANCO });
-  report(match(n, "__same", "franco"));
+  PLAYERS.__same = profile({ ...STANDARD });
+  report(match(n, "__same", "graziano"));
 }
 
 // §4's tempo question: does the opponent lay low cards into a table it could
@@ -255,14 +255,14 @@ function probe(n){
 // held a sweep it could no longer reach.
 function tempo(n){
   // §4 asks: "does the opponent lay low cards into a table it could have swept
-  // next turn had it waited?" That is about tempo Franco *forfeits*, and the
+  // next turn had it waited?" That is about tempo Graziano *forfeits*, and the
   // first version of this function measured two adjacent things instead — what
   // it declines, and what it gives away. Both are worth knowing and are printed
   // below, but neither is the question, and the question was being closed on
   // them.
   //
   // Measured directly: at every decision with a real choice, try each legal
-  // play, let the opponent answer it with greedy-take, and ask whether Franco
+  // play, let the opponent answer it with greedy-take, and ask whether Graziano
   // would then hold a sweep. If some play would have left it one and the play
   // it made did not, it gave the tempo up.
   let decisions = 0, chances = 0, took = 0, gave = 0;
@@ -280,7 +280,7 @@ function tempo(n){
     if (all.length < 2) return;
     decisions++;
 
-    const chosen = compGioca(state, FRANCO);
+    const chosen = compGioca(state, STANDARD);
     if (!chosen) return;
     if (!chosen.presa.length){
       lays++;
@@ -307,12 +307,12 @@ function tempo(n){
     else gave++;
   };
 
-  match(n, "franco", "greedy", watch);
+  match(n, "graziano", "greedy", watch);
 
   console.log(`\ntempo, ${n} seeds mirrored\n`);
   console.log(`  decisions with a real choice: ${decisions}`);
   console.log(`\n  §4's question — tempo forfeited:\n`);
-  console.log(`  some play would have left Franco a sweep next turn: ${chances}` +
+  console.log(`  some play would have left Graziano a sweep next turn: ${chances}` +
               ` (${(100 * chances / decisions).toFixed(2)}%)`);
   console.log(`    it chose one of them: ${took}`);
   console.log(`    it gave the tempo up: ${gave}` +
@@ -322,11 +322,11 @@ function tempo(n){
   console.log(`  so it is an upper bound on what a 2-ply term could recover, not a defect count.`);
 
   console.log(`\n  and the two adjacent numbers, which are not the question:\n`);
-  console.log(`  Franco laid a card: ${lays} (${(100 * lays / decisions).toFixed(1)}%),` +
+  console.log(`  Graziano laid a card: ${lays} (${(100 * lays / decisions).toFixed(1)}%),` +
               ` of which a capture was available and declined: ${laidWithTake}` +
               ` (${(100 * laidWithTake / Math.max(1, lays)).toFixed(1)}%)`);
 
-  for (const [who, other] of [["franco", "greedy"], ["greedy", "franco"]]){
+  for (const [who, other] of [["graziano", "greedy"], ["greedy", "graziano"]]){
     let left = 0, swept = 0;
     for (let seed = SEED_FROM; seed < SEED_FROM + n; seed++){
       for (const firstIsA of [true, false]){
@@ -402,7 +402,7 @@ function fifthCost(n, sample){
         times.push(Number(process.hrtime.bigint() - t) / 1e6);
         timed = true;
       }
-      const m = compGioca(s, FRANCO);
+      const m = compGioca(s, STANDARD);
       gioca(s, who, m.slot, m.presa);
     }
   }
@@ -429,7 +429,7 @@ function fifth(n){
 // the roster chooses a different play, over the decisions the weights actually
 // make and driven by each profile in turn. A different driver matters because
 // one driver's positions are one player's positions, and asking every question
-// about Franco's hands flatters the pairs that play like Franco.
+// about Graziano's hands flatters the pairs that play like Graziano.
 //
 //   node tools/selfplay.mjs --differ 200
 function differ(n){
@@ -470,10 +470,10 @@ function differ(n){
 //
 //   node tools/selfplay.mjs --paired TEMPO_BONUS=0 1500
 //
-// reports what the OVERRIDE is worth relative to Franco, positive meaning
-// Franco is better.
+// reports what the OVERRIDE is worth relative to Graziano, positive meaning
+// Graziano is better.
 function paired(spec, n){
-  const Q = { ...FRANCO };
+  const Q = { ...STANDARD };
   for (const pair of spec.split(",")){
     const [k, v] = pair.split("=");
     if (!WEIGHT_KEYS.includes(k)) throw new Error(`no such weight: ${k}`);
@@ -495,17 +495,17 @@ function paired(spec, n){
   let a = 0, b = 0;
   for (let seed = SEED_FROM; seed < SEED_FROM + n; seed++)
     for (const asBasso of [true, false]){
-      const x = outcome(FRANCO, seed, asBasso), y = outcome(Q, seed, asBasso);
+      const x = outcome(STANDARD, seed, asBasso), y = outcome(Q, seed, asBasso);
       a += x; b += y; diffs.push(x - y);
     }
   const m = diffs.length, mean = diffs.reduce((x, y) => x + y, 0) / m;
   const sd = Math.sqrt(diffs.reduce((x, y) => x + (y - mean) ** 2, 0) / (m - 1));
   const se = sd / Math.sqrt(m);
   console.log(`\npaired, ${spec}, ${n} seeds from ${SEED_FROM}, mirrored\n`);
-  console.log(`  Franco ${(100 * a / m).toFixed(2)}%   ${spec} ${(100 * b / m).toFixed(2)}%`);
-  console.log(`  Franco − it: ${(100 * mean >= 0 ? "+" : "")}${(100 * mean).toFixed(2)}%` +
+  console.log(`  Graziano ${(100 * a / m).toFixed(2)}%   ${spec} ${(100 * b / m).toFixed(2)}%`);
+  console.log(`  Graziano − it: ${(100 * mean >= 0 ? "+" : "")}${(100 * mean).toFixed(2)}%` +
               ` ± ${(100 * 1.96 * se).toFixed(2)}   z = ${(mean / se).toFixed(2)}   over ${m} deals`);
-  console.log(`\n  |z| under about 2 is nothing. Positive means Franco is the better vector.`);
+  console.log(`\n  |z| under about 2 is nothing. Positive means Graziano is the better vector.`);
 }
 
 /* ---- tuning ------------------------------------------------------------------ */
@@ -516,7 +516,7 @@ function paired(spec, n){
 // measured somewhere else — §4 is explicit that a number measured on the seeds
 // it was tuned on is not a measurement of anything.
 function tune(n){
-  let P = { ...FRANCO };
+  let P = { ...STANDARD };
   console.log(`\ntuning against greedy-take on ${n} seeds from ${SEED_FROM}, mirrored\n`);
   const rateOf = Q => { PLAYERS.__try = profile(Q); return scoreRate(match(n, "__try", "greedy")); };
   let best = rateOf(P);
@@ -566,7 +566,7 @@ function roster(n){
 //   node tools/selfplay.mjs --piero 12 400
 function piero(rolls, n){
   const fixed = rollProfiles(rngSeed(1));
-  const names = ["Franco", "Graziano", "Valerio"];
+  const names = ["Graziano", "Franco", "Valerio"];
   console.log(`\nPiero rolled ${rolls} times, ${n} seeds from ${SEED_FROM}, mirrored\n`);
   for (let i = 0; i < rolls; i++){
     const P = rollProfiles(rngSeed(20000 + i)).Piero;
@@ -574,7 +574,7 @@ function piero(rolls, n){
     const g = match(n, "__try", "greedy");
     const r = match(n, "__try", "random");
     const diff = {}; let decisions = 0;
-    match(Math.min(n, 200), "franco", "greedy", (state, who) => {
+    match(Math.min(n, 200), "graziano", "greedy", (state, who) => {
       if (!isDecision(state, who)) return;
       decisions++;
       const mine = compGioca(state, P);
@@ -596,7 +596,7 @@ function piero(rolls, n){
 // formula or to rngSeed invalidates it — which is the whole reason §3.4's
 // contract says change a weight, not the formula, from v1.0.
 function goldenFixture(){
-  const recorded = ["Franco", "Graziano", "Valerio"];
+  const recorded = ["Graziano", "Franco", "Valerio"];
   const deals = [];
   for (const who of recorded){
     const P = PROFILES[who];

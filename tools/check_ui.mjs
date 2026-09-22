@@ -56,7 +56,7 @@
  *    confirm and every path through it, the result's verdict and the line
  *    saying what decided the smazzata, and the 1997 easter egg.
  *
- * 3. DEAL — one whole deal against Franco, played by tapping, choosing a
+ * 3. DEAL — one whole deal against Graziano, played by tapping, choosing a
  *    capture by both paths, reading the table after every play.
  *
  * Every threshold below is calibrated against a real defect, not taste. If you

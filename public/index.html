@@ -1159,7 +1159,7 @@ button.card:disabled{ cursor: default; }
      those move — the roster at iteration 5, the width every time the phone
      turns. `reserveDossier` measures it and writes it as an inline min-height.
 
-     Tressette holds four lines. Measured here, Franco's runs to six at 320x568
+     Tressette holds four lines. Measured here, Graziano's runs to six at 320x568
      and five at 360x800, so four would have been a number that was already
      wrong on the narrowest screen the game claims to work on — found by the
      check, which empties the box and watches the deck row move. */
@@ -1488,7 +1488,7 @@ button.card:disabled{ cursor: default; }
       <div class="plate" id="plateOpp">
         <span class="turn-dot"></span>
         <span>
-          <span class="plate__who" id="oppName">Franco</span>
+          <span class="plate__who" id="oppName">Graziano</span>
           <span class="plate__role">avversario</span>
         </span>
         <span class="plate__deal" id="oppDeal" hidden>mazziere</span>
@@ -1969,14 +1969,14 @@ const PROFILES = rollProfiles(Math.random);
 // Only Franco existed until iteration 5, whose measurement decided how many
 // corners the weights make and therefore how many names go on this sheet.
 const DOSSIER = {
-  Franco: "Lo standard della casa. Equilibrato: conta le carte uscite, non lascia in tavola una somma che tu possa spazzare, e l'ultimo giro lo gioca esatto — come tutti gli altri, perché lì i pesi non servono più.",
-  Graziano: "Punta su carte e denari: per lui ogni carta presa vale molto e un denaro ancor di più, così gioca per prendere e bada poco a quello che lascia. È il più aggressivo dei quattro, e a volte lascia in tavola più di quanto vorrebbe.",
+  Franco: "Punta su carte e denari: per lui ogni carta presa vale molto e un denaro ancor di più, così gioca per prendere e bada poco a quello che lascia. È il più aggressivo dei quattro, e a volte lascia in tavola più di quanto vorrebbe.",
+  Graziano: "Lo standard della casa. Equilibrato: conta le carte uscite, non lascia in tavola una somma che tu possa spazzare, e l'ultimo giro lo gioca esatto — come tutti gli altri, perché lì i pesi non servono più.",
   Valerio: "Gioca per il mazzo delle carte, non per gli ori: un denaro vale per lui come qualunque altra carta. Il settebello però resta un punto a sé, e quello lo prende. Prende molto, ma il punto dei denari spesso lo lascia a te.",
   Piero: "Tirato a sorte a ogni sessione, come in Discola: le sue inclinazioni cambiano e ogni volta è un giocatore un po' diverso — ma sempre il prudente. Non lascia in tavola una carta che valga qualcosa, dà peso ai sette e ai sei dei semi dove sei corto, e teme la scopa più di chiunque altro."
 };
 
 const state = {
-  hands: [], opponent: "Franco", deck: "Trevisane", felt: "#1e5140",
+  hands: [], opponent: "Graziano", deck: "Trevisane", felt: "#1e5140",
   speed: 900, showPoints: true, sound: true, cheat: false,
   dealt: false, over: false,
   selected: null, scelta: 0,
@@ -2691,7 +2691,7 @@ function resume(){
 
 function computerPlay(){
   if (state.deveGiocare !== ALTO || state.over) return;
-  const m = compGioca(state, PROFILES[state.opponent] || PROFILES.Franco);
+  const m = compGioca(state, PROFILES[state.opponent] || PROFILES.Graziano);
   if (!m) return;
   play(ALTO, m.slot, m.presa);
 }
@@ -3061,7 +3061,7 @@ function buildDecks(){
 // stops the deck row moving when the chosen name changes.
 //
 // It is read back off the page for the same reason `renderSay` reads its rung
-// back: a count of lines is a proxy for a height, and a bad one. Franco's
+// back: a count of lines is a proxy for a height, and a bad one. Graziano's
 // dossier is 203 characters, which is four lines on a laptop, five on a 360px
 // phone and six at 320x568 — so the four lines this was written as were already
 // wrong on the narrowest screen the game claims to work on, and the roster has
@@ -3281,7 +3281,7 @@ function boot(){
   state.sound = saved.sound !== false;
   el.soundSel.checked = state.sound;
 
-  selectOpponent(PROFILES[saved.opponent] ? saved.opponent : "Franco");
+  selectOpponent(PROFILES[saved.opponent] ? saved.opponent : "Graziano");
 
   // Nothing is dealt yet: you pick an opponent and a deck first.
   show("start");
