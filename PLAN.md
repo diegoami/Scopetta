@@ -1747,7 +1747,11 @@ with:
 **A non-trivial change may open its design as an issue first**, iterated with the
 reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the
 two stages and the tool split, and `PRINCIPLES.md` the principles both tools
-share. This is the one kind of issue that exists besides a `defect`.
+share. This is the one kind of issue that exists besides a `defect`. **The
+iteration-and-pull-request flow in this section is the route for non-trivial
+work**; a **trivial** change — one that changes no behaviour, no assertion and no
+process text — takes neither stage, needs no pull request, and may be committed
+straight to `main`, per `AGENTS.md`.
 
 Why one iteration and not several: the defects this kind of page ships are
 invisible in a diff and show up only in the check or at the table, and a
@@ -1793,7 +1797,9 @@ there; this section keeps the reasoning, and the mechanics live in those files s
 the two do not drift.
 
 Every pull request gets one review from a **fresh context** — a new session or
-a subagent that has not seen the work. **The reviewer is GPT-5.6 Luna at high
+a subagent that has not seen the work. **This is the implementation stage of the
+non-trivial route**: a trivial change takes neither stage and never reaches it,
+per `AGENTS.md`. **The reviewer is GPT-5.6 Luna at high
 effort** (`opencode/gpt-5.6-luna#high`), run as a subagent with that model; the
 builder is DeepSeek V4.1 Flash. A fresh context matters more than a different
 model — the builder cannot see its own diff, and a reviewer that shares its
