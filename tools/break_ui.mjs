@@ -334,6 +334,7 @@ const EXPECT = {
   "the scopa marks stop counting": "scopa marks",
   "the primiera counter reads the wrong pile": "counters say",
   "the counters stop at three points": "counters say",
+  "the running score's scope row stops counting": "scope counter says",
   "the middle draws a card the engine does not hold": "cards, the engine holds",
   "the denari are counted for the wrong player": "denari, the piles hold",
   "the primiera is read from the wrong pile": "of primiera, the piles make",
@@ -642,6 +643,13 @@ const BREAKS = [
   ["the counters stop at three points",
    "    [\"primiera\", prim === null || prim === undefined ? \"—\" : String(prim),\n      prim !== null && prim !== undefined],\n",
    ""],
+  // The fifth point, which the running score used to omit entirely: a scope
+  // accumulates through the deal like the other four, and the box now counts it.
+  // Named for the running score to keep it apart from the result breakdown's own
+  // scope break, which shares the word.
+  ["the running score's scope row stops counting",
+   "    [\"scope\", String(scope), scope > 0],",
+   "    [\"scope\", \"0\", false],"],
   ["the scopa marks stop counting",
    "  const s = state.scope ? state.scope[who] : 0;",
    "  const s = 0;"],

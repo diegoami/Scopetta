@@ -3361,7 +3361,8 @@ async function checkDeal(browser) {
         return [String(pile.length),
                 String(pile.filter(c => c.s === DENARI).length),
                 pile.some(isSettebello) ? 'sì' : '—',
-                p === null || p === undefined ? '—' : String(p)];
+                p === null || p === undefined ? '—' : String(p),
+                String(state.scope[w])];
       }),
     }));
 
@@ -3376,11 +3377,19 @@ async function checkDeal(browser) {
       bad.push(`play ${st.plays}: the deck badge says ${st.badgeDeck}, the deck holds ${st.deck}`);
     if (st.marksYou !== st.scope[0] || st.marksOpp !== st.scope[1])
       bad.push(`play ${st.plays}: ${st.marksYou}/${st.marksOpp} scopa marks, the engine counted ${st.scope[0]}/${st.scope[1]}`);
-    for (const w of [0, 1])
-      if (JSON.stringify(st.shownPoints[w]) !== JSON.stringify(st.wantPoints[w]))
+    for (const w of [0, 1]){
+      const shown = st.shownPoints[w], want = st.wantPoints[w];
+      if (JSON.stringify(shown.slice(0, 4)) !== JSON.stringify(want.slice(0, 4)))
         bad.push(`play ${st.plays}: ${w ? "their" : "your"} counters say `
-          + `${JSON.stringify(st.shownPoints[w])}, the pile holds `
-          + `${JSON.stringify(st.wantPoints[w])} (carte, ori, settebello, primiera)`);
+          + `${JSON.stringify(shown.slice(0, 4))}, the pile holds `
+          + `${JSON.stringify(want.slice(0, 4))} (carte, ori, settebello, primiera)`);
+      // The fifth point, and the one the running score used to leave to the
+      // marks on the pile. Kept as its own line so the break written for it can
+      // name one assertion rather than sharing "counters say" with the four.
+      if (shown[4] !== want[4])
+        bad.push(`play ${st.plays}: ${w ? "their" : "your"} scope counter says `
+          + `${shown[4]}, the engine counted ${st.scope[w]}`);
+    }
     // Every card you hold is shown, and every slot you do not is empty —
     // except in the beat between rounds, which is the one moment the page draws
     // empty hands over a state that already holds the next three. checkStates

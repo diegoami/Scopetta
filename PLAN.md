@@ -779,9 +779,14 @@ settings ──Cambia avversario──► confirm ─► start
   with a *mazziere* tag on whoever dealt. Each pile shows that player's
   scope always — a scopa is public, and §3.7 puts them face up across the top
   of the pile where tradition puts the cards that made them. With show-points
-  on, carte, *ori*, the settebello and the **primiera**, in the column opposite
-  the plate rather than on the plate, which is iteration 4's correction. The
-  primiera is the owner's, asked for after playing the preview and right: it is
+  on, carte, *ori*, the settebello, the **primiera** and the **scope**, in the
+  column opposite the plate rather than on the plate, which is iteration 4's
+  correction. **Scope was the fifth and arrived last**: the running score
+  omitted it at first, leaving the marks on the pile to carry it while the result
+  panel listed it, so the box showed four of the five points during play and five
+  at the end. It is a row now, and five still fit the fixed `--plate-h` that the
+  fourth row was tightened to fit — measured at every viewport in every deck.
+  The primiera is the owner's, asked for after playing the preview and right: it is
   the only one of the five a player cannot keep in their head, which is the same
   reason the result shows its totals rather than a tick. A dash while a suit is
   missing, as the result draws it, because that is not a zero. A transient
