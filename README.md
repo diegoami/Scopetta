@@ -93,7 +93,7 @@ plays them out exactly — so all four play those last six cards alike.
 
 ```sh
 npm run setup                       # playwright-core and a Chromium, once
-npm test                            # 86 engine tests, no dependencies
+npm test                            # 94 tests: 93 pass, 1 skipped on Windows
 npm run check                       # the UI check
 npm start                           # public/ on http://localhost:8080
 node tools/selfplay.mjs             # the opponents against the baselines

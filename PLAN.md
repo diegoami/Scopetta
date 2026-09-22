@@ -1927,10 +1927,10 @@ is fun — and file what you find as `defect` issues.
 
 ### 7.7 What remains after the divergence review
 
-The reconciliation with discola-web and Tressette (issue #9) is done: the
-divergences that applied here were adopted as one pull request each, and all of
-them are merged. Of the three things that came out of it, one is shipped and two
-are still open.
+The reconciliation with discola-web and Tressette (issue #9) is **done and
+closed**: the divergences that applied here were adopted as one pull request
+each, and all of them are merged. Of the three things it raised, Android is
+shipped, one decision is open, and one is a follow-up rather than an open item.
 
 - **Android packaging — issue #9 item 3. Built and shipped.** `mobile/` wraps
   `public/` unchanged with Capacitor, `tools/make_icons.mjs` writes `assets/`
@@ -1949,10 +1949,11 @@ are still open.
   designed fallback; put it back with an exemption where `--cw` is on its floor;
   or put it back and assert the scroll is bounded. It is a question about what
   the check covers, not a defect.
-- **The CI action versions.** `actions/checkout@v4` and `actions/setup-node@v4`
-  target Node 20, which GitHub is forcing onto Node 24 and warns about on every
-  run. A warning today and not a failure; the bump belongs in the next change
-  to `check.yml`, not in a change of its own.
+- **The CI action versions — a follow-up, not an open item.** `actions/checkout@v4`
+  and `actions/setup-node@v4` target Node 20, which GitHub is forcing onto Node 24
+  and warns about on every run. A warning today and not a failure; the bump
+  belongs in the next change to `check.yml`, not in a change of its own. It is
+  not tracked as an issue.
 
 ## 8. Glossary
 

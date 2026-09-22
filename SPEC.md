@@ -4,12 +4,12 @@ The handover document. `PLAN.md` was the plan and is kept as the record of how
 the project got here, including what it got wrong; this file describes the thing
 that exists, and is what a stranger taking the project over should read first.
 
-The game is live at **<https://scopetta.netlify.app>** — the Netlify site linked
-to `main`, which publishes `public/` and nothing else. That URL is not reachable
-from the container the work is done in (the network policy denies it), so
-nothing in the repository asserts that it serves; the owner confirms it by
-playing it, and `scopetta.netlify.app/PLAN.md` returning 404 is the one-line
-check that the publish directory is right.
+The game is published at **<https://scopetta.netlify.app>** — the Netlify site
+linked to `main`, which publishes `public/` and nothing else. That URL cannot be
+reached from the environment the work is done in (the network policy denies it),
+so **nothing in this repository asserts that it serves**. The owner confirms it
+by playing it, and `scopetta.netlify.app/PLAN.md` returning 404 is the one line
+of that same pass; both are the owner's, not a check's.
 
 ---
 
@@ -103,12 +103,13 @@ the same commit:
 node tools/selfplay.mjs --golden > tools/golden.json
 ```
 
-It has been recorded twice: once when iteration 2 froze Franco's twenty deals,
-and again at iteration 5 when the roster arrived (twenty deals per fixed player,
-the roster's weights, Piero's roll included), and once more when the two names
-were swapped by the owner's request (#23) — which is the same "re-record in the
-commit that moves it" rule, and the reason the fixture's `profiles` is compared
-against `rollProfiles(rngSeed(1))` rather than against a literal.
+It has been recorded three times: once when iteration 2 froze Franco's twenty
+deals, again at iteration 5 when the roster arrived (twenty deals per fixed
+player, the roster's weights, Piero's roll included), and once more when the two
+names were swapped by the owner's request (#23) — which is the same
+"re-record in the commit that moves it" rule, and the reason the fixture's
+`profiles` is compared against `rollProfiles(rngSeed(1))` rather than against a
+literal.
 
 ## 4. The rules as implemented
 
@@ -147,6 +148,7 @@ and then to the first capture. The one quantity every term is built from:
 ```
 worth(c) = CARTE_WEIGHT
          + (denari ? DENARI_WEIGHT : 0)
+         + (settebello ? SETTEBELLO_BONUS : 0)
          + max(0, primiera(c) − bestMine(suit(c))) × PRIMIERA_WEIGHT
 ```
 
@@ -271,7 +273,7 @@ the box.
 ## 7. The checks
 
 ```sh
-node --test "tools/**/*.test.mjs"    93 tests, no dependencies
+node --test "tools/**/*.test.mjs"    94 tests, 93 passing, 1 skipped on Windows
 node tools/check_ui.mjs              twelve passes, needs playwright-core + Chromium
 ```
 
@@ -342,7 +344,7 @@ something green and wrong. The ones a newcomer should know first:
 - **The fifth-round search was measured and does not fit.** Extending the exact
   search one round earlier costs a worst case near 1,900ms over all 84 hands,
   against a 70ms budget, so `CODA_FROM` stays at 5 (PLAN.md §3.4).
-- **The tightest pair of players is 7.2–7.7% apart**, Graziano and Franco. That
+- **The tightest pair of players is 7.3–7.7% apart**, Graziano and Franco. That
   is above the "not a player" line the project holds itself to, but it is the
   floor on how different the roster is, and it is measured rather than chosen.
 - **Piero varies less than his name promises.** He draws three weights from bands
