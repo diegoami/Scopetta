@@ -122,6 +122,7 @@ const EXPECT = {
   "the search ties to the highest slot": "the golden fixture still plays out exactly as recorded",
   "fuori counts my own hand as unseen": "the golden fixture still plays out exactly as recorded",
   "pHold always says they hold it": "the golden fixture still plays out exactly as recorded",
+  "the roster no longer leads with the house standard": "four players, and each one plays a different game",
 };
 
 const BREAKS = [
@@ -356,6 +357,13 @@ const BREAKS = [
   ["the cards are dealt to the opponent first",
    "  for (const who of [BASSO, ALTO]){\n    const hand = [];",
    "  for (const who of [ALTO, BASSO]){\n    const hand = [];"],
+  // The start sheet renders the roster in key order, so a roster that does not lead
+  // with the house standard puts the wrong name first in the selection list. Only the
+  // first-key assertion sees it: the membership assertion sorts, and the golden fixture
+  // compares objects, where key order is not observed.
+  ["the roster no longer leads with the house standard",
+   "  return { Graziano: GRAZIANO_WEIGHTS, Franco: FRANCO_WEIGHTS,",
+   "  return { Franco: FRANCO_WEIGHTS, Graziano: GRAZIANO_WEIGHTS,"],
   ["the score hands out a live reference to the scope",
    "                scope: state.scope.slice(), punti };",
    "                scope: state.scope, punti };"],
