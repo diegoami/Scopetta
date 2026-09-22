@@ -188,14 +188,11 @@ ever grows.
 survives every release, and because the release page is where the notes and the
 checksum are, which is what somebody about to sideload an APK should read.
 
-**The about screen does not carry the link yet, deliberately.** The releases
-repo and the first release are the owner's steps, and a link to a page that does
-not exist is a broken link on the live site. Once a release is published, the
-about screen gains a pair of lines — one per `section[lang]`, because that
-screen carries its body twice — using the release page's **absolute URL**, not
-`/android`: the redirect only exists on Netlify, and the page also lives in a
-folder and inside the APK, where `/android` resolves against the wrong root and
-404s.
+**The about screen carries the link**, as a pair of lines — one per
+`section[lang]`, because that screen carries its body twice — at the release
+page's **absolute URL**, not `/android`: the redirect only exists on Netlify,
+and the page also lives in a folder and inside the APK, where `/android`
+resolves against the wrong root and 404s.
 
 **A Netlify build plugin is the wrong tool for any of this.** Plugins run
 inside the Netlify build, which has no Android SDK, is time-limited, and would
@@ -210,9 +207,14 @@ This section is the release-status source of truth.
 |---|---|---|---|---|
 | 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **done** |
 | 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **done** |
-| 3 | `node tools/package_release.mjs` (records the cert, §3), then `publish_release.mjs --confirm` | either, after 1 and 2 | **in progress** — the digest is recorded; the release is not published yet |
-| 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **to do** (the emulator did it) |
-| 5 | Add the about-screen link, run the check | either, after 3 | **to do** |
+| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0> |
+| 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **done** — installed on the owner's tablet and played |
+| 5 | Add the about-screen link, run the check | either, after 3 | **done in this change** |
+
+**v1.0.0 is the first release**, signed and verified, with `SHA256SUMS.txt`
+beside it, and the owner installed it on a tablet and played. The Emulator run
+in §2 is what the check could reach; the tablet is the thing no check here
+could.
 
 Steps 1 and 2 are the owner's and nothing here can do them: one is a secret and
 one is outward-facing. The build itself, the debug APK and the offline run are

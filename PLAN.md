@@ -1917,18 +1917,19 @@ is fun — and file what you find as `defect` issues.
 
 The reconciliation with discola-web and Tressette (issue #9) is done: the
 divergences that applied here were adopted as one pull request each, and all of
-them are merged. Three things came out of it; two are still not built.
+them are merged. Of the three things that came out of it, one is shipped and two
+are still open.
 
-- **Android packaging — issue #9 item 3. Built.** `mobile/` wraps `public/`
-  unchanged with Capacitor, `tools/make_icons.mjs` writes `assets/` for the
-  launcher icons, the release tooling is `tools/package_release.mjs` and
+- **Android packaging — issue #9 item 3. Built and shipped.** `mobile/` wraps
+  `public/` unchanged with Capacitor, `tools/make_icons.mjs` writes `assets/`
+  for the launcher icons, the release tooling is `tools/package_release.mjs` and
   `tools/publish_release.mjs`, and `netlify.toml` carries the `/android`
-  redirect. `ANDROID.md` is the record. The debug APK was built and **launched
-  on the emulator with the radio off** — the offline run Tressette could not
-  make — and the table plays. What is left is the owner's, in `ANDROID.md` §6:
-  generate the signing key, create the public `diegoami/scopetta-releases`, and
-  publish; then the about screen gains its link. The `appId` is
-  `com.scopetta.app`, still changeable until the first publish.
+  redirect. `ANDROID.md` is the record. The debug APK was built and launched on
+  the emulator with the radio off — the offline run Tressette could not make —
+  **v1.0.0 is published** at
+  <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, the owner
+  installed it on a tablet and played, and the about screen carries the link.
+  Item 3 is closed.
 - **The 1100x320 viewport question — issue #5.** The shape was dropped from the
   grid when `--t-say` grew, and at that size `--cw` sits on its clamp floor, so
   the no-scrolling assertion tests the clamp rather than the derivation. #5
