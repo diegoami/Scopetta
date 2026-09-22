@@ -784,8 +784,9 @@ settings ──Cambia avversario──► confirm ─► start
   correction. **Scope was the fifth and arrived last**: the running score
   omitted it at first, leaving the marks on the pile to carry it while the result
   panel listed it, so the box showed four of the five points during play and five
-  at the end. It is a row now, and five still fit the fixed `--plate-h` that the
-  fourth row was tightened to fit — measured at every viewport in every deck.
+  at the end. It is a row now, and five fit the fixed `--plate-h` the earlier
+  rows were tightened to fit — at `line-height: .95`, measured at every viewport
+  in every deck.
   The primiera is the owner's, asked for after playing the preview and right: it is
   the only one of the five a player cannot keep in their head, which is the same
   reason the result shows its totals rather than a tick. A dash while a suit is
@@ -799,15 +800,15 @@ settings ──Cambia avversario──► confirm ─► start
   `--plates` and `--seat-overhang`, which is every card on the table at every
   viewport. At 320x568 the budget already wants 32.1px against a 32px floor.
 
-  **Which is not a contradiction with the box holding four rows**, though the
+  **Which is not a contradiction with the box holding five rows**, though the
   two sentences sit thirteen lines apart and look like one. The plate's height
   *feeds* the budget: `--plates` and `--seat-overhang` are both derived from
   `--plate-h`, so a row added there is subtracted from every card. The points
   box only *consumes* `--plate-h` — it is a fixed box that either fits its
   contents or overflows them, and nothing downstream reads its height. So the
-  fourth row was bought by tightening the line rather than by growing the box:
-  `.points` sets `line-height: 1.25` where the body's 1.45 would have wanted
-  83px of a 75.8px box. `check_ui.mjs` asserts `scrollHeight` against
+  rows were bought by tightening the line rather than by growing the box: a
+  fourth at `line-height: 1.25`, a fifth at `.95`, where the body's 1.45 would
+  have wanted 83px of a 75.8px box. `check_ui.mjs` asserts `scrollHeight` against
   `clientHeight` on it at every viewport in every deck, so the coupling is
   guarded rather than merely argued.
   The space it goes in instead is one the budget has been paying for since

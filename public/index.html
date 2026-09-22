@@ -2240,15 +2240,15 @@ function render(){
   renderResult();
 }
 
-// What a side has taken, three of the five points as they stand. Carte is here
-// as well as on the pile badge and that is the point of the box: "more than
-// twenty" and "more than five" are comparisons between the two seats, and a
-// badge on each pile is two numbers a card's width apart with a whole table
-// between them.
+// What a side has taken, all five points as they stand. Carte is here as well
+// as on the pile badge and that is the point of the box: "more than twenty" and
+// "more than five" are comparisons between the two seats, and a badge on each
+// pile is two numbers a card's width apart with a whole table between them.
 //
-// Scope are NOT here. They are face up across the top of the pile, where
-// tradition puts the cards that made them, and a second copy in a second place
-// is a number that can disagree with itself.
+// Scope was the last to arrive. It used to be left to the marks across the top
+// of the pile, where tradition puts the cards that made it, and the running
+// score showed four of the five points while the result panel showed five — so
+// the two ways of saying the score disagreed. It is a row now.
 function renderPoints(box, who){
   box.hidden = !state.showPoints || !state.dealt;
   if (box.hidden) return;
