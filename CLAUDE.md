@@ -9,8 +9,9 @@ step, the 1997 card art, one opponent formula with a weight vector per name.
 
 `PLAN.md` is the architecture and the plan, and it is the reference for
 anything this file does not state. Section 7 says how the work is organised:
-one iteration per session, a fresh-context review per pull request, CI on every
-pull request. Section 0 lists the decisions that were the owner's to make, each
+one iteration per session, a fresh-context review per pull request, and the
+verification gates whose schedule is in [`AGENTS.md`](AGENTS.md). Section 0
+lists the decisions that were the owner's to make, each
 with a default. The first seven are confirmed; the eighth — what *scopa
 d'assi* would mean, if it is ever wanted — was raised by iteration 1 and is
 open, and blocks nothing. Tressette is the reference

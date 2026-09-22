@@ -276,7 +276,7 @@ the box.
 
 The **gates** — the commands and how many times each runs before a push — are in
 [`AGENTS.md`](AGENTS.md), which is their home. Both the tests and the UI check
-run in CI on every pull request, and a red check does not merge. What they cover:
+run as CI checks, and a red one does not merge. What they cover:
 the engine tests are the rules, the traps, the roster, the release decisions and
 the golden fixture — 94 in all, 93 passing and 1 skipped on Windows; the UI check
 needs `playwright-core` and a Chromium and its passes are the **document**, the
