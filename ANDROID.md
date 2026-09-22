@@ -136,13 +136,19 @@ Then copy `mobile/android/keystore.properties.example` to
 `keystore.properties` and fill it in. That file and the `.jks` are gitignored
 and must stay that way: committing them lets anyone sign as us.
 
-**The certificate digest is NOT RECORDED YET.** `tools/release_lib.mjs` carries
-`EXPECTED_CERT` as sixty-four zeros, because there is no key until the owner
-makes one. The first `node tools/package_release.mjs` after the key exists will
-build, verify, and then **refuse**, printing the real digest; paste that digest
-into `release_lib.mjs` and here, and run it again. It refuses rather than
-warnings on purpose: an APK signed by a different key cannot update an installed
-copy, and that is not a mistake to make once.
+**The certificate is recorded.** `tools/release_lib.mjs`'s `EXPECTED_CERT` holds
+it, and `apksigner verify` on the first release build reports:
+
+```
+Signer #1 certificate DN: CN=Diego Amicabile, OU=Unknown, O=Unknown, L=Berlin, ST=Berlin, C=DE
+Signer #1 certificate SHA-256 digest: fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447
+```
+
+That fingerprint is the thing every future release has to match: an APK signed
+by anything else is a different app to Android, and no installed copy will take
+it as an update. `package_release.mjs` prints the digest on every build and
+**refuses if it differs** — and refuses while the recorded value is still the
+all-zero placeholder, printing the digest to record.
 
 Android identifies the app by this signature forever — an update installs over
 an existing copy only if it is signed with the same key — and the password
@@ -202,9 +208,9 @@ This section is the release-status source of truth.
 
 | # | Step | Whose | | |
 |---|---|---|---|---|
-| 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **to do** |
-| 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **to do** |
-| 3 | `node tools/package_release.mjs` (records the cert, §3), then `publish_release.mjs --confirm` | either, after 1 and 2 | **to do** |
+| 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **done** |
+| 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **done** |
+| 3 | `node tools/package_release.mjs` (records the cert, §3), then `publish_release.mjs --confirm` | either, after 1 and 2 | **in progress** — the digest is recorded; the release is not published yet |
 | 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **to do** (the emulator did it) |
 | 5 | Add the about-screen link, run the check | either, after 3 | **to do** |
 

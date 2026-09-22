@@ -78,15 +78,18 @@ test("a missing verifier fails closed, and so does the wrong key", () => {
 });
 
 test("the all-zero placeholder is refused, not matched", () => {
-  // This repo has no release key yet, so EXPECTED_CERT is the placeholder. A
-  // verifier that printed sixty-four zeros must not be accepted as "the
-  // recorded key" — the comparison has to refuse the placeholder explicitly.
-  assert.equal(isPlaceholderCert(), true, 'this repo still has no release key');
+  // A verifier that printed sixty-four zeros must not be accepted as "the
+  // recorded key"; the comparison has to refuse the placeholder explicitly.
+  const zero = '0'.repeat(64);
+  assert.equal(isPlaceholderCert(zero), true);
   assert.equal(isPlaceholderCert('a'.repeat(64)), false);
   assert.equal(isPlaceholderCert('nonsense'), true);
 
-  const v = signatureVerdict({ verify: { status: 0, stdout: 'SHA-256 digest: ' + EXPECTED_CERT } });
+  const v = signatureVerdict({ verify: { status: 0, stdout: 'SHA-256 digest: ' + zero }, expected: zero });
   assert.equal(v.ok, false, 'the placeholder is never a signer');
+
+  // And this repo's key is recorded now (the first release build set it).
+  assert.equal(isPlaceholderCert(), false, 'a release key has been recorded');
 });
 
 // --- checksum validation, with the file reads injected

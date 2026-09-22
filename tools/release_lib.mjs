@@ -17,14 +17,11 @@ import path from 'node:path';
 // Every future release must be signed with this key: Android treats a different
 // signer as a different app, and no installed copy will take it as an update.
 //
-// NOT RECORDED YET. This project has no release key at the time of writing, so
-// the placeholder below is all zeros. The first `node tools/package_release.mjs`
-// after the key exists will build and verify, then refuse with the real digest
-// in the message — paste that digest here and into ANDROID.md §3, and run it
-// again. It refuses rather than warning on purpose: an APK signed by the wrong
-// key cannot update an installed copy, and that is not a mistake to make once.
+// Recorded from the first release build on 2026-09-22
+// (`node tools/package_release.mjs`, apksigner --print-certs):
+//   CN=Diego Amicabile, SHA-256 fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447
 export const EXPECTED_CERT =
-  '0000000000000000000000000000000000000000000000000000000000000000';
+  'fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447';
 
 // `vX.Y.Z` (the only shape package_release writes) to [X, Y, Z], else null.
 export function parseVersion(name){
