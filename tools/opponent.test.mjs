@@ -22,7 +22,7 @@ const { BASSO, ALTO, DENARI, rngSeed, newDeal, gioca, scoreDeal,
         WEIGHT_KEYS, rollProfiles, compGioca, mosse, CODA_FROM,
         tempoShare, fuori, altro } = globalThis;
 
-const FRANCO = rollProfiles(rngSeed(1)).Franco;
+const STANDARD = rollProfiles(rngSeed(1)).Graziano;
 const card = (s, n) => ({ s, n });
 
 // A position built by hand. `giro` defaults to 0 — the formula's branch — and
@@ -76,7 +76,7 @@ test("with two sevens on the table, it takes the settebello", () => {
   });
   const choices = realChoice(s);
   assert.equal(choices.length, 2, "both sevens are on offer");
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.deepEqual(m.presa, [1], "it took the seven of coppe instead of the settebello");
 });
 
@@ -89,18 +89,18 @@ test("offered 4+3 or 5+2 for a seven, it takes the pair with the denaro", () => 
   });
   const choices = realChoice(s);
   assert.equal(choices.length, 2, "4+3 and 5+2, and nothing else");
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.deepEqual(m.presa, [0, 1], "it left the denaro on the table");
 });
 
 test("the settebello trap holds with room to spare, and where it stops", () => {
   // §3.4 presents its traps as behaviours the opponent must have *whatever its
-  // weights are*, and they are all run against Franco. For most of them that is
-  // harmless; for this one it is not. The trap above flips somewhere between
-  // SETTEBELLO_BONUS 5 and 6, and Franco's value is 6 — one notch above the
-  // edge — while the ladder's own range for that weight is [0, 3, 6, 12, 25],
-  // so two of the five values it runs put the engine into a state where §3.4's
-  // first trap fails and nothing would notice.
+  // weights are*, and they are all run against the house standard. For most of
+  // them that is harmless; for this one it is not. The trap above flips somewhere
+  // between SETTEBELLO_BONUS 5 and 6, and the standard's value is 6 — one notch
+  // above the edge — while the ladder's own range for that weight is
+  // [0, 3, 6, 12, 25], so two of the five values it runs put the engine into a
+  // state where §3.4's first trap fails and nothing would notice.
   //
   // Pinned here so iteration 5 cannot walk over it while building a roster:
   // a profile that wants the settebello point needs the weight above the edge,
@@ -111,18 +111,18 @@ test("the settebello trap holds with room to spare, and where it stops", () => {
     prese: [[card(DENARI, 6)], []]
   });
   const takesIt = v => {
-    const m = compGioca(board(), { ...FRANCO, SETTEBELLO_BONUS: v });
+    const m = compGioca(board(), { ...STANDARD, SETTEBELLO_BONUS: v });
     return m.presa.length === 1 && board().tavola[m.presa[0]].s === DENARI;
   };
-  assert.equal(takesIt(FRANCO.SETTEBELLO_BONUS), true, "Franco declines the settebello");
+  assert.equal(takesIt(STANDARD.SETTEBELLO_BONUS), true, "Graziano declines the settebello");
   assert.equal(takesIt(0), false, "without the term it should decline — the trap is not vacuous");
 
   // The edge itself, so that it cannot drift without this failing.
   let edge = 0;
   for (let v = 0; v <= 12; v += 0.1) if (takesIt(Number(v.toFixed(1)))){ edge = Number(v.toFixed(1)); break; }
   assert.ok(edge > 5 && edge < 6, `the trap now flips at ${edge}, not between 5 and 6`);
-  assert.ok(FRANCO.SETTEBELLO_BONUS > edge,
-    `Franco's ${FRANCO.SETTEBELLO_BONUS} is not above the edge at ${edge}`);
+  assert.ok(STANDARD.SETTEBELLO_BONUS > edge,
+    `Graziano's ${STANDARD.SETTEBELLO_BONUS} is not above the edge at ${edge}`);
 });
 
 test("offered the same card in two suits, it takes the denaro", () => {
@@ -140,7 +140,7 @@ test("offered the same card in two suits, it takes the denaro", () => {
   const choices = realChoice(s);
   assert.equal(choices.length, 2, "both fives are on offer");
   assert.deepEqual(choices.map(m => m.presa), [[0], [1]], "and the denaro is the second");
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.deepEqual(m.presa, [1], "it took the five of spade and left the denaro");
 });
 
@@ -162,7 +162,7 @@ test("it lays the card that leaves the table hardest to sweep", () => {
   });
   const choices = realChoice(s);
   assert.ok(choices.every(m => m.presa.length === 0), "neither card takes anything");
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.equal(played(s, m).n, 5, "it laid the 2 and left a table one card sweeps");
 });
 
@@ -179,7 +179,7 @@ test("it takes the scopa when the alternative is worth less", () => {
   const choices = realChoice(s);
   // The 7 takes 1+2+4 and sweeps; the 3 takes 1+2 and leaves the 4.
   assert.equal(choices.length, 2);
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.equal(played(s, m).n, 7, "it passed up a sweep");
   assert.equal(m.presa.length, 3, "and took the whole table");
 });
@@ -198,7 +198,7 @@ test("on the 35th play it takes a worthless card, for the leftovers", () => {
   const choices = realChoice(s);
   assert.ok(choices.some(m => m.presa.length), "there is a capture available");
   assert.ok(choices.some(m => !m.presa.length), "and a card that takes nothing");
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.ok(m.presa.length,
     "it laid a card and handed the last capture, and the leftovers, to the opponent");
 });
@@ -216,7 +216,7 @@ test("the deal's last card can sweep, and the score shows no scopa for it", () =
     hands: [[null, null, null], [card(0, 4), null, null]],
     ultimaPresa: BASSO
   });
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.ok(m, "it has a play");
   const r = gioca(s, ALTO, m.slot, m.presa);
   assert.equal(r.ultima, true);
@@ -267,7 +267,7 @@ test("§3.4's own ending: it lays the five, which only playing it out finds", ()
   assert.ok(choices.every(m => m.presa.length === 0), "and no capture on offer");
   assert.equal(s.hands[BASSO][0].n, 6, "the six is in the lower slot, where a tie finds it");
 
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.equal(m.slot, 1, "it laid the six — the play the formula makes and the search refuses");
 
   // Played out with the real rules rather than asserted about.
@@ -275,7 +275,7 @@ test("§3.4's own ending: it lays the five, which only playing it out finds", ()
     const st = build();
     gioca(st, BASSO, first.slot, first.presa);
     while (!st.over){
-      const mm = compGioca(st, FRANCO);
+      const mm = compGioca(st, STANDARD);
       gioca(st, st.deveGiocare, mm.slot, mm.presa);
     }
     return st.prese[BASSO].length;
@@ -313,7 +313,7 @@ test("the search declines a capture the formula takes, and wins four more cards"
              + s.hands[BASSO].filter(c => c).length + s.hands[ALTO].filter(c => c).length,
     40, "the position is a real one: forty cards accounted for");
 
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.equal(m.slot, 1, "it took the six instead of laying the re");
   assert.deepEqual(m.presa, [], "and it captured, where the search declines");
 
@@ -329,7 +329,7 @@ test("the search declines a capture the formula takes, and wins four more cards"
     });
     gioca(st, BASSO, first.slot, first.presa);
     while (!st.over){
-      const mm = compGioca(st, FRANCO);
+      const mm = compGioca(st, STANDARD);
       gioca(st, st.deveGiocare, mm.slot, mm.presa);
     }
     return st.prese[BASSO].length;
@@ -360,7 +360,7 @@ test("the search plays for its own points, not theirs", () => {
     ]
   });
   realChoice(s);
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.deepEqual([m.slot, m.presa], [0, [1, 3]],
     "it played for the wrong side of the score");
 });
@@ -384,7 +384,7 @@ test("the search expects the opponent to play against it, not to help", () => {
     ]
   });
   realChoice(s);
-  const m = compGioca(s, FRANCO);
+  const m = compGioca(s, STANDARD);
   assert.deepEqual([m.slot, m.presa], [2, [0]],
     "it assumed the opponent would cooperate");
 });
@@ -405,7 +405,7 @@ test("the tempo term guesses at nothing it cannot see", () => {
   assert.equal(closing.hands[BASSO].filter(c => c).length, 1);
   assert.equal(closing.hands[ALTO].filter(c => c).length, 1);
   assert.equal(
-    tempoShare(closing, BASSO, mosse(closing, BASSO)[0], fuori(closing, BASSO), FRANCO),
+    tempoShare(closing, BASSO, mosse(closing, BASSO)[0], fuori(closing, BASSO), STANDARD),
     0, "it guessed past a round boundary");
 
   // And with room left in the round it does answer, so the zero above is the
@@ -419,7 +419,7 @@ test("the tempo term guesses at nothing it cannot see", () => {
     prese: [new Array(4).fill(card(1, 8)), new Array(5).fill(card(3, 8))]
   });
   const shares = mosse(open, ALTO)
-    .map(m => tempoShare(open, ALTO, m, fuori(open, ALTO), FRANCO));
+    .map(m => tempoShare(open, ALTO, m, fuori(open, ALTO), STANDARD));
   assert.ok(shares.some(v => v > 0),
     `the term never fires even with a round to play: ${JSON.stringify(shares)}`);
   assert.ok(shares.some(v => v === 0), "and it does not fire for every play alike");
@@ -450,15 +450,15 @@ test("the tempo term cannot tell their hand from the deck", () => {
           swapped.hands[altro(me)] = theirs.slice();
           swapped.hands[altro(me)][slot] = { ...inDeck };
           for (const m of mosse(s, me)){
-            const a = tempoShare(s, me, m, hidden, FRANCO);
-            const b = tempoShare(swapped, me, m, fuori(swapped, me), FRANCO);
+            const a = tempoShare(s, me, m, hidden, STANDARD);
+            const b = tempoShare(swapped, me, m, fuori(swapped, me), STANDARD);
             assert.equal(a, b,
               `seed ${seed}, play ${s.plays + 1}: the guess changed when only their hand did`);
             compared++;
           }
         }
       }
-      const m = compGioca(s, FRANCO);
+      const m = compGioca(s, STANDARD);
       gioca(s, me, m.slot, m.presa);
     }
   }
@@ -479,13 +479,13 @@ test("the tempo term stops at one ply", () => {
   });
   const roots = mosse(s, ALTO).length;
   let reads = 0;
-  const counting = { ...FRANCO };
+  const counting = { ...STANDARD };
   delete counting.TEMPO_BONUS;
   Object.defineProperty(counting, "TEMPO_BONUS", {
     get(){
       if (++reads > 2 * roots)
         throw new Error(`TEMPO_BONUS read ${reads} times for ${roots} plays — the reply is pricing tempo too`);
-      return FRANCO.TEMPO_BONUS;
+      return STANDARD.TEMPO_BONUS;
     }
   });
   compGioca(s, counting);
@@ -508,7 +508,7 @@ test("every profile plays the sixth round alike", () => {
   for (let seed = 1; seed <= 60; seed++){
     const s = newDeal({}, rngSeed(seed));
     while (!s.over){
-      const a = compGioca(s, FRANCO);
+      const a = compGioca(s, STANDARD);
       if (s.giro >= CODA_FROM){
         const b = compGioca(s, wild);
         searched++;
@@ -527,7 +527,7 @@ test("it never offers a play the rules refuse", () => {
   for (let seed = 1; seed <= 100; seed++){
     const s = newDeal({}, rngSeed(seed));
     while (!s.over){
-      const m = compGioca(s, FRANCO);
+      const m = compGioca(s, STANDARD);
       assert.ok(m, `seed ${seed}: compGioca returned nothing at play ${s.plays + 1}`);
       gioca(s, s.deveGiocare, m.slot, m.presa);   // throws if it is not legal
     }
@@ -608,8 +608,8 @@ test("four players, and each one plays a different game", () => {
   for (let seed = 1; seed <= 24; seed++){
     const s = newDeal({}, rngSeed(seed));
     // A different profile drives each deal: one driver's positions are one
-    // player's positions, and asking every question about Franco's hands
-    // flatters the pairs that play like Franco.
+    // player's positions, and asking every question about one player's hands
+    // flatters the pairs that play like him.
     const driver = P4[names[seed % names.length]];
     while (!s.over){
       const who = s.deveGiocare;

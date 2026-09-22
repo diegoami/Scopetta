@@ -522,36 +522,42 @@ function weights(values){
 //
 // The plan guessed the two risk terms would make four corners. They do not:
 // GIFT_FACTOR=0 is 55.8% against greedy-take, under §3.4's 57.7 floor, and the
-// risk corners leave Graziano 1.78% from Piero — two names, one player. What
-// separates players and keeps them strong is the two value weights and the
-// cautious corner. The measurement is in PLAN.md §3.4 and the iteration's PR.
-const FRANCO_WEIGHTS = weights([1, 2, 6, 0.4, 6, 0.5, 5]);
+// risk corners left two of the candidate names 1.78% apart — two names, one
+// player. What separates players and keeps them strong is the two value weights
+// and the cautious corner. The measurement is in PLAN.md §3.4 and iteration 5's
+// PR. **The two names were swapped after that**: the house standard is Graziano
+// now, and Franco is the value-hunter, by the owner's request (#23).
+// Franco is the value-hunter: carte and denari both priced high, so he plays to
+// take and does not much mind what he leaves. 59.7% / 80.0% against greedy-take
+// / random-legal on seeds 5001+, 7.7% away from Graziano.
+const FRANCO_WEIGHTS = weights([4, 8, 6, 0.4, 6, 0.5, 5]);
 
-// Graziano is the value-hunter: carte and denari both priced high, so he plays
-// to take and does not much mind what he leaves. 60.2% / 78.8% against
-// greedy-take / random-legal on seeds 20001+, 7.1% of the decisions the weights
+// Graziano is the house standard: the vector iteration 2 tuned, balanced —
+// counts the cards out, does not leave a sum that can be swept, and plays the
+// last round exactly like every other profile. 60.6% / 80.2% against
+// greedy-take / random-legal on seeds 5001+, 7.7% of the decisions the weights
 // make away from Franco.
-const GRAZIANO_WEIGHTS = weights([4, 8, 6, 0.4, 6, 0.5, 5]);
+const GRAZIANO_WEIGHTS = weights([1, 2, 6, 0.4, 6, 0.5, 5]);
 
 // Valerio plays the card count and treats a denaro like any other card
 // (DENARI 0). The settebello is still a point on its own and keeps its bonus, so
-// what he ignores is the denari POINT, not the card. 59.4% / 78.8% on seeds
-// 20001+, 8.4% away from Franco.
+// what he ignores is the denari POINT, not the card. 59.7% / 79.7% on seeds
+// 5001+, 16.3% away from Graziano.
 const VALERIO_WEIGHTS = weights([1, 0, 6, 0.4, 6, 0.5, 5]);
 
 // Piero is rolled once per session, as Discola's was — a house tradition, not a
-// Delphi accident. His corner is the cautious one, the opposite of Graziano's
+// Delphi accident. His corner is the cautious one, the opposite of Franco's
 // value-hunting: he leaves nothing cheap, weights a high card in a suit he is
 // weak in, and fears a sweepable table. The bands hold the corner; the three
-// values are drawn, and the other four stay Franco's so that every roll is a
-// strong player and none lands on Franco, Graziano or Valerio.
+// values are drawn, and the other four stay the standard's so that every roll is
+// a strong player and none lands on Graziano, Franco or Valerio.
 const PIERO_STANCE = {
   GIFT_FACTOR: [1.7, 2.5],
   PRIMIERA_WEIGHT: [1.5, 2.1],
   SCOPA_RISK_PENALTY: [22, 30],
 };
 function rollPiero(rng){
-  const P = { ...FRANCO_WEIGHTS };
+  const P = { ...GRAZIANO_WEIGHTS };
   for (const k in PIERO_STANCE){
     const [a, b] = PIERO_STANCE[k];
     P[k] = a + (b - a) * rng();

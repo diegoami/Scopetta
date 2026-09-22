@@ -1,8 +1,8 @@
 {
  "profiles": {
   "Franco": {
-   "CARTE_WEIGHT": 1,
-   "DENARI_WEIGHT": 2,
+   "CARTE_WEIGHT": 4,
+   "DENARI_WEIGHT": 8,
    "SETTEBELLO_BONUS": 6,
    "PRIMIERA_WEIGHT": 0.4,
    "SCOPA_RISK_PENALTY": 6,
@@ -10,8 +10,8 @@
    "TEMPO_BONUS": 5
   },
   "Graziano": {
-   "CARTE_WEIGHT": 4,
-   "DENARI_WEIGHT": 8,
+   "CARTE_WEIGHT": 1,
+   "DENARI_WEIGHT": 2,
    "SETTEBELLO_BONUS": 6,
    "PRIMIERA_WEIGHT": 0.4,
    "SCOPA_RISK_PENALTY": 6,
@@ -40,7 +40,7 @@
  "codaFrom": 5,
  "deals": [
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 1,
    "mazziere": 1,
    "plays": [
@@ -95,7 +95,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 2,
    "mazziere": 1,
    "plays": [
@@ -150,7 +150,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 3,
    "mazziere": 1,
    "plays": [
@@ -205,7 +205,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 4,
    "mazziere": 1,
    "plays": [
@@ -260,7 +260,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 5,
    "mazziere": 1,
    "plays": [
@@ -315,7 +315,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 6,
    "mazziere": 1,
    "plays": [
@@ -370,7 +370,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 7,
    "mazziere": 1,
    "plays": [
@@ -425,7 +425,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 8,
    "mazziere": 1,
    "plays": [
@@ -480,7 +480,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 9,
    "mazziere": 1,
    "plays": [
@@ -535,7 +535,7 @@
    "primiera": null
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 10,
    "mazziere": 1,
    "plays": [
@@ -590,7 +590,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 11,
    "mazziere": 1,
    "plays": [
@@ -645,7 +645,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 12,
    "mazziere": 1,
    "plays": [
@@ -700,7 +700,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 13,
    "mazziere": 1,
    "plays": [
@@ -755,7 +755,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 14,
    "mazziere": 1,
    "plays": [
@@ -810,7 +810,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 15,
    "mazziere": 1,
    "plays": [
@@ -865,7 +865,7 @@
    "primiera": null
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 16,
    "mazziere": 1,
    "plays": [
@@ -920,7 +920,7 @@
    "primiera": null
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 17,
    "mazziere": 1,
    "plays": [
@@ -975,7 +975,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 18,
    "mazziere": 1,
    "plays": [
@@ -1030,7 +1030,7 @@
    "primiera": 0
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 19,
    "mazziere": 1,
    "plays": [
@@ -1085,7 +1085,7 @@
    "primiera": 1
   },
   {
-   "who": "Franco",
+   "who": "Graziano",
    "seed": 20,
    "mazziere": 1,
    "plays": [
@@ -1140,7 +1140,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 1,
    "mazziere": 1,
    "plays": [
@@ -1195,7 +1195,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 2,
    "mazziere": 1,
    "plays": [
@@ -1250,7 +1250,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 3,
    "mazziere": 1,
    "plays": [
@@ -1305,7 +1305,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 4,
    "mazziere": 1,
    "plays": [
@@ -1360,7 +1360,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 5,
    "mazziere": 1,
    "plays": [
@@ -1415,7 +1415,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 6,
    "mazziere": 1,
    "plays": [
@@ -1470,7 +1470,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 7,
    "mazziere": 1,
    "plays": [
@@ -1525,7 +1525,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 8,
    "mazziere": 1,
    "plays": [
@@ -1580,7 +1580,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 9,
    "mazziere": 1,
    "plays": [
@@ -1635,7 +1635,7 @@
    "primiera": null
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 10,
    "mazziere": 1,
    "plays": [
@@ -1690,7 +1690,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 11,
    "mazziere": 1,
    "plays": [
@@ -1745,7 +1745,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 12,
    "mazziere": 1,
    "plays": [
@@ -1800,7 +1800,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 13,
    "mazziere": 1,
    "plays": [
@@ -1855,7 +1855,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 14,
    "mazziere": 1,
    "plays": [
@@ -1910,7 +1910,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 15,
    "mazziere": 1,
    "plays": [
@@ -1965,7 +1965,7 @@
    "primiera": null
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 16,
    "mazziere": 1,
    "plays": [
@@ -2020,7 +2020,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 17,
    "mazziere": 1,
    "plays": [
@@ -2075,7 +2075,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 18,
    "mazziere": 1,
    "plays": [
@@ -2130,7 +2130,7 @@
    "primiera": 0
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 19,
    "mazziere": 1,
    "plays": [
@@ -2185,7 +2185,7 @@
    "primiera": 1
   },
   {
-   "who": "Graziano",
+   "who": "Franco",
    "seed": 20,
    "mazziere": 1,
    "plays": [
