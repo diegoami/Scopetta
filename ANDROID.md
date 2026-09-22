@@ -46,14 +46,13 @@ mobile/
 JSON rather than a `capacitor.config.ts`: this project has no TypeScript
 toolchain and this file does not justify introducing one.
 
-**The `appId` is `com.scopetta.app`** — permanent from the first publish.
-Changing it later produces a different app: it installs alongside the old one
-rather than upgrading it, and the installed copy can never be updated again.
-`appName` is only the label under the icon and can change in any release. The id
-is not yet published anywhere, so it is still free: changing it now means editing
-the two `com.scopetta.app` lines in `mobile/android/app/build.gradle` (and the
-generated `strings.xml`), or deleting `mobile/android/` and re-running
-`npx cap add android`.
+**The `appId` is `com.scopetta.app`** — permanent now that v1.0.0 is published.
+Changing it here means a different app: it installs alongside the old one rather
+than upgrading it, and the installed copy can never be updated again. `appName`
+is only the label under the icon and can change in any release. (Before the first
+publish the id was still free — an edit to the two `com.scopetta.app` lines in
+`mobile/android/app/build.gradle` and the generated `strings.xml`, or deleting
+`mobile/android/` and re-running `npx cap add android`. That window is closed.)
 
 What this drags in is a JDK, the Android SDK and Gradle. Real, and it is
 packaging tooling only: `public/` stays a directory of static files that opens
@@ -171,11 +170,11 @@ failed build, which is why step three is a refusal rather than a warning.
 run by default; `--confirm` to actually publish, because this is outward-facing
 and a public tag is hard to take back.
 
-**The releases repo does not exist yet.** `diegoami/Scopetta` is private, and
-release assets on a private repo are not publicly downloadable, so the split is
-the same one Discola and Tressette use: source private, binaries public in
-`diegoami/scopetta-releases`. Creating it is the owner's call and the one step
-here that cannot be undone quietly.
+**The releases repo is `diegoami/scopetta-releases`.** `diegoami/Scopetta` is
+private, and release assets on a private repo are not publicly downloadable, so
+the split is the same one Discola and Tressette use: source private, binaries
+public. Creating it was the owner's call and the one step that could not be
+undone quietly; it is done, and v1.0.0 is published there.
 
 **Build locally, not in CI.** For one target, a release workflow means putting
 the signing key in a repository secret to save a command. Revisit if the matrix
@@ -216,11 +215,11 @@ beside it, and the owner installed it on a tablet and played. The Emulator run
 in §2 is what the check could reach; the tablet is the thing no check here
 could.
 
-Steps 1 and 2 are the owner's and nothing here can do them: one is a secret and
-one is outward-facing. The build itself, the debug APK and the offline run are
-done and recorded above.
+All five steps are done: the key exists, the releases repo exists and carries
+v1.0.0, it was published from this machine, and the owner installed and played
+it. The build, the debug APK and the offline emulator run are recorded above.
 
-Two things worth knowing for the first publish, both learned on Tressette:
+Two things worth knowing when publishing, both learned on Tressette:
 `storeFile` in `keystore.properties` is read as a Java properties value, so a
 Windows path needs forward slashes or doubled backslashes; and GitHub will not
 create a release on a repository with no commits — the releases repo needs its
