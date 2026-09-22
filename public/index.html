@@ -723,17 +723,20 @@ button.card:disabled{ cursor: default; }
   height: var(--plate-h);
   display: grid;
   align-content: center;
-  /* No row gap, and a tight line, because the box holds FOUR rows and its
+  /* No row gap, and a tight line, because the box holds FIVE rows and its
      height is not its own: it is --plate-h, which is derived from the three
      rows the name plate can hold. The owner asked for primiera beside carte,
      ori and the settebello — rightly, it is the one point nobody can compute
      while playing — and a fourth row at the body's 1.45 line wants 83px of a
-     75.8px box. 1.25 is what fits with room to spare at every shape the grid
-     holds, and the check asserts scrollHeight against clientHeight here, so a
-     line that stops fitting is a failure rather than an opinion. */
+     75.8px box, so it is .95. The fifth row is scope, which the running score
+     used to leave to the marks on the pile; with the row in, 1.25 spilled 4px at
+     320x568 and 1.1 spilled 4–7px on the tall phones, where --t-tiny grows, and
+     .95 fits with 14–18px to spare at every viewport in every deck. The check
+     asserts scrollHeight against clientHeight here, so a line that stops fitting
+     is a failure rather than an opinion. */
   gap: 0;
-  line-height: 1.25;
-  padding: .15rem .5rem;
+  line-height: .95;
+  padding: 0 .5rem;
   border-radius: 3px;
   background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.28));
   box-shadow: inset 0 0 0 1px var(--rail-line);
@@ -2237,15 +2240,15 @@ function render(){
   renderResult();
 }
 
-// What a side has taken, three of the five points as they stand. Carte is here
-// as well as on the pile badge and that is the point of the box: "more than
-// twenty" and "more than five" are comparisons between the two seats, and a
-// badge on each pile is two numbers a card's width apart with a whole table
-// between them.
+// What a side has taken, all five points as they stand. Carte is here as well
+// as on the pile badge and that is the point of the box: "more than twenty" and
+// "more than five" are comparisons between the two seats, and a badge on each
+// pile is two numbers a card's width apart with a whole table between them.
 //
-// Scope are NOT here. They are face up across the top of the pile, where
-// tradition puts the cards that made them, and a second copy in a second place
-// is a number that can disagree with itself.
+// Scope was the last to arrive. It used to be left to the marks across the top
+// of the pile, where tradition puts the cards that made it, and the running
+// score showed four of the five points while the result panel showed five — so
+// the two ways of saying the score disagreed. It is a row now.
 function renderPoints(box, who){
   box.hidden = !state.showPoints || !state.dealt;
   if (box.hidden) return;
@@ -2253,7 +2256,7 @@ function renderPoints(box, who){
   const ori = pile.filter(c => c.s === DENARI).length;
   const sette = pile.some(isSettebello);
   // The fourth row, and the one the owner asked for after playing: primiera is
-  // the only one of the five points a player cannot keep in their head — the
+  // the only one of the points a player cannot keep in their head — the
   // best card of each suit, summed, on a scale where a seven is 21 and a re is
   // 10. §3.6 gives the same reason for showing its totals in the result rather
   // than a tick: a point decided by an arithmetic nobody can see is the one
@@ -2264,6 +2267,7 @@ function renderPoints(box, who){
   // here". Drawn as a dash, exactly as the result panel draws it, so the two
   // places the primiera appears say the same thing in the same way.
   const prim = state.prese ? primieraTotale(pile) : null;
+  const scope = state.scope ? state.scope[who] : 0;
   box.replaceChildren(...[
     ["carte", String(pile.length), true],
     ["ori", String(ori), true],
@@ -2273,6 +2277,10 @@ function renderPoints(box, who){
     ["settebello", sette ? "sì" : "—", sette],
     ["primiera", prim === null || prim === undefined ? "—" : String(prim),
       prim !== null && prim !== undefined],
+    // The fifth point, and the one the running score used to leave to the marks
+    // on the pile: a scopa accumulates through the deal like the other four, and
+    // the running score and the result panel list the same five now.
+    ["scope", String(scope), scope > 0],
   ].map(([label, value, has]) => {
     const row = document.createElement("div");
     const l = document.createElement("span");
