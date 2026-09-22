@@ -516,7 +516,10 @@ function weights(values){
 }
 
 // The roster: §0 decision 5, and iteration 5's measurement. Three fixed
-// vectors, one name each, and Piero rolled once per session. Values are in
+// vectors, one name each, and Piero rolled once per session. **The roster leads
+// with the house standard, who is also the default opponent**, so the start
+// sheet's list does too — the order here is the one home for "which name is
+// first", and the page renders `Object.keys(PROFILES)` in order. Values are in
 // WEIGHT_KEYS order:
 //   CARTE, DENARI, SETTEBELLO, PRIMIERA, SCOPA_RISK, GIFT, TEMPO
 //
@@ -566,7 +569,7 @@ function rollPiero(rng){
 }
 
 function rollProfiles(rng){
-  return { Franco: FRANCO_WEIGHTS, Graziano: GRAZIANO_WEIGHTS,
+  return { Graziano: GRAZIANO_WEIGHTS, Franco: FRANCO_WEIGHTS,
            Valerio: VALERIO_WEIGHTS, Piero: rollPiero(rng) };
 }
 

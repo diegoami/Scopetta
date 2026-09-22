@@ -598,6 +598,10 @@ test("four players, and each one plays a different game", () => {
   const P4 = rollProfiles(rngSeed(1));
   const names = ["Franco", "Graziano", "Valerio", "Piero"];
   assert.deepEqual(Object.keys(P4).sort(), [...names].sort());
+  // And the roster leads with the house standard, which is also the default opponent.
+  // The start sheet renders `Object.keys(PROFILES)` in order, so this one assertion is
+  // what puts Graziano first in the selection list — the ordering has one home.
+  assert.equal(Object.keys(P4)[0], "Graziano", "the house standard leads the roster");
 
   const same = (a, b) => a.slot === b.slot && a.presa.length === b.presa.length
     && a.presa.every((x, i) => x === b.presa[i]);
