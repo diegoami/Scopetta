@@ -1800,13 +1800,13 @@ model — the builder cannot see its own diff, and a reviewer that shares its
 context cannot either — but the two roles are deliberately different models, so
 one model's blind spot is not the other's.
 
-**The review is posted to the pull request, not handed back to the builder.** A
+**The review is posted where the work is, not handed back to the builder.** A
 review that lives only in a conversation is one the owner cannot see and the
-next session cannot read. The reviewer writes it where the work is —
-`gh pr review <n> --comment --body-file …`, or `gh pr comment <n>` — and signs
-it as the reviewer, so a reader can tell it from the builder's own comments.
-This is not ceremony: the owner asked for it after a review that existed only in
-a subagent's reply.
+next session cannot read: the **design** verdict on the issue, the
+**implementation** verdict on the pull request, each signed as the reviewer so a
+reader can tell it from the builder's own comments. `AGENTS.md` gives the
+commands. This is not ceremony: the owner asked for it after a review that
+existed only in a subagent's reply.
 
 The reviewer is given three things: this document, the diff, and the check
 output pasted into the pull request. It checks, in order:

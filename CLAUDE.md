@@ -63,10 +63,10 @@ them. So the check hit-tests: the table row a pixel at a time with
 about what reaches the player rather than about where a box is, measure what
 the page answers, not what it contains.
 
-**`node tools/break_ui.mjs` is the other half.** It breaks the page on purpose,
-one defect at a time, and checks that the assertion *written for that defect*
-goes red — not merely that something did. Run it after adding an assertion, the
-way `tools/break.mjs` is run after adding a rule test.
+**`break_ui.mjs` is the other half** of the check, and the gate that runs it —
+when, and against what — is in [`AGENTS.md`](AGENTS.md). It breaks the page on
+purpose, one defect at a time, and checks that the assertion *written for that
+defect* goes red — not merely that something did.
 
 Every UI defect Discola shipped was invisible in the diff and threw no error:
 cards overlapping the hand, the player's own hand pushed below the fold, the
