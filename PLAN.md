@@ -8,14 +8,14 @@ above, the house's named opponents, who share one formula and differ only in
 their weights, and a UI check calibrated against the defects that actually
 ship.
 
-**Status: iterations 0 to 4 are built** — the scaffold, the rules with their
-tests, the opponent with its harness and its golden fixture, the table, and the
-partita around it: the start sheet, the settings, the history of smazzate, the
-rules screen finished, the confirm and the result with its computed note. What
-is left is the roster (iteration 5) and the handover (iteration 6). This
-document is the plan, and it becomes `SPEC.md` once the game
-exists, the way Discola's and Tressette's did. Where an iteration measured
-something the plan had guessed, the plan says so at the place it guessed.
+**Status: iterations 0 to 6 are built, and the game has shipped.** The scaffold,
+the rules with their tests, the opponent with its harness and its golden fixture,
+the table, the partita around it, the roster, and the handover: `README.md` and
+`SPEC.md` are written, the Android APK is published, and the reconciliation with
+the ancestors (issue #9) is done. This document is the plan and the record; the
+thing that exists is described in `SPEC.md`, the way Discola's and Tressette's
+did. Where an iteration measured something the plan had guessed, the plan says so
+at the place it guessed.
 
 Tressette is the ancestor this game forks from, not Discola: Tressette already
 has the engine in its own file, the check with four passes, CI with two jobs,
@@ -264,7 +264,7 @@ tools/package_release.mjs, publish_release.mjs, release_lib.mjs, release.test.mj
 netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.html, /android redirect
 assets/             the 1024px icon layers Capacitor's asset tool reads
 mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
-CLAUDE.md, README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md (when built), .claude/skills/ui-check/
+CLAUDE.md, README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
 ```
 
 Only `public/` is the site. Tressette's §3.1 says why the engine is a second
@@ -1673,6 +1673,18 @@ stranger take the project over. The first half of that cannot be asserted
 from inside the project: the container the work is done in cannot reach the
 live URL, so the check asserts the directory `netlify.toml` publishes, and
 the owner asserts the URL by playing it, and says so in the pull request.
+
+**What this iteration did, and what it found.** The README was rewritten in
+iteration 5's wake and again here; `SPEC.md` was written from this document and
+from the code, section by section, with the numbers read off the harness rather
+than remembered. Three stale things surfaced only because the handover has to be
+declarative: `ANDROID.md` still described a releases repo that did not exist, an
+`appId` that was "still free", and five owner steps as to-do, when the release
+had shipped and the owner had played it on a tablet. **A handover written from
+the plan alone inherits the plan's tense.** The Android work also found the one
+thing the ancestors left in prose: a Windows `storeFile` with backslashes is a
+`Properties.load` error, which `ANDROID.md` had documented and no script had
+caught.
 
 **Total: 7–8 days**, with the table and the opponent the two estimates that
 can slip.

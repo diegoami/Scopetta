@@ -101,9 +101,12 @@ node tools/selfplay.mjs             # the opponents against the baselines
 
 `playwright-core` is the only dependency and it is a dev one: it belongs to the
 check, not to the game. Both checks run in CI on every pull request, and a red one
-does not merge. **[`PLAN.md`](PLAN.md)** is the plan and the record of how it was
-built, including what it got wrong on the way — which is most of what the project
-is worth.
+does not merge. **[`SPEC.md`](SPEC.md)** is the handover document: what was built
+and why, the engine contract, the rules as implemented, the opponent and where
+every number came from, the layout, the checks, persistence and the known gaps.
+**[`PLAN.md`](PLAN.md)** is the plan and the record of how it was built,
+including what it got wrong on the way — which is most of what the project is
+worth.
 
 ## Provenance
 
