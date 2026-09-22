@@ -1834,10 +1834,10 @@ the same rate and budget for it.
 - **One pull request per iteration.** Its description has four parts: what
   was built; the iteration's "Done when" as a ticked list; the check output,
   verbatim; what was left out and why.
-- **CI on every pull request**: the engine tests from iteration 1, the UI
-  check from iteration 3. A red check does not merge. Nothing is skipped or
-  quarantined to get to green. The gates and the run count are stated in
-  [`AGENTS.md`](AGENTS.md).
+- **CI is the merge gate**: the engine tests from iteration 1, the UI check
+  from iteration 3; a red check does not merge, and nothing is skipped or
+  quarantined to get to green. The gates, their schedule and the run count are
+  stated in [`AGENTS.md`](AGENTS.md).
 - **Issues hold a design proposal or a defect.** A non-trivial change may open
   its design as an issue, iterated with the reviewer to an explicit AGREE before
   the pull request (`AGENTS.md` states the two stages). A defect found by
