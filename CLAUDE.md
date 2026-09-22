@@ -43,11 +43,11 @@ reports and the builder fixes in the same change; a finding the builder
 disagrees with goes to the owner, not around the reviewer. Everything in
 `PRINCIPLES.md` applies either way.
 
-## After any UI change, run the UI check
+## The UI check, and why it exists
 
-The gate — the command and how many times it runs before a push — is in
-[`AGENTS.md`](AGENTS.md). Not optional, and not only when something looks wrong.
-It runs in CI on every pull request as well, and a red check does not merge.
+The gate — the command, when it runs, and the CI schedule — is in
+[`AGENTS.md`](AGENTS.md); this section is the rationale behind it, and it exists
+because reading the diff was repeatedly not enough.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
@@ -364,17 +364,17 @@ a derivation.
 
 The `ui-check` skill explains what it covers and how to read a failure.
 
-## After any engine change, run the unit tests
+## The unit tests, and why they exist
 
-The gate is in [`AGENTS.md`](AGENTS.md). They are deterministic — the shuffle and Piero's roll both arrive as a seeded
-rng — and they cover what the UI check cannot see: the capture rules, the
-scoring of every point, the trap positions, the search that refuses a position
-it cannot deduce, and the golden fixture's frozen deals. They live in
+The gate — the command and when it runs — is in [`AGENTS.md`](AGENTS.md); this is
+what they are for. They are deterministic — the shuffle and Piero's roll both
+arrive as a seeded rng — and they cover what the UI check cannot see: the capture
+rules, the scoring of every point, the trap positions, the search that refuses a
+position it cannot deduce, and the golden fixture's frozen deals. They live in
 `tools/engine.test.mjs` and `tools/opponent.test.mjs`.
 
-This rule is not optional for the same reason the UI one is not. The golden
-fixture freezes the plays: a formula change moves them by accident and the test
-says so, and a weight change moves them deliberately and the fixture is
+The golden fixture freezes the plays: a formula change moves them by accident and
+the test says so, and a weight change moves them deliberately and the fixture is
 re-recorded in the same commit — `node tools/selfplay.mjs --golden >
 tools/golden.json`, which is what `tools/golden.json` is.
 
