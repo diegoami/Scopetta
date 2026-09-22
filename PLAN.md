@@ -264,7 +264,9 @@ tools/package_release.mjs, publish_release.mjs, release_lib.mjs, release.test.mj
 netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.html, /android redirect
 assets/             the 1024px icon layers Capacitor's asset tool reads
 mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
-CLAUDE.md, README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
+AGENTS.md, CLAUDE.md, PRINCIPLES.md
+                     the guidance, split by tool (§7.2, §7.3)
+README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
 ```
 
 Only `public/` is the site. Tressette's §3.1 says why the engine is a second
@@ -1387,9 +1389,9 @@ that player; one on a shuffle where the case it meant to test never came up;
 one that searched the source for the word `document` and found it in the
 comment promising not to use it.
 
-`check.yml` runs `node --test 'tools/**/*.test.mjs'` — the glob, because
-Node 22 reads a bare directory as a module path — on pull requests and on
-pushes to `main` only, so a pull request branch does not run twice.
+`check.yml` runs the engine tests with a glob rather than a bare directory,
+because Node 22 reads a bare directory as a module path; the CI gate schedule is
+stated in [`AGENTS.md`](AGENTS.md).
 
 **The sort is the engine's, and it is here, not later.** Ties in `compGioca`
 go to the lowest slot, so the order of a hand is part of what the golden
@@ -1742,6 +1744,11 @@ with:
 > when": do not start the next one. Finish with every check green, commit,
 > push, and open a pull request with the description in §7.4.
 
+**A non-trivial change may open its design as an issue first**, iterated with the
+reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the
+two stages and the tool split, and `PRINCIPLES.md` the principles both tools
+share. This is the one kind of issue that exists besides a `defect`.
+
 Why one iteration and not several: the defects this kind of page ships are
 invisible in a diff and show up only in the check or at the table, and a
 session that holds the whole of one iteration in context catches them.
@@ -1776,6 +1783,15 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 
 ### 7.3 The reviewer
 
+**The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
+by tool:** OpenCode runs the cross-model review, Claude Code does not (it cannot
+spawn another family as a subagent), and the principles both share are in
+[`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
+an explicit AGREE, then the pull request reviewed the same way — the **signed
+verdict on GitHub**, and the rule that a **BLOCK goes to the owner** are stated
+there; this section keeps the reasoning, and the mechanics live in those files so
+the two do not drift.
+
 Every pull request gets one review from a **fresh context** — a new session or
 a subagent that has not seen the work. **The reviewer is GPT-5.6 Luna at high
 effort** (`opencode/gpt-5.6-luna#high`), run as a subagent with that model; the
@@ -1784,13 +1800,13 @@ model — the builder cannot see its own diff, and a reviewer that shares its
 context cannot either — but the two roles are deliberately different models, so
 one model's blind spot is not the other's.
 
-**The review is posted to the pull request, not handed back to the builder.** A
+**The review is posted where the work is, not handed back to the builder.** A
 review that lives only in a conversation is one the owner cannot see and the
-next session cannot read. The reviewer writes it where the work is —
-`gh pr review <n> --comment --body-file …`, or `gh pr comment <n>` — and signs
-it as the reviewer, so a reader can tell it from the builder's own comments.
-This is not ceremony: the owner asked for it after a review that existed only in
-a subagent's reply.
+next session cannot read: the **design** verdict on the issue, the
+**implementation** verdict on the pull request, each signed as the reviewer so a
+reader can tell it from the builder's own comments. `AGENTS.md` gives the
+commands. This is not ceremony: the owner asked for it after a review that
+existed only in a subagent's reply.
 
 The reviewer is given three things: this document, the diff, and the check
 output pasted into the pull request. It checks, in order:
@@ -1820,13 +1836,17 @@ the same rate and budget for it.
   verbatim; what was left out and why.
 - **CI on every pull request**: the engine tests from iteration 1, the UI
   check from iteration 3. A red check does not merge. Nothing is skipped or
-  quarantined to get to green.
-- **Issues only for defects found by playing** after an iteration has merged.
-  Label them `defect`. Each is closed by a pull request that fixes the page
-  *and* adds the assertion that would have caught it, written against the
-  broken commit first.
+  quarantined to get to green. The gates and the run count are stated in
+  [`AGENTS.md`](AGENTS.md).
+- **Issues hold a design proposal or a defect.** A non-trivial change may open
+  its design as an issue, iterated with the reviewer to an explicit AGREE before
+  the pull request (`AGENTS.md` states the two stages). A defect found by
+  playing, after an iteration has merged, is an issue too, labelled `defect`,
+  closed by a pull request that fixes the page *and* adds the assertion that
+  would have caught it, written against the broken commit first.
 - **No project board, no milestones, no issue per iteration.** This document
-  holds the plan; a second copy goes stale.
+  holds the plan; a second copy goes stale. A design issue is the exception, and
+  it is one per non-trivial change, not one per iteration.
 - **A pull request does not merge while its review is still running.**
   Tressette's iteration 5 merged with its review in flight, and the review
   then found the iteration's central conclusion wrong, which the next pull

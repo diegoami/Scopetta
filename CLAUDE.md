@@ -1,3 +1,7 @@
+> Guidance for Claude Code. The OpenCode review process lives in
+> [`AGENTS.md`](AGENTS.md), and the principles both tools share are in
+> [`PRINCIPLES.md`](PRINCIPLES.md).
+
 # Scopetta
 
 A two-player Scopa game for the browser, the third of a series after
@@ -15,82 +19,41 @@ open, and blocks nothing. Tressette is the reference
 for everything the plan does not state, and Discola for everything Tressette
 does not; clone both beside this repo if they are not already there.
 
-## Read this much, and no more
+## How this file relates to the others
 
-Normally inspect: `public/index.html`, `public/engine.js`, `tools/*`, the root
-`*.md`, `.github/workflows/*`, `.claude/skills/*`.
+The tool-agnostic working principles are in
+[`PRINCIPLES.md`](PRINCIPLES.md): reproduce a finding or a claim before acting on
+it, say what a passing check would have caught, treat one measurement as a coin
+toss, flag out-of-scope defects, show diffs, the paths to inspect and ignore,
+keeping command output short, and the session handoff. Read them there; this file
+keeps the project's own rules.
 
-Normally ignore: `node_modules/`, `.git/`, `public/decks/`, `public/fonts/`,
-`public/icons/`, and any binary. Read `package-lock.json` only when dependencies
-are the task.
+## How changes are reviewed
 
-Ignoring a path here does not mean it should be deleted or gitignored.
+The principles both tools share are in [`PRINCIPLES.md`](PRINCIPLES.md), and the
+**verification gates** — the commands and how many times the full suite runs
+before a push — are in [`AGENTS.md`](AGENTS.md). Read the principles; run the
+gates.
 
-## Change the smallest thing
-
-Prefer targeted reads and diffs to repeating whole files: search first, then read
-the range you need, and show changes as a diff (`git diff -- <path>`,
-`git show HEAD:<path>`) rather than reprinting a file. Make edits with focused
-replacements instead of rewriting a file to change a few lines.
-
-## Keep command output short
-
-Prefer the repository's own commands over ad-hoc exploration, and cap their
-output. On PowerShell:
-
-```powershell
-npm run check 2>&1 | Select-Object -Last 40
-npm test 2>&1 | Select-Object -Last 20
-git diff --stat
-gh pr view <n> --json title,state --jq .
-```
-
-On bash, `| tail -40` instead of `Select-Object -Last 40`. Use `node --check
-<file>` for a syntax check instead of running a script, and scope file searches
-to source directories rather than searching from the repository root.
-
-## Sessions and handoff
-
-Start a fresh session after a completed logical unit — a merged PR, a finished
-fix, a documentation pass — or when a thread has grown long. Carry forward a
-short handoff:
-
-- **Completed:** what is now true (and any verification that ran).
-- **Files / decisions:** the paths touched and the decisions made, with reasons.
-- **Next:** the next task, or "nothing open".
-
-Durable facts belong in the repository (this file, the docs, the PR body), not
-in the conversation.
-
-## Who builds and who reviews
-
-The builder is DeepSeek V4.1 Flash. Every pull request gets one review from a
-**fresh context** by GPT-5.6 Luna at high effort (`opencode/gpt-5.6-luna#high`),
-run as a subagent with that model. PLAN.md §7.2 and §7.3 say why, and §7.3 says
-what the reviewer is given and what it checks. The reviewer reports; the builder
-fixes in the same pull request and the reviewer looks once more.
-
-**The review is posted to the pull request itself** — `gh pr review`/`gh pr
-comment`, signed as the reviewer — not handed back to the builder alone. A review
-only a conversation can see is one the owner cannot.
+**Claude Code does not run the cross-model review.** That mechanism is
+OpenCode's, in `AGENTS.md`, and it needs a subagent from a different model family,
+which Claude Code cannot spawn. Here the process is the lighter one: a change is
+reviewed by a fresh context when one is available, the reviewer reports and the
+builder fixes in the same change — but no model is switched and no reviewer is
+spawned. A finding the builder disagrees with goes to the owner, not around the
+reviewer. Everything in `PRINCIPLES.md` applies either way.
 
 ## After any UI change, run the UI check
 
-```sh
-node tools/check_ui.mjs
-```
-
-Not optional, and not only when something looks wrong. It runs in CI on every
-pull request as well, and a red check does not merge.
+The gate — the command and how many times it runs before a push — is in
+[`AGENTS.md`](AGENTS.md). Not optional, and not only when something looks wrong.
+It runs in CI on every pull request as well, and a red check does not merge.
 
 **The suspension ended at iteration 3.** The check is this game's now — its
 own fixtures, its own table row, `scopetta` where it used to say `tressette` —
-and `check.yml` has the job that runs it. Ten passes: the document, every
-screen, the table at every viewport in every deck, the table again with the
-spacing inflated and no slack, the capture choice and the toast, the states
-only playing can reach — a card landing, a sweep, a lay and the beat between
-rounds — turning the phone over, the rules in both languages and both ways in,
-the sheets and the partita around the deal, and one whole deal.
+and `check.yml` has the job that runs it. `SPEC.md` §7 lists what it covers and
+[`AGENTS.md`](AGENTS.md) states the gates; this file does not repeat either, so
+the pass list has one home.
 
 **Which card a tap lands on, and which words a player can read, are decided by
 paint order, and nothing about paint order moves a box.** Four of iteration 3's
@@ -100,10 +63,10 @@ them. So the check hit-tests: the table row a pixel at a time with
 about what reaches the player rather than about where a box is, measure what
 the page answers, not what it contains.
 
-**`node tools/break_ui.mjs` is the other half.** It breaks the page on purpose,
-one defect at a time, and checks that the assertion *written for that defect*
-goes red — not merely that something did. Run it after adding an assertion, the
-way `tools/break.mjs` is run after adding a rule test.
+**`break_ui.mjs` is the other half** of the check, and the gate that runs it —
+when, and against what — is in [`AGENTS.md`](AGENTS.md). It breaks the page on
+purpose, one defect at a time, and checks that the assertion *written for that
+defect* goes red — not merely that something did.
 
 Every UI defect Discola shipped was invisible in the diff and threw no error:
 cards overlapping the hand, the player's own hand pushed below the fold, the
@@ -403,11 +366,7 @@ The `ui-check` skill explains what it covers and how to read a failure.
 
 ## After any engine change, run the unit tests
 
-```sh
-node --test "tools/**/*.test.mjs"
-```
-
-They are deterministic — the shuffle and Piero's roll both arrive as a seeded
+The gate is in [`AGENTS.md`](AGENTS.md). They are deterministic — the shuffle and Piero's roll both arrive as a seeded
 rng — and they cover what the UI check cannot see: the capture rules, the
 scoring of every point, the trap positions, the search that refuses a position
 it cannot deduce, and the golden fixture's frozen deals. They live in
@@ -417,9 +376,7 @@ This rule is not optional for the same reason the UI one is not. The golden
 fixture freezes the plays: a formula change moves them by accident and the test
 says so, and a weight change moves them deliberately and the fixture is
 re-recorded in the same commit — `node tools/selfplay.mjs --golden >
-tools/golden.json`, which is what `tools/golden.json` is. The tests and
-`node tools/check_ui.mjs` are the two jobs in `.github/workflows/check.yml`, on
-every pull request and every push to `main`, and a red one does not merge.
+tools/golden.json`, which is what `tools/golden.json` is.
 
 ## The card size is a budget, and it has two terms
 

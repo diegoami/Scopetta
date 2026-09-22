@@ -56,7 +56,9 @@ package.json         scripts and playwright-core, the one dev dependency
 RULES.md / REGOLE.md the rules as this game plays them, English and Italian
 PLAN.md              the plan and the record, iteration by iteration
 ANDROID.md           the APK: what is done, and what is left and whose
-CLAUDE.md            the rules a builder has to follow
+AGENTS.md            OpenCode's guidance: the cross-model review and the gates
+PRINCIPLES.md        the principles both tools share
+CLAUDE.md            Claude Code's guidance: the project's own rules
 ```
 
 Nothing is generated at build time and nothing under `public/` imports
@@ -272,19 +274,17 @@ the box.
 
 ## 7. The checks
 
-```sh
-node --test "tools/**/*.test.mjs"    94 tests, 93 passing, 1 skipped on Windows
-node tools/check_ui.mjs              twelve passes, needs playwright-core + Chromium
-```
-
-Both run in CI on every pull request; a red check does not merge. The engine
-tests cover the rules, the traps, the roster, the release decisions and the
-golden fixture. The UI check's twelve passes: the **document**, the **fonts**
-(every character inside the shipped subset, every `@font-face` loading with the
-network cut, no subresource from outside), the **screens** (every screen and
-every mid-deal state at seven shapes), the **table** (25 viewports × 6 decks × 4
-table sizes, then the tightest again with the spacing inflated and `--slack: 0`),
-the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
+The **gates** — the commands and how many times each runs before a push — are in
+[`AGENTS.md`](AGENTS.md), which is their home. Both the tests and the UI check
+run in CI on every pull request, and a red check does not merge. What they cover:
+the engine tests are the rules, the traps, the roster, the release decisions and
+the golden fixture — 94 in all, 93 passing and 1 skipped on Windows; the UI check
+needs `playwright-core` and a Chromium and its passes are the **document**, the
+**fonts** (every character inside the shipped subset, every `@font-face` loading
+with the network cut, no subresource from outside), the **screens** (every screen
+and every mid-deal state at seven shapes), the **table** (25 viewports × 6 decks ×
+4 table sizes, then the tightest again with the spacing inflated and `--slack:
+0`), the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
 **plates in a fallback font**, the **sheets and the partita**, and **one whole
 deal**. `.claude/skills/ui-check/SKILL.md` explains what each threshold is
 calibrated against.
