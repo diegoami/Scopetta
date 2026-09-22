@@ -56,7 +56,9 @@ package.json         scripts and playwright-core, the one dev dependency
 RULES.md / REGOLE.md the rules as this game plays them, English and Italian
 PLAN.md              the plan and the record, iteration by iteration
 ANDROID.md           the APK: what is done, and what is left and whose
-CLAUDE.md            the rules a builder has to follow
+AGENTS.md            OpenCode's guidance: the cross-model review and the gates
+PRINCIPLES.md        the principles both tools share
+CLAUDE.md            Claude Code's guidance: the project's own rules
 ```
 
 Nothing is generated at build time and nothing under `public/` imports

@@ -1,3 +1,7 @@
+> Guidance for Claude Code. The OpenCode review process lives in
+> [`AGENTS.md`](AGENTS.md), and the principles both tools share are in
+> [`PRINCIPLES.md`](PRINCIPLES.md).
+
 # Scopetta
 
 A two-player Scopa game for the browser, the third of a series after
@@ -62,17 +66,20 @@ short handoff:
 Durable facts belong in the repository (this file, the docs, the PR body), not
 in the conversation.
 
-## Who builds and who reviews
+## How changes are reviewed
 
-The builder is DeepSeek V4.1 Flash. Every pull request gets one review from a
-**fresh context** by GPT-5.6 Luna at high effort (`opencode/gpt-5.6-luna#high`),
-run as a subagent with that model. PLAN.md §7.2 and §7.3 say why, and §7.3 says
-what the reviewer is given and what it checks. The reviewer reports; the builder
-fixes in the same pull request and the reviewer looks once more.
+The principles both tools share are in [`PRINCIPLES.md`](PRINCIPLES.md), and the
+**verification gates** — the commands and how many times the full suite runs
+before a push — are in [`AGENTS.md`](AGENTS.md). Read the principles; run the
+gates.
 
-**The review is posted to the pull request itself** — `gh pr review`/`gh pr
-comment`, signed as the reviewer — not handed back to the builder alone. A review
-only a conversation can see is one the owner cannot.
+**Claude Code does not run the cross-model review.** That mechanism is
+OpenCode's, in `AGENTS.md`, and it needs a subagent from a different model family,
+which Claude Code cannot spawn. Here the process is the lighter one: a change is
+reviewed by a fresh context when one is available, the reviewer reports and the
+builder fixes in the same change — but no model is switched and no reviewer is
+spawned. A finding the builder disagrees with goes to the owner, not around the
+reviewer. Everything in `PRINCIPLES.md` applies either way.
 
 ## After any UI change, run the UI check
 

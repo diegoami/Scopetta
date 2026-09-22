@@ -264,7 +264,9 @@ tools/package_release.mjs, publish_release.mjs, release_lib.mjs, release.test.mj
 netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.html, /android redirect
 assets/             the 1024px icon layers Capacitor's asset tool reads
 mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
-CLAUDE.md, README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
+AGENTS.md, CLAUDE.md, PRINCIPLES.md
+                     the guidance, split by tool (§7.2, §7.3)
+README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
 ```
 
 Only `public/` is the site. Tressette's §3.1 says why the engine is a second
@@ -1775,6 +1777,12 @@ layout defect costs more than it saves. Exploration subagents the builder spawns
 to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 
 ### 7.3 The reviewer
+
+**The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
+by tool:** OpenCode runs the cross-model review, Claude Code does not (it cannot
+spawn another family as a subagent), and the principles both share are in
+[`PRINCIPLES.md`](PRINCIPLES.md). This section keeps the reasoning; the mechanics
+live in those files so the two do not drift.
 
 Every pull request gets one review from a **fresh context** — a new session or
 a subagent that has not seen the work. **The reviewer is GPT-5.6 Luna at high
