@@ -623,8 +623,9 @@ values, Piero's row the `--piero 8 400` range, and the last column the seeded
 `--differ 300`. The fourth corner of the (carte, denari) grid — both off — is a
 **handicap**: 54.9–55.8% against greedy-take, and no compensation lifts it back
 over the floor, so it is empty and Piero rolls in the cautious corner instead.
-Pairwise, the tightest pair is Graziano and Franco at 7.7% / 7.3%, and no other
-pair is under 8.7%. Every fixed player and every roll of Piero clears the floors
+Pairwise, the tightest pair is Graziano and Franco at 7.7% / 7.3%; in
+`--differ`'s single roll of Piero no other pair is under 8.7%, and across his
+eight rolls he comes as close as 8.3% to Graziano. Every fixed player and every roll of Piero clears the floors
 on both ranges, and no pair is near the 65% head-to-head ceiling — all are about
 50%.
 
