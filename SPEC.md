@@ -45,15 +45,15 @@ tools/serve.mjs          public/ over http, standard library only
 tools/make_icons.mjs     cuts the settebello out of the Napoletane sheet
 tools/import_bresciane.mjs  builds the sixth deck from its source repo
 tools/release.test.mjs / release_lib.mjs  the release decisions, held in tests
-tools/package_release.mjs   signed APK into dist-release/
-tools/publish_release.mjs   that APK to the releases repo, on --confirm
+tools/package_release.mjs   signed APK and Windows exe into dist-release/
+tools/publish_release.mjs   both to the releases repo, on --confirm
 tools/smoke_desktop.mjs  the built desktop app, launched twice and played
 tools/pack_cards.py      carried from Discola, for repacking a deck
 mobile/              the Capacitor wrapper and the Android project
 desktop/             the Tauri wrapper, the Windows build (DESKTOP.md)
 .github/workflows/check.yml  the two CI jobs: the tests, and the UI check
 netlify.toml         publish public/, cache decks/fonts/icons, never the page,
-                     and the /android redirect
+                     and the /android and /windows redirects
 package.json         scripts and playwright-core, the one dev dependency
 RULES.md / REGOLE.md the rules as this game plays them, English and Italian
 PLAN.md              the plan and the record, iteration by iteration

@@ -87,8 +87,10 @@ On this machine, present tense:
 Android Studio JBR **JDK 25** with `Unsupported class file major version 69`; the
 build here used **`%USERPROFILE%\.jdks\jbr-21.0.11`** with `JAVA_HOME` pointing
 at it, `ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk` with `platforms;android-36`,
-`build-tools;36.0.0`. `tools/package_release.mjs` warns when `JAVA_HOME` is
-unset for that reason.
+`build-tools;36.0.0`. `tools/package_release.mjs` takes `JAVA_HOME` when it is
+set, and otherwise looks for a JDK 21 where they usually land (`~/.jdks`,
+`Program Files\Java`, Eclipse Adoptium, Android Studio's `jbr`) and refuses to
+build without one, rather than let Gradle fail on 25 (`pickJdk`, from Tressette).
 
 **The manifest asks for `android.permission.INTERNET`, and the app makes no
 network requests.** Both are true, and the permission is Capacitor's default
@@ -158,16 +160,19 @@ in this project worth backing up somewhere that outlives the machine.
 
 ## 4. Publishing
 
-**`node tools/package_release.mjs`** — `cap sync`, `gradlew assembleRelease`,
-refuse an unsigned APK, `apksigner verify`, then write
-`dist-release/vX.Y.Z/Scopetta-X.Y.Z-android.apk` and `SHA256SUMS.txt`. The
-version comes from `versionName` in `app/build.gradle`, so the filename cannot
-drift from what is inside the APK. A silently unsigned artifact is worse than a
-failed build, which is why step three is a refusal rather than a warning.
+**`node tools/package_release.mjs`** — since 1.0.1 it builds **both** targets,
+the APK and the Windows executable (`DESKTOP.md`). It checks that every version
+declaration agrees with `versionName` in `app/build.gradle` before anything
+builds, then `cap sync`, `gradlew assembleRelease`, refuse an unsigned APK,
+`apksigner verify`, the desktop build, refuse an implausible `.exe`, the desktop
+smoke, and stage `dist-release/vX.Y.Z/` with `Scopetta-X.Y.Z-android.apk`,
+`Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt`, read back and verified. A
+silently unsigned artifact is worse than a failed build, which is why the APK
+step is a refusal rather than a warning.
 
 **`node tools/publish_release.mjs`** — re-hash the staged files against
-`SHA256SUMS.txt`, then `gh release create` on `diegoami/scopetta-releases`. Dry
-run by default; `--confirm` to actually publish, because this is outward-facing
+`SHA256SUMS.txt`, require exactly the two assets and nothing else, then `gh
+release create` on `diegoami/scopetta-releases`. Dry run by default; `--confirm` to actually publish, because this is outward-facing
 and a public tag is hard to take back.
 
 **The releases repo is `diegoami/scopetta-releases`.** `diegoami/Scopetta` is
@@ -230,9 +235,11 @@ README pushed before `--confirm` can work.
 1. **Portrait-only, or both orientations?** Both work today and the check
    covers both. Portrait-only is one line and removes a class of bug from a
    device nobody is going to rotate mid-hand.
-2. **Version numbering.** There is no changelog and no version anywhere else in
-   this repo. `versionCode` only ever increases; 1.0.0 / `versionCode 1` is the
-   start, and a changelog is worth adding when there is a second release.
+2. **Version numbering.** `versionName` is the version, and since 1.0.1 the
+   desktop wrapper declares it five more times; `tools/release.test.mjs` holds
+   all seven to it on every pull request. `versionCode` only ever increases:
+   1.0.0 was `versionCode 1`, 1.0.1 is `2`. There is still no changelog; the
+   release notes' subtitle is the one line that says what changed.
 3. **A Play Store listing** is deliberately not in the table above: sideloading
    needs none of the paperwork, and the paperwork outweighs the code.
 4. **Can `android.permission.INTERNET` be dropped?** See §2. It would make the

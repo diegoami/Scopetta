@@ -2345,6 +2345,25 @@ async function checkRules(browser) {
           if (!blocks.join(' ').toLowerCase().includes(must))
             out.push(`the rules in ${lang} never mention the ${must}`);
       }
+      // The two apps, linked from each half: the Android one and, since 1.0.1,
+      // the Windows one (DESKTOP.md). Both links go to the same releases page,
+      // so each is told apart by its text. `Windows` is the same word in both
+      // languages, so each half is also asked for a phrase only its own
+      // language has; a sentence pasted untranslated into the other half
+      // answers the first question and not the second. Tressette's check, whose
+      // own page had the Android link and no assertion for it either.
+      const computer = { it: /sul computer/, en: /\ba computer\b/ };
+      for (const lang of ['it', 'en']) {
+        const sec = document.querySelector(`#viewRules section[lang="${lang}"]`);
+        if (!sec) continue;   // the language checks above already said so
+        const links = [...sec.querySelectorAll('a[href]')].filter(a =>
+          a.getAttribute('href').startsWith('https://github.com/diegoami/scopetta-releases'));
+        for (const app of ['Android', 'Windows'])
+          if (!links.some(a => a.textContent.includes(app)))
+            out.push(`the rules in ${lang} do not link to the ${app} app`);
+        if (!computer[lang].test(sec.textContent.replace(/\s+/g, ' ')))
+          out.push(`the rules in ${lang} do not say the Windows app is for a computer, in ${lang}`);
+      }
       return out;
     }));
 
