@@ -88,7 +88,13 @@ browser, and say where it came from and how it was obtained.
 
 ## Flag out-of-scope defects, do not fix them silently
 
-A defect found while doing something else is filed — a `defect` issue — not
+**A review is scoped; a finding is not lost.** A review answers the change as
+proposed — a finding outside it is written down and put to the owner with a
+proposed issue, never a condition of this change and never a silent edit to
+another one. `AGENTS.md` states that routing.
+
+Outside a review, the same habit holds and the implementer needs no leave: a
+defect found while doing something else **is filed as a `defect` issue**, not
 swept into the change. A silent fix hides the defect from the next reader, who
 would have found it the same way, and leaves no assertion behind for it.
 

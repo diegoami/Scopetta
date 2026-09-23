@@ -69,15 +69,32 @@ defect; it changes no check's *design*; it changes no process. Adding or
 adjusting the assertion **that catches the recorded defect** is part of the fix,
 not check design; changing **what a check measures** is check design.
 
-**What a BLOCK may require.** Every required change in a BLOCK must be
-**necessary to the change as proposed** — directly required for its stated aim,
-its correctness, or its verification — not merely useful, preferred, or unrelated
-cleanup. A requirement that is really a **separate concern** is **filed as its
-own issue and linked**, not swallowed; the reviewer may require the split. If the
-required changes would turn the change into a different, larger one, the
-implementer may **withdraw and re-scope** it with the owner rather than let it
-grow: **the withdrawal and the re-scope are recorded** on the issue, and any
-AGREE already given is invalidated under § *AGREE, materiality, re-review*.
+**A BLOCK is scoped to the change as proposed.** A required change must be
+necessary to the proposal's stated aim, its correctness, or its verification —
+not merely useful, preferred, or unrelated cleanup. **The reviewer decides
+whether a finding is necessary, and that decision is what the verdict rests on;
+neither party's label changes it.** A finding necessary to the proposal **is in
+scope and may be a BLOCK**, and § *A BLOCK is not overridden* applies to it.
+
+A finding **outside** that scope does not block the change and is not swallowed:
+the reviewer **posts it on the issue or PR marked out of scope**, and the
+implementer **lists it for the owner in the chat with a proposed issue for
+each**. **The owner decides which become issues**, recorded on the issue or PR
+under § *Owner decisions are not the reviewer's*; **until the owner answers, the
+finding stays a proposal and the verdict stands**. An out-of-scope finding is
+not a BLOCK, a merge condition or a required dependency, is not a reason to
+withhold AGREE, and the reviewer's obligation toward it ends at posting it.
+
+If the proposal must **grow** to take a necessary finding, that is a **withdrawal
+and re-scope** — recorded on the issue, and any AGREE already given is invalidated
+under § *AGREE, materiality, re-review*. **An in-scope requirement that is the
+owner's to decide is still not the reviewer's to choose**: the reviewer requires
+the decision to be recorded, and an owner who rejects an in-scope requirement
+means withdraw or re-scope — no AGREE, never merged around. **An owner decision
+sets a value or a boundary; it does not reclassify the finding** — the owner
+cannot make an out-of-scope finding necessary, nor an in-scope one out of scope.
+A different boundary is the **withdrawn and re-scoped proposal**, not a
+relabelling.
 
 ### A BLOCK is not overridden
 
