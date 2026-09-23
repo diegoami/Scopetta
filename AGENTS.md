@@ -61,9 +61,10 @@ GitHub forbids approving your own pull request under one account.
    `Closes #<design issue>` when a design issue exists, and `Closes #<defect
    issue>` when it fixes a defect, so both records close themselves; nothing is
    closed by hand. **When one issue is both the design and the defect record, one
-   `Closes` line is enough.** Each is **plain text on a line of its own** at the
-   end of the body — never inside backticks or a code block, where GitHub does
-   not read it: #35 put `Closes #34` in a code span and linked nothing. The proof
+   `Closes` line is enough.** Each is **plain text, never inside backticks or a
+   code block**, where GitHub does not read it: #35 put `Closes #34` in a code
+   span and linked nothing, while a plain keyword links even mid-sentence (both
+   probed on #55). By convention it sits on a line of its own at the end. The proof
    is `gh pr view <n> --json closingIssuesReferences` listing every issue the PR
    closes; if it does not, the body is fixed before the merge.
 
