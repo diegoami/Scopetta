@@ -50,8 +50,9 @@ reproduces what it reports and does not edit the change. It posts its verdict on
 the pull request with `gh pr comment`, ending in `AGREE` or `BLOCK`, and signs it
 `— <model name> (<model id>), fresh-context subagent, reviewer`. The builder fixes
 the change in the same pull request, and **a re-review may continue the same
-subagent**. Claude merges on an `AGREE` **given on the revision being merged**
-and green CI. Any push after the `AGREE` needs a fresh verdict, unless it
+subagent**. A pull request that fixes an issue closes it with a `Closes` line,
+written and checked as `AGENTS.md` § *Two stages* says. Claude merges on an
+`AGREE` **given on the revision being merged** and green CI. Any push after the `AGREE` needs a fresh verdict, unless it
 changes only commit messages, whitespace or a typo that alters no behaviour, no
 assertion and no process text. A finding the builder disagrees with goes to the
 owner, not around the reviewer. A finding outside the change is routed as
