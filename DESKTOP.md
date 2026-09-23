@@ -5,9 +5,9 @@ the build is checked. Companion to [`ANDROID.md`](ANDROID.md), which does the
 same for the APK.
 
 **Status.** The [`desktop/`](desktop/README.md) wrapper is built and passes
-`tools/smoke_desktop.mjs` (below). A release carries it beside the APK from
-1.0.1 on, and the rules screen and `/windows` link to it. Installers and code
-signing are deferred.
+`tools/smoke_desktop.mjs` (below). **v1.0.1 carries it beside the APK**,
+published on 2026-09-23 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, and the rules
+screen and `/windows` link to it. Installers and code signing are deferred.
 
 ## Recorded decision
 

@@ -227,6 +227,14 @@ All five steps are done: the key exists, the releases repo exists and carries
 v1.0.0, it was published from this machine, and the owner installed and played
 it. The build, the debug APK and the offline emulator run are recorded above.
 
+**v1.0.1 is the current release** (2026-09-23), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>: the APK
+(`versionCode 2`, signed on the same key, `fdf7ca01…`) and, for the first time,
+the Windows executable beside it (`DESKTOP.md`). It was packaged from `main` at
+`5e1669c` with `tools/package_release.mjs`, which built both, smoked the exe and
+verified the staging, and published with `publish_release.mjs --confirm` on the
+owner's go-ahead. The executable downloaded back from the release matches its
+checksum.
+
 Two things worth knowing when publishing, both learned on Tressette:
 `storeFile` in `keystore.properties` is read as a Java properties value, so a
 Windows path needs forward slashes or doubled backslashes; and GitHub will not
