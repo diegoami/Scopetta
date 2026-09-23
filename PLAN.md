@@ -261,12 +261,14 @@ tools/make_icons.mjs       cuts the icon from a deck sheet, for the tab and for 
 tools/import_bresciane.mjs builds the sixth deck's sprite sheet
 tools/pack_cards.py the packer, carried over unchanged in case a deck is ever repacked
 tools/package_release.mjs, publish_release.mjs, release_lib.mjs, release.test.mjs   the Android release
+tools/smoke_desktop.mjs    the built desktop app, launched twice and played (DESKTOP.md)
 netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.html, /android redirect
 assets/             the 1024px icon layers Capacitor's asset tool reads
 mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
+desktop/            the Tauri wrapper that packages public/ as a Windows app (DESKTOP.md)
 AGENTS.md, CLAUDE.md, PRINCIPLES.md
                      the guidance, split by tool (§7.2, §7.3)
-README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
+README.md, RULES.md, REGOLE.md, ANDROID.md, DESKTOP.md, SPEC.md, .claude/skills/ui-check/
 ```
 
 Only `public/` is the site. Tressette's §3.1 says why the engine is a second

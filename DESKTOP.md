@@ -60,6 +60,13 @@ a card, and where the rules leave a choice of capture a second tap accepts the
 capture the table proposes — then restarts the app and looks for the deal and
 the deck it chose.
 
+The deal is a known one, seed 16 with the dealer cleared, as in `check_ui.mjs`'s
+deal pass. A random deal meets a choice of capture only about a third of the
+time, and a run that never made the second tap printed the same as one that did;
+the review of #61 found it. On this deal the driver meets two choices every run,
+the smoke counts them and fails on none, and the cards played are read from the
+page rather than counted by the driver.
+
 Run on 2026-09-23 (Windows 11, Tauri 2.11.6):
 
 ```
@@ -68,7 +75,8 @@ first launch
   pass  the window opens at 1280x800  (1280x800)
   pass  all 6 decks load over the asset protocol
   pass  a deal puts three cards in your hand  (3)
-  pass  a whole deal plays through  (18 cards played)
+  pass  a whole deal plays through  (36 of 36 cards played)
+  pass  a choice of capture is accepted with a second tap  (2 choice(s))
   pass  the end of the deal shows its result  (Hai perso)
   pass  the deal is recorded in the history  (1 deals)
   pass  all 6 @font-face rules load
@@ -80,7 +88,7 @@ second launch
   pass  the app wrote to the temporary profile, not the player's
 ```
 
-Made to fail first, two ways, so its checks are known to see what they name:
+Made to fail first, three ways, so its checks are known to see what they name:
 
 - **A window of the wrong size.** Built with `tauri.conf.json` at 1100 × 700,
   the smoke fails exactly one check: `the window opens at 1280x800 (1100x700)`.
@@ -92,7 +100,13 @@ Made to fail first, two ways, so its checks are known to see what they name:
   that state, since the picker offers only real names and the page replaces an
   unknown saved one on load, so it is recorded here rather than chased.
 
-After both, the healthy build passes every check again.
+- **A choice the second tap never accepts.** With the second tap taken out
+  but the choice still counted, the deal stalls on the raised card: `a whole
+  deal plays through (32 of 36 cards played)` fails, with the result and the
+  history after it. The page's own count is what catches it.
+
+After each, the healthy build passes every check again, and three healthy runs
+in a row met the same two choices.
 
 ## Releasing
 

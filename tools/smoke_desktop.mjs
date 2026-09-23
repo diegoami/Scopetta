@@ -91,14 +91,23 @@ async function quit({ proc, browser }) {
 // page.mouse rather than locator.click: attached to WebView2 over CDP,
 // Playwright's visibility check does not pass for cards that are on screen at
 // full size (Tressette found it on its fan), and the page takes the taps.
+//
+// The card played is the one with the most captures on offer, as check_ui.mjs
+// drives it, so the second tap is reached whenever the hand allows it — and on
+// the deal set up below it always does. Returns how many choices were met.
 async function playDeal(page) {
-  let plays = 0;
+  let plays = 0, choices = 0;
   for (let i = 0; i < 1200 && plays < YOUR_PLAYS; i++) {
     await sleep(60);
     const move = await page.evaluate(() => {
       if (state.over || state.deveGiocare !== 0 || beat || sweeping) return null;
-      const slot = state.hands[0].findIndex(c => !!c);
-      return slot < 0 ? null : { slot, choices: prese(state.tavola, state.hands[0][slot]).length };
+      let slot = -1, n = -1;
+      state.hands[0].forEach((c, i) => {
+        if (!c) return;
+        const k = prese(state.tavola, c).length;
+        if (k > n){ n = k; slot = i; }
+      });
+      return slot < 0 ? null : { slot, choices: n };
     });
     if (!move) {
       if (await page.evaluate(() => state.over)) break;
@@ -110,12 +119,12 @@ async function playDeal(page) {
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     };
     await tap();
-    if (move.choices > 1) { await sleep(120); await tap(); }
+    if (move.choices > 1) { await sleep(120); await tap(); choices++; }
     plays++;
     await page.waitForFunction(() => state.deveGiocare !== 0 || state.over,
                                null, { timeout: 5000 }).catch(() => {});
   }
-  return plays;
+  return choices;
 }
 
 try {
@@ -154,10 +163,25 @@ try {
     null, { timeout: 5000 }).catch(() => {});
   const dealt = await page.locator('.hand--you .card:not([data-empty="true"])').count();
   check(dealt === 3, 'a deal puts three cards in your hand', String(dealt));
-  const plays = await playDeal(page);
+  // Then the deal is replaced by a known one, because a random deal meets a
+  // choice of capture about a third of the time, and a smoke that never makes
+  // the second tap prints the same as one that does. Seed 16 with the dealer
+  // cleared is check_ui.mjs's deal pass (its comment says why the dealer has to
+  // be cleared); under the driver above its first choice comes before anything
+  // this driver does differently, so every run meets at least one.
+  await page.evaluate(`(() => { epoch++; state.mazziere = null;
+    newDeal(state, rngSeed(16)); render();
+    if (state.deveGiocare === 1) computerPlay(); })()`);
+  const choices = await playDeal(page);
   const over = await page.waitForFunction(() => state.over, null, { timeout: 8000 })
     .then(() => true, () => false);
-  check(over && plays === YOUR_PLAYS, 'a whole deal plays through', `${plays} cards played`);
+  // Read from the page, not counted here: a tap that did nothing would still
+  // have been counted by the driver.
+  const played = await page.evaluate(() => state.plays);
+  check(over && played === 2 * YOUR_PLAYS, 'a whole deal plays through',
+        `${played} of ${2 * YOUR_PLAYS} cards played`);
+  check(choices > 0, 'a choice of capture is accepted with a second tap',
+        choices ? `${choices} choice(s)` : 'the deal met no choice, so the second tap was never made');
   await page.waitForFunction(() => !document.querySelector('#result').hidden,
                              null, { timeout: 8000 }).catch(() => {});
   const title = await page.evaluate(() => document.querySelector('#resultTitle')?.textContent.trim());

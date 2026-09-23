@@ -112,7 +112,7 @@ a check that silently passes. **Two of them are played rather than posed** — t
 sweep and the beat between rounds — because neither is a state the engine will
 sit in; see the pass below.
 
-**Table pass** — the card table at all twenty-five viewports in all six decks,
+**Table pass** — the card table at all twenty-seven viewports in all six decks,
 **with the middle row holding 0, 4, 8 and 13 cards**. Asserts that no table card
 lands on a card in either hand, that your whole seat is above the fold, that the
 middle stays inside the table and draws one row in landscape and two in
