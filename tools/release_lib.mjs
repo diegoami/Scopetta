@@ -218,10 +218,15 @@ export function checksumProblems(manifestText, hashOf, { expected, present } = {
 // The release notes, in Italian to match the game. The Windows paragraph is
 // the one place a player meets the unsigned-first decision (DESKTOP.md): it
 // says what SmartScreen will show and how to get past it. `subtitle` is the
-// one line that changes from release to release.
-export function releaseNotes(version, { subtitle } = {}){
+// one line that changes from release to release. `tag` and `commit` name the
+// source every binary was built from (CLAUDE.md, "Each milestone"); the
+// publisher always passes both, having checked the tag names that commit.
+export function releaseNotes(version, { subtitle, tag, commit } = {}){
   const [apk, exe] = releaseAssets(version);
   const title = subtitle ? `Scopetta ${version}: ${subtitle}.` : `Scopetta ${version}.`;
+  const source = commit
+    ? `**Sorgente:** il tag \`${tag}\` di diegoami/Scopetta, commit \`${commit}\`.\n\n`
+    : '';
   return `${title}\n\n` +
     `**Windows:** scarica \`${exe}\` e avvialo. L'eseguibile non è firmato ` +
     `digitalmente, quindi Windows mostrerà l'avviso «Windows ha protetto il PC»: ` +
@@ -232,6 +237,7 @@ export function releaseNotes(version, { subtitle } = {}){
     `Lo storico delle smazzate resta sul dispositivo: niente lascia il telefono o ` +
     `il computer.\n\n` +
     `**Gioca nel browser:** https://scopetta.netlify.app/\n\n` +
+    source +
     `Checksum SHA-256 in \`SHA256SUMS.txt\`.\n`;
 }
 

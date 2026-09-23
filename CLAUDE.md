@@ -67,9 +67,9 @@ branch, a pull request, a proposal, a count of merged pull requests, or a change
 to a particular file or to this process. The independent review happens per
 milestone, **before the tag**, never per pull request. Releases are published
 to `diegoami/scopetta-releases`; the tag still goes on this repository's
-`main`, and the release notes name the tagged commit — the scripts do not write
-it yet (#65), so until they do, Claude adds it to the published release's notes
-as part of the publish the owner approved. This project publishes no
+`main`, and the release notes name the tagged commit: `publish_release.mjs`
+refuses unless the tag on origin names the commit the release was packaged
+from, and writes that commit into the notes (#65). This project publishes no
 pre-releases.
 
 1. **The owner calls a milestone, or Claude proposes one** when a release is due

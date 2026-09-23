@@ -6,6 +6,9 @@
  *   node tools/package_release.mjs
  *
  * Steps, in order, stopping at the first failure:
+ *   0. the working tree is exactly HEAD (tools/source_tag.mjs), and HEAD's
+ *      commit and tree are what this build will be recorded as; any earlier
+ *      staging of this version is removed before anything builds
  *   1. every version declaration agrees with Android's versionName
  *   2. cap sync android   — copy public/ into the Android project
  *   3. gradlew assembleRelease
@@ -15,7 +18,8 @@
  *   7. refuse an implausible executable (missing, truncated, not PE)
  *   8. tools/smoke_desktop.mjs against that executable
  *   9. stage dist-release/vX.Y.Z/ with both assets and SHA256SUMS.txt, then
- *      read back and verify what was staged
+ *      read back and verify what was staged, and record the source beside it in
+ *      dist-release/vX.Y.Z.source, which publish_release.mjs checks the tag against
  *
  * The version comes from mobile/android/app/build.gradle's versionName, and
  * step 1 holds the desktop wrapper's declarations to it. Both targets stage
@@ -40,6 +44,7 @@ import {
   EXPECTED_CERT, JDK_MAJOR, newestBuildTools, signatureVerdict, pickJdk,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, checksumProblems,
 } from './release_lib.mjs';
+import { formatSource, treeProblems } from './source_tag.mjs';
 
 const WIN = process.platform === 'win32';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -107,6 +112,33 @@ if (disagree.length)
 const tag = `v${version}`;
 console.log(`packaging Scopetta ${tag}`);
 
+// --- 0: build only committed source, and remember which ---
+// A release is the tagged commit (CLAUDE.md, "Each milestone"), so a build that
+// no commit contains cannot be published. Untracked files count, and ignored
+// ones under public/, which the build bundles; treeProblems says why it avoids
+// git status, which cap sync's LF rewrites fool on a CRLF checkout.
+let dirty;
+try { dirty = treeProblems(ROOT); } catch (e) { fail(e.message); }
+if (dirty.length)
+  fail('the working tree is not exactly HEAD, so this build would match no commit:\n' +
+       dirty.map((p) => `  ${p}`).join('\n') +
+       '\n\nCommit, stash or remove them, then package again.');
+const git = (args) => spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+const source = {
+  commit: git(['rev-parse', 'HEAD']).stdout.trim(),
+  tree: git(['rev-parse', 'HEAD^{tree}']).stdout.trim(),
+};
+// A failed rev-parse fails here, not after a long build.
+try { formatSource(source); } catch (e) { fail(`could not read HEAD: ${e.message}`); }
+console.log(`source ${source.commit}`);
+
+// Any earlier staging of this version goes now, before a long build that can
+// fail: a failed rerun must not leave the last build staged for publishing.
+const outDir = path.join(ROOT, 'dist-release', tag);
+const sourceFile = path.join(ROOT, 'dist-release', `${tag}.source`);
+rmSync(outDir, { recursive: true, force: true });
+rmSync(sourceFile, { force: true });
+
 // --- a signing key must be configured, or the whole exercise is pointless ---
 if (!existsSync(path.join(ANDROID, 'keystore.properties')))
   fail('mobile/android/keystore.properties is missing — no signing key configured. ' +
@@ -160,9 +192,8 @@ if (problem) fail(`${problem} (${path.relative(ROOT, exe)}).`);
 // What check_ui cannot see, because only the wrapper can break it (DESKTOP.md).
 step('smoke the desktop app', process.execPath, [path.join(ROOT, 'tools', 'smoke_desktop.mjs'), exe]);
 
-// --- 9: stage both, replacing any earlier directory, then read it back ---
-const outDir = path.join(ROOT, 'dist-release', tag);
-rmSync(outDir, { recursive: true, force: true });
+// --- 9: stage both, then read it back, then record the source ---
+// (any earlier directory was removed at step 0)
 mkdirSync(outDir, { recursive: true });
 const assets = releaseAssets(version);
 const [apkName, exeName] = assets;
@@ -177,10 +208,13 @@ writeFileSync(path.join(outDir, 'SHA256SUMS.txt'), sums.join('\n') + '\n');
 const problems = checksumProblems(readFileSync(path.join(outDir, 'SHA256SUMS.txt'), 'utf8'),
   hashOf, { expected: assets, present: readdirSync(outDir) });
 if (problems.length) fail(`what was staged does not verify: ${problems.join('; ')}`);
+// Last, so a source record exists only beside a staging that verified.
+writeFileSync(sourceFile, formatSource(source));
 
 console.log(`\ndone.`);
 console.log(`  dist-release/${tag}/`);
 for (const line of sums) console.log(`  ${line}`);
 console.log(`  cert   ${signer}`);
+console.log(`  source ${source.commit} (tree ${source.tree})`);
 console.log(`         (expected ${EXPECTED_CERT}, ANDROID.md \u00a73)`);
 console.log(`\nnext: node tools/publish_release.mjs   (dry run; --confirm to publish)`);

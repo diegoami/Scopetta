@@ -125,11 +125,13 @@ the Rust toolchain.
 
 **Tag first, build from the tag.** A release is a milestone (`CLAUDE.md`): its
 candidate commit is reviewed, the annotated tag `vX.Y.Z` goes on exactly the
-reviewed SHA, and the release is packaged from a clean checkout of that tag:
-`git status --short` has to print nothing before packaging. The scripts check
-neither the tag nor the tree yet, and the notes do not name the tagged commit
-yet (#65); until they do, the tree is checked by hand and the commit is added to
-the published notes by hand.
+reviewed SHA, and the release is packaged from a clean checkout of that tag.
+The scripts hold both ends (#65, `tools/source_tag.mjs`, from discola-web):
+`package_release.mjs` refuses a working tree that is not exactly HEAD —
+checked by content, not by `git status`, which `cap sync`'s LF rewrites fool
+here — and records the commit and tree it built in `dist-release/vX.Y.Z.source`;
+`publish_release.mjs` refuses, dry run included, unless `vX.Y.Z` on origin names
+that commit and is on `origin/main`, and the notes name the commit.
 
 ```sh
 git tag -a vX.Y.Z <reviewed SHA> -m "Scopetta X.Y.Z" && git push origin vX.Y.Z

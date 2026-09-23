@@ -163,8 +163,9 @@ in this project worth backing up somewhere that outlives the machine.
 
 **Tag first.** A release is a milestone (`CLAUDE.md`): the annotated tag
 `vX.Y.Z` goes on the reviewed commit on `main`, and everything below runs from a
-clean checkout of that tag (`DESKTOP.md`, *Releasing*; not yet enforced by the
-scripts, #65).
+clean checkout of that tag (`DESKTOP.md`, *Releasing*): the packager refuses a
+tree that is not exactly HEAD, and the publisher refuses a build whose commit
+the tag on origin does not name.
 
 **`node tools/package_release.mjs`** — since 1.0.1 it builds **both** targets,
 the APK and the Windows executable (`DESKTOP.md`). It checks that every version
