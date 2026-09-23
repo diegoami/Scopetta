@@ -614,8 +614,8 @@ iteration 5 merged.
 |---|---|---|---|---|
 | Graziano | `[1, 2, 6, 0.4, 6, 0.5, 5]` | 60.6 / 80.2 | 60.1 / 78.8 | — |
 | Franco | `[4, 8, 6, 0.4, 6, 0.5, 5]` | 59.7 / 80.0 | 59.9 / 78.7 | 7.7% / 7.3% |
-| Valerio | `[1, 0, 6, 0.4, 6, 0.5, 5]` | 59.7 / 79.7 | 59.6 / 78.9 | 16.3% / 15.8% |
-| Piero | rolled: `GIFT∈[1.7,2.5]`, `PRIMIERA∈[1.5,2.1]`, `SCOPA_RISK∈[22,30]` | 58.4–58.8 / 79.3–79.7 | 58.4–59.3 / 78.0–78.5 | 14.8–15.8% / 13.9–14.4% |
+| Valerio | `[1, 0, 6, 0.4, 6, 0.5, 5]` | 59.7 / 79.7 | 59.6 / 78.9 | 8.8% / 8.9% |
+| Piero | rolled: `GIFT∈[1.7,2.5]`, `PRIMIERA∈[1.5,2.1]`, `SCOPA_RISK∈[22,30]` | 58.4–58.8 / 79.3–79.7 | 58.4–59.3 / 78.0–78.5 | 8.3–9.3% / 8.3–8.9% |
 
 Values are in `WEIGHT_KEYS` order: carte, denari, settebello, primiera, scopa
 risk, gift, tempo. The three fixed rows are `--roster 1000` at the two `SEED_FROM`
@@ -623,8 +623,9 @@ values, Piero's row the `--piero 8 400` range, and the last column the seeded
 `--differ 300`. The fourth corner of the (carte, denari) grid — both off — is a
 **handicap**: 54.9–55.8% against greedy-take, and no compensation lifts it back
 over the floor, so it is empty and Piero rolls in the cautious corner instead.
-Pairwise, the tightest pair is Graziano and Franco at 7.7% / 7.3%, and no other
-pair is under 8.7%. Every fixed player and every roll of Piero clears the floors
+Pairwise, the tightest pair is Graziano and Franco at 7.7% / 7.3%; in
+`--differ`'s single roll of Piero no other pair is under 8.7%, and across his
+eight rolls he comes as close as 8.3% to Graziano. Every fixed player and every roll of Piero clears the floors
 on both ranges, and no pair is near the 65% head-to-head ceiling — all are about
 50%.
 

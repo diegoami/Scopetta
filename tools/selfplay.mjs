@@ -434,7 +434,14 @@ function fifth(n){
 //   node tools/selfplay.mjs --differ 200
 function differ(n){
   const P4 = rollProfiles(rngSeed(1));
-  const names = Object.keys(P4);
+  // The driver schedule is this list, not the roster's key order: which profile
+  // drives which seed is part of the measurement, and the key order is how the
+  // start sheet lists the names. Reordering that list moved every figure here
+  // by a tenth of a point — issue #36. This order is the one README and SPEC
+  // were measured with; a roster that is not these four names stops here.
+  const names = ["Graziano", "Franco", "Valerio", "Piero"];
+  if (Object.keys(P4).sort().join() !== [...names].sort().join())
+    throw new Error(`--differ measures ${names.join(", ")}; the roster is ${Object.keys(P4).join(", ")}`);
   const pairs = names.flatMap((a, i) => names.slice(i + 1).map(b => [a, b]));
   const count = Object.fromEntries(pairs.map(p => [p.join(" vs "), 0]));
   let decisions = 0;

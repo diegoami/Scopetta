@@ -545,7 +545,7 @@ const GRAZIANO_WEIGHTS = weights([1, 2, 6, 0.4, 6, 0.5, 5]);
 // Valerio plays the card count and treats a denaro like any other card
 // (DENARI 0). The settebello is still a point on its own and keeps its bonus, so
 // what he ignores is the denari POINT, not the card. 59.7% / 79.7% on seeds
-// 5001+, 16.3% away from Graziano.
+// 5001+, 8.8% away from Graziano.
 const VALERIO_WEIGHTS = weights([1, 0, 6, 0.4, 6, 0.5, 5]);
 
 // Piero is rolled once per session, as Discola's was — a house tradition, not a

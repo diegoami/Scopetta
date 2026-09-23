@@ -70,8 +70,8 @@ columns — is `node tools/selfplay.mjs --piero 8 400` at both ranges:
 |---|---|---|---|
 | Graziano | 60.6% / 60.1% | 80.2% / 78.8% | — |
 | Franco | 59.7% / 59.9% | 80.0% / 78.7% | 7.7% / 7.3% |
-| Valerio | 59.7% / 59.6% | 79.7% / 78.9% | 16.3% / 15.8% |
-| Piero\* | 58.4–58.8% / 58.4–59.3% | 79.3–79.7% / 78.0–78.5% | 14.8–15.8% / 13.9–14.4% |
+| Valerio | 59.7% / 59.6% | 79.7% / 78.9% | 8.8% / 8.9% |
+| Piero\* | 58.4–58.8% / 58.4–59.3% | 79.3–79.7% / 78.0–78.5% | 8.3–9.3% / 8.3–8.9% |
 
 The two figures are seeds 5001+ and 20001+; both are ranges nothing was tuned
 on. Head to head the six pairs run about 48% to 52% — characters, not difficulty
@@ -81,8 +81,8 @@ is held to are 57.7% against greedy-take and 76.9% against random-legal.
 
 \* rolled once per session, as Discola's was: he draws three weights from bands
 narrow enough that he cannot roll into somebody else's game. Eight rolls —
-`node tools/selfplay.mjs --piero 8 400`, at both `SEED_FROM` values — stay 13.9%
-to 15.8% away from Graziano, 58.4% to 59.3% against greedy-take and 78.0% to
+`node tools/selfplay.mjs --piero 8 400`, at both `SEED_FROM` values — stay 8.3%
+to 9.3% away from Graziano, 58.4% to 59.3% against greedy-take and 78.0% to
 79.7% against random-legal.
 
 In the last round the weights stop mattering: the deck is empty, the opponent's
