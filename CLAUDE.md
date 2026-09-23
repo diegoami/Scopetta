@@ -35,11 +35,11 @@ commands and how many times the full suite runs before a push — are in
 [`AGENTS.md`](AGENTS.md). Read the principles; run the gates.
 
 **The cross-model review is OpenCode's alone.** The different-model-family
-requirement and its two stages are in `AGENTS.md` and apply only there. Here the
-lighter process applies: for a **non-trivial** change a **fresh-context review
-is required**, and **Claude Code runs it itself** — it spawns a reviewer
-subagent that is given the pull request, the issue and these documents, and
-none of the builder's conversation. The same model family is fine; the fresh
+requirement is in `AGENTS.md` and applies only there. Here the lighter process
+applies: for a **non-trivial** change a **fresh-context review is required**,
+and **Claude Code runs it itself** — it spawns a reviewer subagent that is given
+the pull request, any issue it links, and these documents, and none of the
+builder's conversation. The same model family is fine; the fresh
 context is the point. The reviewer reproduces what it reports, posts its verdict
 on the pull request with `gh pr comment`, ending in `AGREE` or `BLOCK` and
 signed `— <model name> (<model id>), fresh-context subagent, reviewer`, and does
