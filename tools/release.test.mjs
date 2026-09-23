@@ -242,6 +242,17 @@ test("the release notes name both files and say what SmartScreen will show", () 
   assert.match(releaseNotes('1.0.1'), /^Scopetta 1\.0\.1\.\n/);
 });
 
+// Issue #65: every published binary names the source it was built from.
+test("the release notes name the tag and the commit they were built from", () => {
+  const commit = 'e888af0ab9dcfb28a4e1123f336cceb90ae3d80a';
+  const notes = releaseNotes('1.0.2', { tag: 'v1.0.2', commit });
+  assert.ok(notes.includes('`v1.0.2`'), 'the tag');
+  assert.ok(notes.includes(`\`${commit}\``), 'the full commit');
+  assert.ok(notes.indexOf(commit) < notes.indexOf('SHA256SUMS.txt'),
+    'the source line comes before the checksum line');
+  assert.ok(!releaseNotes('1.0.2').includes('Sorgente'), 'no commit, no source line');
+});
+
 // --- the integration half — the real script, dry-run, does not create
 
 test("the script's dry run exits clean and never calls gh release create",
@@ -249,7 +260,7 @@ test("the script's dry run exits clean and never calls gh release create",
   () => {
     const tmp = mkdtempSync(path.join(tmpdir(), 'scopetta-publish-'));
     mkdirSync(path.join(tmp, 'tools'));
-    for (const f of ['publish_release.mjs', 'release_lib.mjs'])
+    for (const f of ['publish_release.mjs', 'release_lib.mjs', 'source_tag.mjs'])
       copyFileSync(new URL(`./${f}`, import.meta.url), path.join(tmp, 'tools', f));
 
     const dir = path.join(tmp, 'dist-release', 'v1.0.0');
@@ -275,13 +286,83 @@ test("the script's dry run exits clean and never calls gh release create",
       'exit 0\n');
     chmodSync(path.join(bin, 'gh'), 0o755);
 
-    const res = spawnSync(process.execPath, [path.join(tmp, 'tools', 'publish_release.mjs')], {
-      encoding: 'utf8',
+    // A repository with a bare origin, and the source record the packager
+    // writes (issue #65): the publisher checks the tag on origin against it.
+    const git = (cwd, ...args) => {
+      const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+      assert.equal(r.status, 0, `git ${args.join(' ')}: ${r.stderr}`);
+      return r.stdout.trim();
+    };
+    const origin = mkdtempSync(path.join(tmpdir(), 'scopetta-origin-'));
+    git(origin, 'init', '-q', '--bare');
+    git(tmp, 'init', '-q', '-b', 'main');
+    for (const [k, v] of [['user.name', 't'], ['user.email', 't@t'], ['commit.gpgsign', 'false'],
+                          ['tag.gpgsign', 'false']])
+      git(tmp, 'config', k, v);
+    writeFileSync(path.join(tmp, '.gitignore'), 'dist-release\nbin\ncreated\n');
+    git(tmp, 'add', '.gitignore', 'tools');
+    git(tmp, 'commit', '-q', '-m', 'init');
+    git(tmp, 'remote', 'add', 'origin', origin);
+    git(tmp, 'push', '-q', 'origin', 'main');
+    const commit = git(tmp, 'rev-parse', 'HEAD');
+    const tree = git(tmp, 'rev-parse', 'HEAD^{tree}');
+    const sourceFile = path.join(tmp, 'dist-release', 'v1.0.0.source');
+
+    const publish = () => spawnSync(process.execPath, [path.join(tmp, 'tools', 'publish_release.mjs')], {
+      encoding: 'utf8', cwd: tmp,
       env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
     });
 
+    // No source record: refused, since nothing says which commit was built.
+    const unrecorded = publish();
+    assert.equal(unrecorded.status, 1, 'a staging with no source record is refused');
+    assert.match(unrecorded.stderr, /v1\.0\.0\.source is missing/);
+    writeFileSync(sourceFile, `commit ${commit}\ntree ${tree}\n`);
+
+    // Not tagged on origin: refused, dry run included.
+    const untagged = publish();
+    assert.equal(untagged.status, 1, 'an untagged build is refused');
+    assert.match(untagged.stderr, /v1\.0\.0 is not tagged on origin/);
+
+    // Tagged on another commit: refused.
+    git(tmp, 'commit', '-q', '--allow-empty', '-m', 'later');
+    git(tmp, 'push', '-q', 'origin', 'main');
+    git(tmp, 'tag', '-a', 'v1.0.0', '-m', 'wrong', 'HEAD');
+    git(tmp, 'push', '-q', 'origin', 'v1.0.0');
+    const wrong = publish();
+    assert.equal(wrong.status, 1, 'a tag on another commit is refused');
+    assert.match(wrong.stderr, /is not the commit that was packaged/);
+
+    // Tagged on the packaged commit: the dry run passes and names it.
+    git(tmp, 'push', '-q', 'origin', ':refs/tags/v1.0.0');
+    git(tmp, 'tag', '-d', 'v1.0.0');
+    git(tmp, 'tag', '-a', 'v1.0.0', '-m', 'Scopetta 1.0.0', commit);
+    git(tmp, 'push', '-q', 'origin', 'v1.0.0');
+    const res = publish();
     assert.equal(res.status, 0, res.stderr);
     assert.match(res.stdout, /dry run/);
+    // In the notes, not anywhere in the output: the publisher also logs the
+    // commit, and asserting on the whole of stdout passed a mutant whose notes
+    // named nothing (the review of #66).
+    const notes = res.stdout.split('Notes that would be used:')[1] ?? '';
+    assert.match(notes, new RegExp(`Sorgente:.*\`v1\\.0\\.0\`.*\`${commit}\``),
+      'the notes name the tag and the tagged commit');
     assert.equal(existsSync(marker), false,
       'a dry run must not reach gh release create');
+
+    // A tag on a commit that is not on origin/main: refused. The commit reaches
+    // origin with the tag, but no branch of main's contains it.
+    git(tmp, 'switch', '-q', '-c', 'side');
+    git(tmp, 'commit', '-q', '--allow-empty', '-m', 'side');
+    const offMain = git(tmp, 'rev-parse', 'HEAD');
+    writeFileSync(sourceFile, `commit ${offMain}\ntree ${git(tmp, 'rev-parse', 'HEAD^{tree}')}\n`);
+    git(tmp, 'switch', '-q', 'main');
+    git(tmp, 'push', '-q', 'origin', ':refs/tags/v1.0.0');
+    git(tmp, 'tag', '-d', 'v1.0.0');
+    git(tmp, 'tag', '-a', 'v1.0.0', '-m', 'off main', offMain);
+    git(tmp, 'push', '-q', 'origin', 'v1.0.0');
+    const off = publish();
+    assert.equal(off.status, 1, 'a tag off main is refused');
+    assert.match(off.stderr, /is not on origin\/main/);
+    assert.equal(existsSync(marker), false, 'no refusal reaches gh release create');
   });

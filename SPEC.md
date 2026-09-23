@@ -47,6 +47,7 @@ tools/import_bresciane.mjs  builds the sixth deck from its source repo
 tools/release.test.mjs / release_lib.mjs  the release decisions, held in tests
 tools/package_release.mjs   signed APK and Windows exe into dist-release/
 tools/publish_release.mjs   both to the releases repo, on --confirm
+tools/source_tag.mjs        the tree is exactly HEAD; the tag names the build
 tools/smoke_desktop.mjs  the built desktop app, launched twice and played
 tools/pack_cards.py      carried from Discola, for repacking a deck
 mobile/              the Capacitor wrapper and the Android project
