@@ -224,7 +224,11 @@ Wherever the card is on its designed floor, the table pass lifts the floor and
 asks the question of the budget alone, and the scroll the floor adds is the
 stated fallback. Only the designed floor earns that: a card held up by any other
 floor is still held to no scrolling, or the break that raises the floor would
-survive.
+survive. And lifting the floor gives the budget its slack back, which the strict
+rule on the floored page did not have. A 7-9px defect on short landscape alone
+passed until those windows joined the inflated pass, where the slack is zero.
+**An exemption is paid for somewhere, and the review that found this one built
+the defect to show where.**
 
 **And the last play of a deal is a state, and so is the moment after the play
 that ends a round.** Three defects shipped in those two, all found by the sixth

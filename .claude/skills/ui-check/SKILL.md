@@ -123,9 +123,10 @@ the floor is lifted, because there the floor decides the card and the scroll it
 adds is the designed fallback (#5) — that the DOM and the engine agree on how many cards are on
 the table, and the fan floors below. Then it repeats the tightest of them with
 the spacing tokens inflated, which fails if anyone replaces the derived
-`--chrome` with a hard-coded number — but not the short landscape windows,
-where the inflation drives the card onto its clamp floor and tests the clamp
-rather than the derivation. That pass also runs with `--slack: 0`, because a
+`--chrome` with a hard-coded number. Since #5 that includes the short
+landscape windows, where the inflation drives the card onto its clamp floor:
+the floor is lifted there as in the plain pass, and with no slack they are the
+only place a small shortfall on short landscape shows. That pass also runs with `--slack: 0`, because a
 budget term that is *short* by less than the slack costs nothing and shows
 nowhere: `--plates` was 8px short at every portrait viewport and the slack is
 8px.

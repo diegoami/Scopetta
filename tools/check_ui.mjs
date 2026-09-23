@@ -119,10 +119,12 @@ const VIEWPORTS = [
   // rem — grows past the card's height and the seat row stops costing a card.
   ['short window',      980,  340],
   ['shorter window',   1100,  330],
-  // Back in the grid since issue #5. The card is on its 32px clamp floor here,
-  // and so it is at 1100x330: the budget wants less than the floor allows, the
-  // floor wins, and the table scrolls by what it added (6px here, measured when
-  // the shape was dropped in iteration 3). "No scrolling" at a shape like this
+  // Back in the grid since issue #5. The card is on its 32px clamp floor here
+  // in four decks of six, and at 1100x330 in two: the budget wants less than
+  // the floor allows, the floor wins, and the table scrolls by what it added
+  // (6px here in Trevisane). The floor also binds by a fraction of a pixel at
+  // 320x568 in two decks, at 500x425 in every deck (by the width term), and in
+  // the inflated pass at 980x385 in Bresciane. "No scrolling" at a shape like this
   // tested the clamp rather than the derivation, which is why it was dropped,
   // and why dropping it left short landscape with nothing testing the budget
   // below 980x340. Wherever the designed floor binds, the table pass now lifts
@@ -135,15 +137,18 @@ const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
                           'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
 
 // The inflated pass runs these, and it is a list of what is IN rather than a
-// list of what is out. What is deliberately not here: the short landscape
-// windows (640x480, 980x340, 1100x330) and the narrowest phone
-// (320x568, whose budget sits within half a pixel of the 32px floor, and in
-// some decks just under it — 31.6px in Trevisane). At all of them the
-// inflation drives the card onto its clamp floor, which tests the clamp rather
-// than the derivation, exactly as the note on INFLATE says. The rest are
-// simply not the tightest shapes in the grid.
+// list of what is out. The short landscape windows (640x480, 980x340, 1100x330,
+// 1100x320) were left out until issue #5 because inflation drives the card onto
+// its clamp floor there, which tested the clamp rather than the derivation.
+// Since #5 the table pass lifts the designed floor wherever it binds, so they
+// are in: with --slack at 0 they are the only place a budget that is short by
+// less than the slack shows on short landscape. Without them, a 7-9px defect
+// on those windows alone survived. Still out: the narrowest phone (320x568),
+// whose budget sits within half a pixel of the floor and in two decks just
+// under it (31.6px in Trevisane), and which is not the tightest portrait shape.
 const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
-               'Android small', 'small window', 'tiny window'];
+               'Android small', 'small window', 'tiny window',
+               'VGA window', 'short window', 'shorter window', 'shortest window'];
 
 // Where an interaction is measured. The screen shapes, plus the narrow portrait
 // one where the middle row has to overlap hardest — a card's reachable strip is
@@ -1384,9 +1389,20 @@ async function checkTable(browser, only, inflate) {
         // defect the strict rule has to see, so a card that is not exactly
         // CARD_FLOOR wide is held to "no scrolling" whatever the budget wants.
         const wanted = Math.min(m.cwHeight, m.cwWidth);
-        // Floored means both: the card is the designed floor's width, and it is
-        // wider than the budget wants — at 500x425 the budget wants 31.9px and
-        // gets 31.9px, which is near the floor but not held up by it.
+        // Floored means both: the card is the designed floor's width, AND it is
+        // wider than the budget wants. With the floor lowered to 20px, a card at
+        // 500x425 is 31.9px because the budget wants 31.9px — near 32 and not
+        // held up by any floor — and counting it as floored would have left the
+        // rail below satisfied by a case the rule never had to lift.
+        //
+        // What this costs, and where: with the floor lifted the budget has its
+        // full --slack again, where the strict rule on the floored page had only
+        // what the floor left of it — 2-5px on the short landscape windows. A
+        // defect that small, confined to those windows, passes this pass; it is
+        // the inflated pass, with --slack at 0 and the same windows in TIGHT,
+        // that catches it (the break "the icon bar grows on short landscape
+        // windows"). 320x568 keeps about 3px of that difference, since the
+        // inflated pass does not run it.
         const floored = Math.abs(m.cwExact - CARD_FLOOR) < 0.5 && m.cwExact - wanted > 0.05;
         const fit = floored ? await (async () => {
           flooredCases++;

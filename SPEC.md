@@ -354,12 +354,14 @@ something green and wrong. The ones a newcomer should know first:
 - **`SETTEBELLO_BONUS` moves 0.45% of decisions.** It is kept on a paired
   measurement (worth about half a point) rather than on the 1% bar, which is a
   proxy for "cannot change the outcome" and fails when a point lives in one card.
-- **Below its 32px floor, the card stops shrinking and the table scrolls.** Where
-  the budget wants a smaller card — 1100x320 and 1100x330, and by a fraction of a
-  pixel 320x568 and 500x425 in some decks — the clamp wins and the table may
-  scroll by what the floor adds, 6px at 1100x320. That is the designed fallback,
-  and the check says so rather than leaving the shapes out: there, it lifts the
-  floor and asserts the budget itself fits (#5).
+- **Below its 32px floor, the card stops shrinking and the table scrolls.** The
+  budget wants a smaller card at 1100x320 (four decks of six) and 1100x330 (two),
+  by a fraction of a pixel at 320x568 (two decks), and at 500x425 in every deck,
+  where the width term binds. There the clamp wins and the table may scroll by
+  what the floor adds, 6px at 1100x320. That is the designed fallback, and the
+  check says so rather than leaving the shapes out. It lifts the floor and
+  asserts the budget itself fits, and it runs the short landscape windows in the
+  inflated pass, with no slack, so a small shortfall there is still seen (#5).
 - **The UI check needs a browser**, so it is the one thing here with a
   dependency.
 - **Every deck sheet loads on the start screen**, because the picker previews
