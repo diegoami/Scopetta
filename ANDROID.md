@@ -172,8 +172,9 @@ step is a refusal rather than a warning.
 
 **`node tools/publish_release.mjs`** — re-hash the staged files against
 `SHA256SUMS.txt`, require exactly the two assets and nothing else, then `gh
-release create` on `diegoami/scopetta-releases`. Dry run by default; `--confirm` to actually publish, because this is outward-facing
-and a public tag is hard to take back.
+release create` on `diegoami/scopetta-releases`. Dry run by default;
+`--confirm` to actually publish, because this is outward-facing and a public
+tag is hard to take back.
 
 **The releases repo is `diegoami/scopetta-releases`.** `diegoami/Scopetta` is
 private, and release assets on a private repo are not publicly downloadable, so
@@ -191,8 +192,10 @@ ever grows.
 `/releases/latest` — the page rather than a versioned asset URL, so the link
 survives every release, and because the release page is where the notes and the
 checksum are, which is what somebody about to sideload an APK should read.
+Since 1.0.1 `/windows` does the same for the Windows executable, which the
+same release carries (`DESKTOP.md`).
 
-**The about screen carries the link**, as a pair of lines — one per
+**The about screen carries the links**, Android and Windows, as a pair of lines — one per
 `section[lang]`, because that screen carries its body twice — at the release
 page's **absolute URL**, not `/android`: the redirect only exists on Netlify,
 and the page also lives in a folder and inside the APK, where `/android`
@@ -236,7 +239,7 @@ README pushed before `--confirm` can work.
    covers both. Portrait-only is one line and removes a class of bug from a
    device nobody is going to rotate mid-hand.
 2. **Version numbering.** `versionName` is the version, and since 1.0.1 the
-   desktop wrapper declares it five more times; `tools/release.test.mjs` holds
+   desktop wrapper declares it in six more places; `tools/release.test.mjs` holds
    all seven to it on every pull request. `versionCode` only ever increases:
    1.0.0 was `versionCode 1`, 1.0.1 is `2`. There is still no changelog; the
    release notes' subtitle is the one line that says what changed.
