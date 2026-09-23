@@ -15,6 +15,7 @@ import {
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, releaseNotes,
   pickJdk, parseVersionCode, previousMilestone, versionCodeProblem,
 } from './release_lib.mjs';
+import { stageAssets } from './stage_assets.mjs';
 
 // --- the newest staged version is the highest number, not the last string
 
@@ -215,6 +216,31 @@ test("versionCode is read, and has to be higher than the previous milestone's", 
 test("the repository's versionCode is a positive integer", () => {
   const code = parseVersionCode(readFileSync(new URL('../mobile/android/app/build.gradle', import.meta.url), 'utf8'));
   assert.ok(Number.isInteger(code) && code > 0, `versionCode ${code}`);
+});
+
+// Issue #70: the manifest is written from the SOURCES, before copying, and the
+// staged copies are checked against it, so a copy that went wrong is caught.
+// Hashing the staged copies to write the manifest and then checking them
+// against it compared a reading with itself, and could only fail on the set.
+test("staging checks the copies against hashes of the sources", () => {
+  const tmp = mkdtempSync(path.join(tmpdir(), 'scopetta-stage-'));
+  const src = path.join(tmp, 'src'), out = path.join(tmp, 'out');
+  mkdirSync(src); mkdirSync(out);
+  const files = releaseAssets('1.0.2').map((name) => {
+    writeFileSync(path.join(src, name), `built ${name}`);
+    return [name, path.join(src, name)];
+  });
+  const good = stageAssets(out, files);
+  assert.deepEqual(good.problems, []);
+  assert.deepEqual(good.sums, files.map(([name, p]) =>
+    `${createHash('sha256').update(readFileSync(p)).digest('hex')}  ${name}`));
+  assert.equal(readFileSync(path.join(out, 'SHA256SUMS.txt'), 'utf8'), good.sums.join('\n') + '\n');
+
+  // A copy that lands different bytes: the old read-back passed this.
+  const out2 = path.join(tmp, 'out2'); mkdirSync(out2);
+  const bad = stageAssets(out2, files, {
+    copy: (from, to) => writeFileSync(to, readFileSync(from, 'utf8') + ', damaged') });
+  assert.deepEqual(bad.problems, files.map(([name]) => `${name} does not match SHA256SUMS.txt`));
 });
 
 // The JDK Android Studio bundles was 25 when Tressette wrote this, and Gradle

@@ -38,17 +38,17 @@
  * functions are Tressette's (DESKTOP.md), ported into these scripts.
  */
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   EXPECTED_CERT, JDK_MAJOR, newestBuildTools, signatureVerdict, pickJdk,
-  releaseAssets, versionDeclarations, versionDisagreements, exeProblem, checksumProblems,
+  releaseAssets, versionDeclarations, versionDisagreements, exeProblem,
   parseVersionCode, previousMilestone, versionCodeProblem,
 } from './release_lib.mjs';
 import { formatSource, treeProblems } from './source_tag.mjs';
+import { stageAssets } from './stage_assets.mjs';
 
 const WIN = process.platform === 'win32';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -220,18 +220,10 @@ step('smoke the desktop app', process.execPath, [path.join(ROOT, 'tools', 'smoke
 // --- 9: stage both, then read it back, then record the source ---
 // (any earlier directory was removed at step 1b)
 mkdirSync(outDir, { recursive: true });
-const assets = releaseAssets(version);
-const [apkName, exeName] = assets;
-copyFileSync(apk, path.join(outDir, apkName));
-copyFileSync(exe, path.join(outDir, exeName));
-const hashOf = (name) => {
-  const p = path.join(outDir, name);
-  return existsSync(p) ? createHash('sha256').update(readFileSync(p)).digest('hex') : null;
-};
-const sums = assets.map((name) => `${hashOf(name)}  ${name}`);
-writeFileSync(path.join(outDir, 'SHA256SUMS.txt'), sums.join('\n') + '\n');
-const problems = checksumProblems(readFileSync(path.join(outDir, 'SHA256SUMS.txt'), 'utf8'),
-  hashOf, { expected: assets, present: readdirSync(outDir) });
+// The manifest comes from the built files and the check from the staged
+// copies, so a copy that went wrong fails here (stage_assets.mjs, issue #70).
+const [apkName, exeName] = releaseAssets(version);
+const { sums, problems } = stageAssets(outDir, [[apkName, apk], [exeName, exe]]);
 if (problems.length) fail(`what was staged does not verify: ${problems.join('; ')}`);
 // The build takes minutes, so the tree is asked again before it is recorded:
 // a commit, checkout or edit made meanwhile would otherwise be recorded as
