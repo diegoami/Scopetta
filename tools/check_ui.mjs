@@ -1213,13 +1213,16 @@ const measure = () => {
 
   // What the budget WANTS, before the clamp: --cw-height and --cw-width, read
   // through a probe because a custom property's computed value is its text,
-  // not a length. Below CARD_FLOOR the clamp decides the card, not the budget,
+  // not a length. Below --cw-floor the clamp decides the card, not the budget,
   // and the table pass reads these to tell when that is so — issue #5.
   const probe = document.createElement('div');
   probe.style.cssText = 'position:absolute;visibility:hidden;height:0';
   document.body.appendChild(probe);
   const want = v => { probe.style.width = `var(${v})`; return probe.getBoundingClientRect().width; };
   const cwHeight = want('--cw-height'), cwWidth = want('--cw-width');
+  // The designed floor, from the page's own token rather than a number here
+  // (issue #60): what the table pass calls "on the floor" follows the page.
+  const cwFloor = want('--cw-floor');
   probe.remove();
 
   // Past the screen edge, and the name plates. These live in the audit too, but
@@ -1267,7 +1270,7 @@ const measure = () => {
     plateBad,
     sayH: say ? Math.round(say.height) : 0,
     cw: Math.round(cw),
-    cwExact: cw, cwHeight, cwWidth,
+    cwExact: cw, cwHeight, cwWidth, cwFloor,
     rowStats,
     overlapsHand,
     // §3.7: one row in landscape, two in portrait once there is more than one
@@ -1326,8 +1329,6 @@ const INFLATE = `:root{
 // floor binds, to ask whether the budget itself fits the screen (issue #5). At
 // !important it beats the portrait rule's own clamp as well as the root one.
 const UNFLOOR = ':root{ --cw: min(var(--cw-height), var(--cw-width)) !important; }';
-// The lower bound of both --cw clamps in index.html, landscape and portrait.
-const CARD_FLOOR = 32;
 
 async function checkTable(browser, only, inflate) {
   console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
@@ -1401,7 +1402,8 @@ async function checkTable(browser, only, inflate) {
         // Only the DESIGNED floor earns this. A card held up by any other floor —
         // "the portrait card has a floor of its own" raises it to 36px — is a
         // defect the strict rule has to see, so a card that is not exactly
-        // CARD_FLOOR wide is held to "no scrolling" whatever the budget wants.
+        // the designed floor's width (the page's --cw-floor token, read by
+        // measure) is held to "no scrolling" whatever the budget wants.
         const wanted = Math.min(m.cwHeight, m.cwWidth);
         // Floored means both: the card is the designed floor's width, AND it is
         // wider than the budget wants. With the floor lowered to 20px, a card at
@@ -1417,7 +1419,9 @@ async function checkTable(browser, only, inflate) {
         // that catches it (the break "the icon bar grows on short landscape
         // windows"). 320x568 keeps about 3px of that difference, since the
         // inflated pass does not run it.
-        const floored = Math.abs(m.cwExact - CARD_FLOOR) < 0.5 && m.cwExact - wanted > 0.05;
+        if (!(m.cwFloor > 0))
+          bad.push('the page declares no --cw-floor, so the designed card floor cannot be read');
+        const floored = m.cwFloor > 0 && Math.abs(m.cwExact - m.cwFloor) < 0.5 && m.cwExact - wanted > 0.05;
         const fit = floored ? await (async () => {
           flooredCases++;
           if (vname === 'shortest window') flooredShortest++;

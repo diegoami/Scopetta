@@ -439,7 +439,7 @@ const BREAKS = [
    "    --plates: calc(2 * var(--plate-h) + 4 * var(--seat-gap));",
    "    --plates: calc(2 * var(--plate-h) + 2 * var(--seat-gap));"],
   ["the portrait card has a floor of its own",
-   "    --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);",
+   "    --cw: clamp(var(--cw-floor), min(var(--cw-height), var(--cw-width)), 168px);",
    "    --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);"],
   ["the icon bar is taller than the budget pays for",
    ".topbar{\n  height: var(--topbar);",
