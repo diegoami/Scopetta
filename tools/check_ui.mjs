@@ -1530,7 +1530,7 @@ async function checkTable(browser, only, inflate) {
   // rule above went unasked and this pass would look exactly as if it held.
   if (list.some(v => v[0] === 'shortest window') && !flooredShortest) {
     failed++;
-    console.log(`  FAIL  no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
+    console.log(`  FAIL  the landscape floor rail\n        no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
   }
   // The skip above is a guard too, and railed like the floors (the review of
   // #73): a shape where the inflated budget ran out in every case asked
@@ -1541,7 +1541,7 @@ async function checkTable(browser, only, inflate) {
   for (const [shape, n] of Object.entries(exhaustedAt))
     if (n === casesAt[shape]) {
       failed++;
-      console.log(`  FAIL  at ${shape} the inflated budget leaves no card in any case, so this pass asks `
+      console.log(`  FAIL  the exhausted-budget rail at ${shape}\n        the inflated budget leaves no card in any case, so this pass asks `
         + 'nothing there: the page no longer fits the inflation at that shape. Take the shape out of '
         + 'TIGHT or ease INFLATE, and say why');
     }
@@ -1551,7 +1551,7 @@ async function checkTable(browser, only, inflate) {
   // #73).
   if (floorsRead.size > 1) {
     failed++;
-    console.log(`  FAIL  the card floor reads ${[...floorsRead].join('px and ')}px across the grid: `
+    console.log(`  FAIL  the one-floor rail\n        the card floor reads ${[...floorsRead].join('px and ')}px across the grid: `
       + '--cw-floor is overridden somewhere, so there is no one designed floor');
   }
   // The same for portrait, whose --cw rule has a clamp of its own (issue #59):
@@ -1560,7 +1560,7 @@ async function checkTable(browser, only, inflate) {
   // the budget wants floors nothing there, and without this nothing would say so.
   if (list.some(v => v[0] === 'narrow phone') && !flooredNarrow) {
     failed++;
-    console.log(`  FAIL  no case at 320x568 was on the card's clamp floor, so the portrait floor rule was never asked`);
+    console.log(`  FAIL  the portrait floor rail\n        no case at 320x568 was on the card's clamp floor, so the portrait floor rule was never asked`);
   }
   const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `

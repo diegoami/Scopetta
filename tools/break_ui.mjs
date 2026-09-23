@@ -186,6 +186,7 @@ const EXPECT = {
   // --- the card floor's own guards (#58, #59, #60, and the review of #73) ----
   // Each is a rail or a message that exists so a silence cannot pass for a pass.
   "the portrait floor drops below the budget": "portrait floor rule was never asked",
+  "the landscape floor drops below the budget": "no case at 1100x320 was on",
   "the card floor token goes missing": "declares no --cw-floor",
   "the portrait block overrides the floor token": "the card floor reads",
   "the icon bar alone outgrows a short screen": "the chrome alone is taller",
@@ -461,6 +462,9 @@ const BREAKS = [
   ["the Windows sentence is left in English in the Italian rules",
    "Windows</a>: lo stesso gioco, da installare sul telefono o sul computer\n        e giocare senza connessione.",
    "Windows</a>: the same game, to install on a phone or a computer and play\n        with no connection."],
+  ["the landscape floor drops below the budget",
+   "  --cw: clamp(var(--cw-floor), min(var(--cw-height), var(--cw-width)), 156px);",
+   "  --cw: clamp(20px, min(var(--cw-height), var(--cw-width)), 156px);"],
   ["the portrait floor drops below the budget",
    "    --cw: clamp(var(--cw-floor), min(var(--cw-height), var(--cw-width)), 168px);",
    "    --cw: clamp(20px, min(var(--cw-height), var(--cw-width)), 168px);"],
