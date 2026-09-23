@@ -1747,7 +1747,8 @@ with:
 **A non-trivial change may open its design as an issue first**, iterated with the
 reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the
 two stages and the tool split, and `PRINCIPLES.md` the principles both tools
-share. This is the one kind of issue that exists besides a `defect`. **The
+share. Besides a `defect`, this is one of two kinds of issue; the other is
+Claude Code's milestone review and the findings it files (`CLAUDE.md`). **The
 iteration-and-pull-request flow in this section is the route for non-trivial
 work**; a **trivial** change — one that changes no behaviour, no assertion and no
 process text — takes neither stage, needs no pull request, and may be committed
@@ -1788,9 +1789,10 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 ### 7.3 The reviewer
 
 **The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
-by tool:** OpenCode runs the cross-model review; Claude Code runs a
-fresh-context review with a reviewer subagent of its own, as `CLAUDE.md` states
-(the owner's decision on #44); and the principles both share are in
+by tool:** OpenCode runs the cross-model review; Claude Code reviews each change
+with a fresh-context subagent of its own and hands the owner a prompt for an
+independent review of the repository at each milestone, as `CLAUDE.md` states
+(the owner's decisions on #44 and #47); and the principles both share are in
 [`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
 an explicit AGREE, then the pull request reviewed the same way — the **signed
 verdict on GitHub**, and the rule that a **BLOCK goes to the owner** are stated
@@ -1800,7 +1802,7 @@ the two do not drift.
 Every pull request gets one review from a **fresh context** — a new session or
 a subagent that has not seen the work. **This is the implementation stage of the
 non-trivial route**: a trivial change takes neither stage and never reaches it,
-per `AGENTS.md`. **The reviewer is GPT-5.6 Luna at high
+per `AGENTS.md`. **Under OpenCode, the reviewer is GPT-5.6 Luna at high
 effort** (`opencode/gpt-5.6-luna#high`), run as a subagent with that model; the
 builder is DeepSeek V4.1 Flash. A fresh context matters more than a different
 model — the builder cannot see its own diff, and a reviewer that shares its
@@ -1845,13 +1847,14 @@ the same rate and budget for it.
   from iteration 3; a red check does not merge, and nothing is skipped or
   quarantined to get to green. The gates, their schedule and the run count are
   stated in [`AGENTS.md`](AGENTS.md).
-- **Issues hold a design proposal or a defect.** A non-trivial change may open
+- **Issues hold a design proposal, a defect, or a milestone review and its
+  findings** (the last is Claude Code's, stated in `CLAUDE.md`). A non-trivial change may open
   its design as an issue, iterated with the reviewer to an explicit AGREE before
   the pull request (`AGENTS.md` states the two stages). A defect found by
   playing, after an iteration has merged, is an issue too, labelled `defect`,
   closed by a pull request that fixes the page *and* adds the assertion that
   would have caught it, written against the broken commit first.
-- **No project board, no milestones, no issue per iteration.** This document
+- **No project board, no GitHub milestones, no issue per iteration.** This document
   holds the plan; a second copy goes stale. A design issue is the exception, and
   it is one per non-trivial change, not one per iteration.
 - **A pull request does not merge while its review is still running.**

@@ -11,9 +11,10 @@ cross-model review — and the verification gates.
 
 `AGENTS.md`, `CLAUDE.md` and `PRINCIPLES.md` are part of the design a builder
 follows, so a change to any of them **that changes what a builder must do or how
-the process works** is non-trivial: it takes both stages below, to a signed AGREE
-on each, before it merges. A pure typo is trivial and takes neither. **The
-process reviews its own amendment.**
+the process works** is non-trivial: built under OpenCode, it takes both stages
+below, to a signed AGREE on each, before it merges; built under Claude Code, it
+takes the process in `CLAUDE.md`. A pure typo is trivial and takes neither.
+**The process reviews its own amendment.**
 
 ## The cross-model review
 
