@@ -1987,6 +1987,11 @@ shipped, one decision is open, and one is a follow-up rather than an open item.
   of card, and a correct change failed there. A
   bounded-scroll assertion was tried and dropped, because no break could make it
   fail on its own.
+- **The desktop build — Tauri, as Tressette and Discola.** Chosen by the owner
+  on 2026-09-23 with the proposed defaults: Tauri 2, Windows only, unsigned,
+  `com.scopetta.desktop`, shipped beside the APK from 1.0.1. The wrapper in
+  `desktop/` is Tressette's, and `tools/smoke_desktop.mjs` plays the built exe.
+  `DESKTOP.md` is the record; releasing it is the change after the wrapper.
 - **The CI action versions — a follow-up, not an open item.** `actions/checkout@v4`
   and `actions/setup-node@v4` target Node 20, which GitHub is forcing onto Node 24
   and warns about on every run. A warning today and not a failure; the bump
