@@ -161,6 +161,47 @@ export function versionDisagreements(version, declarations){
     .map(([where, value]) => `${where}: ${value ?? '(missing)'}`);
 }
 
+// Android's versionCode, the integer an installed copy compares an update
+// against. It is not one of the version declarations above: it goes up rather
+// than matching, so it is held to the previous milestone instead (issue #69).
+export function parseVersionCode(gradle){
+  const m = /versionCode\s+(\d+)/.exec(gradle ?? '');
+  return m ? Number(m[1]) : null;
+}
+
+// The previous milestone: the newest vX.Y.Z tag strictly below `version`, by
+// number, or null. Re-packaging a release that is already tagged compares with
+// the one before it, not with itself.
+export function previousMilestone(tagNames, version){
+  const at = parseVersion(`v${version}`);
+  if (!at) return null;
+  const below = (v) => v[0] !== at[0] ? v[0] < at[0] : v[1] !== at[1] ? v[1] < at[1] : v[2] < at[2];
+  let best = null, bestV = null;
+  for (const name of tagNames){
+    const v = parseVersion(name);
+    if (!v || !below(v)) continue;
+    if (!bestV || v[0] > bestV[0] || (v[0] === bestV[0] && (v[1] > bestV[1] || (v[1] === bestV[1] && v[2] > bestV[2]))))
+      { best = name; bestV = v; }
+  }
+  return best;
+}
+
+// Why this versionCode cannot ship, or null. Android refuses an update whose
+// versionCode is not higher than the installed one, so a release that forgets
+// the bump builds, passes, publishes, and updates nobody. `previous` is the
+// previous milestone's { tag, versionCode }, or null when there is none.
+export function versionCodeProblem({ versionCode, previous }){
+  if (!Number.isInteger(versionCode) || versionCode < 1)
+    return `versionCode ${versionCode} is not a positive integer (mobile/android/app/build.gradle)`;
+  if (!previous) return null;
+  if (!Number.isInteger(previous.versionCode))
+    return `could not read ${previous.tag}'s versionCode, so the bump cannot be checked`;
+  if (versionCode <= previous.versionCode)
+    return `versionCode ${versionCode} is not higher than ${previous.tag}'s ${previous.versionCode}: ` +
+           'Android will not install it over that release. Bump it in mobile/android/app/build.gradle.';
+  return null;
+}
+
 // Why these bytes are not a Windows executable, or null if they could be. The
 // desktop counterpart of refusing an unsigned APK: a missing, truncated or
 // non-PE file must never be staged. 1 MB is far under the ~11 MB a build is

@@ -13,7 +13,7 @@ import {
   parseCertDigest, certificateMatches, isPlaceholderCert, signatureVerdict,
   parseChecksums, checksumProblems, releaseCreateArgs,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, releaseNotes,
-  pickJdk,
+  pickJdk, parseVersionCode, previousMilestone, versionCodeProblem,
 } from './release_lib.mjs';
 
 // --- the newest staged version is the highest number, not the last string
@@ -184,6 +184,37 @@ test("the repository's version declarations agree with each other", () => {
   const version = all['mobile/android/app/build.gradle versionName'];
   assert.ok(parseVersion(`v${version}`), `versionName ${version} is X.Y.Z`);
   assert.deepEqual(versionDisagreements(version, all), []);
+});
+
+// Issue #69: Android will not install an update whose versionCode is not higher
+// than the installed one, so a release that forgets to bump it publishes an APK
+// that cannot update anybody.
+test("versionCode is read, and has to be higher than the previous milestone's", () => {
+  assert.equal(parseVersionCode(declared('1.0.1').gradle), 2);
+  assert.equal(parseVersionCode('versionName "1.0.1"'), null);
+  assert.equal(parseVersionCode('versionCode 0'), 0);
+
+  // The previous milestone is the newest tag below the version being built,
+  // by number, ignoring anything that is not vX.Y.Z and the version itself.
+  assert.equal(previousMilestone(['v1.0.1', 'v1.0.2', 'v1.0.10', 'nonsense'], '1.0.10'), 'v1.0.2');
+  assert.equal(previousMilestone(['v1.0.1'], '1.0.1'), null, 're-packaging a release compares with nothing');
+  assert.equal(previousMilestone(['v1.0.9', 'v1.0.10'], '1.1.0'), 'v1.0.10');
+  assert.equal(previousMilestone([], '1.0.2'), null);
+
+  assert.equal(versionCodeProblem({ versionCode: 3, previous: { tag: 'v1.0.1', versionCode: 2 } }), null);
+  assert.match(versionCodeProblem({ versionCode: 2, previous: { tag: 'v1.0.1', versionCode: 2 } }),
+    /versionCode 2 is not higher than v1.0.1's 2/);
+  assert.match(versionCodeProblem({ versionCode: 1, previous: { tag: 'v1.0.1', versionCode: 2 } }), /not higher/);
+  assert.match(versionCodeProblem({ versionCode: 3, previous: { tag: 'v1.0.1', versionCode: null } }),
+    /could not read v1.0.1's versionCode/);
+  assert.match(versionCodeProblem({ versionCode: null, previous: null }), /not a positive integer/);
+  assert.match(versionCodeProblem({ versionCode: 0, previous: null }), /not a positive integer/);
+  assert.equal(versionCodeProblem({ versionCode: 2, previous: null }), null, 'no earlier milestone: nothing to compare');
+});
+
+test("the repository's versionCode is a positive integer", () => {
+  const code = parseVersionCode(readFileSync(new URL('../mobile/android/app/build.gradle', import.meta.url), 'utf8'));
+  assert.ok(Number.isInteger(code) && code > 0, `versionCode ${code}`);
 });
 
 // The JDK Android Studio bundles was 25 when Tressette wrote this, and Gradle

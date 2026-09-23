@@ -10,6 +10,7 @@
  *   1b. the working tree is exactly HEAD (tools/source_tag.mjs), and HEAD's
  *      commit and tree are what this build will be recorded as; any earlier
  *      staging of this version is removed before anything builds
+ *   1c. versionCode is higher than the previous milestone tag's
  *   2. npm ci (mobile), then cap sync android — the Capacitor runtime from
  *      mobile/package-lock.json at this commit, then public/ into the project
  *   3. gradlew assembleRelease
@@ -45,6 +46,7 @@ import { fileURLToPath } from 'node:url';
 import {
   EXPECTED_CERT, JDK_MAJOR, newestBuildTools, signatureVerdict, pickJdk,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, checksumProblems,
+  parseVersionCode, previousMilestone, versionCodeProblem,
 } from './release_lib.mjs';
 import { formatSource, treeProblems } from './source_tag.mjs';
 
@@ -133,6 +135,22 @@ const source = {
 // A failed rev-parse fails here, not after a long build.
 try { formatSource(source); } catch (e) { fail(`could not read HEAD: ${e.message}`); }
 console.log(`source ${source.commit}`);
+
+// --- 1c: versionCode goes up from the previous milestone ---
+// Android refuses an update whose versionCode is not higher than the installed
+// one (issue #69). The previous milestone is the newest vX.Y.Z tag merged into
+// HEAD that is below this version; its build.gradle is read from the tag.
+const versionCode = parseVersionCode(read('mobile/android/app/build.gradle'));
+const tagsHere = git(['tag', '--merged', 'HEAD', '--list', 'v*']).stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+const prevTag = previousMilestone(tagsHere, version);
+const previous = prevTag
+  ? { tag: prevTag, versionCode: parseVersionCode(git(['show', `${prevTag}:mobile/android/app/build.gradle`]).stdout) }
+  : null;
+const codeProblem = versionCodeProblem({ versionCode, previous });
+if (codeProblem) fail(codeProblem);
+console.log(previous
+  ? `versionCode ${versionCode}, above ${previous.tag}'s ${previous.versionCode}`
+  : `versionCode ${versionCode}; no milestone tag below ${tag} here, so there is nothing to compare it with`);
 
 // Any earlier staging of this version goes now, before a long build that can
 // fail: a failed rerun must not leave the last build staged for publishing.
