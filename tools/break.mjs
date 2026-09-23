@@ -380,16 +380,28 @@ const dir = mkdtempSync(join(tmpdir(), "scopetta-break-"));
 let caught = 0, survived = [], invalid = [], equivalent = [], wrongly = [],
     mismatched = [], undeclared = [];
 
+// Everything below parses TAP, so the reporter is named rather than left to
+// Node: with no TTY the runner picks spec, which prints neither `# tests` nor
+// `not ok`, and every caught break came back INVALID — issue #40.
+const RUN = ["--test-reporter=tap", "--test", ...TESTS];
+
 // The suite has to pass on the real engine first, or every "caught" below
 // means nothing.
 let BASELINE = 0;
 try {
-  const out = String(execFileSync(process.execPath, ["--test", ...TESTS], { stdio: "pipe", maxBuffer: 64 * 1024 * 1024 }));
+  const out = String(execFileSync(process.execPath, RUN, { stdio: "pipe", maxBuffer: 64 * 1024 * 1024 }));
   // How many tests the suite really has, so the "did it run at all?" check
   // below is a fact rather than a magic number.
   BASELINE = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
 } catch {
   console.error("the tests do not pass on the unbroken engine — fix that first");
+  rmSync(dir, { recursive: true, force: true });
+  process.exit(2);
+}
+// A passing suite that reports no tests is a summary this script cannot read,
+// not an empty suite, and every verdict below would be built on it.
+if (!BASELINE){
+  console.error("the unbroken suite passed but its summary could not be read — no `# tests` line");
   rmSync(dir, { recursive: true, force: true });
   process.exit(2);
 }
@@ -419,7 +431,7 @@ for (const [name, find, replace, why] of chosen){
     // one-minute budget that arrived here as "the suite did not run", which
     // was a harness defect reporting a caught break as an unrunnable one. One
     // slow break costs this tool a few minutes and it is run by hand.
-    execFileSync(process.execPath, ["--test", ...TESTS],
+    execFileSync(process.execPath, RUN,
       { stdio: "pipe", timeout: 600000, maxBuffer: 64 * 1024 * 1024,
         env: { ...process.env, SCOPETTA_ENGINE: file } });
   } catch (e) {
