@@ -67,16 +67,23 @@ branch, a pull request, a proposal, a count of merged pull requests, or a change
 to a particular file or to this process. The independent review happens per
 milestone, **before the tag**, never per pull request. Releases are published
 to `diegoami/scopetta-releases`; the tag still goes on this repository's
-`main`, and the release notes name the tagged commit. This project publishes
-no pre-releases.
+`main`, and the release notes name the tagged commit — the scripts do not write
+it yet (#65), so until they do, Claude adds it to the published release's notes
+as part of the publish the owner approved. This project publishes no
+pre-releases.
 
 1. **The owner calls a milestone, or Claude proposes one** when a release is due
    or a coherent set of work has landed.
-2. **Claude opens a milestone issue** in this repository, labelled `milestone`
-   and titled `Milestone vX.Y.Z`: the proposed tag, the candidate commit on
-   `main` (full SHA), the previous milestone tag, the pull requests merged
-   since it, and the gate results on the candidate — the engine tests, the full
-   UI check, and `tools/smoke_desktop.mjs` on a build of the candidate.
+2. **The candidate is already the release.** Before a candidate is named, an
+   ordinary pull request has bumped every version declaration to the proposed
+   version (`tools/release.test.mjs` holds all seven to it) and set the release
+   notes' subtitle (`SUBTITLE` in `tools/publish_release.mjs`), so the tagged
+   commit builds exactly what is published. **Claude then opens a milestone
+   issue** in this repository, labelled `milestone` and titled `Milestone
+   vX.Y.Z`: the proposed tag, the candidate commit on `main` (full SHA), the
+   previous milestone tag, the pull requests merged since it, and the gate
+   results on the candidate — the engine tests, the full UI check, and
+   `tools/smoke_desktop.mjs` on a build of the candidate.
 3. **Claude gives the owner one review prompt**, written with the
    `review-handoff` skill, and puts the same prompt in the milestone issue. The
    owner runs it in a model that is not Claude, in a fresh session. The reviewer
@@ -93,8 +100,8 @@ no pre-releases.
 5. **On `AGREE`, Claude creates the annotated tag on exactly the reviewed SHA**,
    never on a later commit, and pushes it, and the release is built from a
    checkout of that tag (`ANDROID.md` §4, `DESKTOP.md`). Work merged after the
-   candidate belongs to the next milestone. Any device or manual check happens
-   before the tag. Publishing — `publish_release.mjs --confirm`, the releases
+   candidate belongs to the next milestone. Any device or manual check runs on a
+   build of the candidate SHA, before the tag. Publishing — `publish_release.mjs --confirm`, the releases
    repository — stays with the owner's go-ahead.
 6. **The owner may tag without a review**, and the milestone issue records that.
 

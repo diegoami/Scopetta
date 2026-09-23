@@ -47,8 +47,33 @@ tools sandbox by default: tell the owner to allow it.
 - **Known owner decisions**: questions already put to the owner, so the reviewer
   does not report them as defects.
 - **Round**: 1, 2 or 3. A third that does not end in AGREE goes to the owner.
-- **Labels**: `gh label list`. Make sure `review` exists (`gh label create
-  review --description "Found by an independent milestone review"`).
+- **Labels**: `gh label list`. `milestone` (the milestone issue) and `review`
+  (the reviewer's findings) exist; recreate either if it is gone.
+- **The candidate is the release**: every version declaration is already at
+  the proposed version and `SUBTITLE` is set, merged before the candidate is
+  named (`CLAUDE.md`, step 2). If not, that pull request comes first.
+
+## The milestone issue
+
+```text
+Title: Milestone vX.Y.Z
+Label: milestone
+
+Status: <under review, round n | BLOCK at <sha>: #n, #m | AGREE at <sha> | tagged vX.Y.Z at <sha> | tagged without review (owner)>
+
+- Proposed tag: vX.Y.Z
+- Candidate: <full SHA> on main
+- Previous milestone: <vA.B.C> (<full SHA>)
+- Merged since: <#n title, one per line>
+- Gates on the candidate: <engine tests: pass count; full UI check: result;
+  desktop smoke on a build of the candidate: result>
+
+## The review prompt
+
+<the prompt below, as given to the owner>
+```
+
+Keep the `Status:` line current: it is what a later session reads first.
 
 ## Template
 
@@ -130,8 +155,10 @@ Rules:
   subagent as usual), or rebut it with evidence on the issue and leave the close
   to the owner. When the fixes are merged, move the candidate to the new `main`
   commit, update the milestone issue, and give the owner the re-review prompt
-  unasked, with the round number. After a third round that does not end in
-  AGREE, stop and take it to the owner.
+  unasked, with the round number. A re-review prompt names the earlier verdict
+  (its SHA and the issues it opened) and the pull requests that fixed them, so
+  the reviewer checks those first and then the whole new range. After a third
+  round that does not end in AGREE, stop and take it to the owner.
 - SHOULD and OUT OF SCOPE: leave each issue for its own change unless the owner
   wants it in this release. Owner decisions: put them to the owner with a
   recommended default. Nits: your call, and say which you took.

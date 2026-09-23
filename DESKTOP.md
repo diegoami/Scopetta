@@ -125,8 +125,11 @@ the Rust toolchain.
 
 **Tag first, build from the tag.** A release is a milestone (`CLAUDE.md`): its
 candidate commit is reviewed, the annotated tag `vX.Y.Z` goes on exactly the
-reviewed SHA, and the release is packaged from a clean checkout of that tag.
-The release notes name the tagged commit.
+reviewed SHA, and the release is packaged from a clean checkout of that tag:
+`git status --short` has to print nothing before packaging. The scripts check
+neither the tag nor the tree yet, and the notes do not name the tagged commit
+yet (#65); until they do, the tree is checked by hand and the commit is added to
+the published notes by hand.
 
 ```sh
 git tag -a vX.Y.Z <reviewed SHA> -m "Scopetta X.Y.Z" && git push origin vX.Y.Z
