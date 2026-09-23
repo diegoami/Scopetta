@@ -120,11 +120,13 @@ portrait, that nothing runs off the screen, that no name plate is wider or
 taller than its own box or lands on the cards, that **the table needs no
 scrolling at all** — or, where the card sits on its clamp floor (the page's
 `--cw-floor`, #60), none once the floor is lifted, because there the floor
-decides the card and the scroll it adds is the designed fallback (#5). The pass
-fails if 1100x320 or 320x568 never reaches the floor (#59), and a budget that
-reads zero is not blamed on a missing term: the inflated pass skips and counts
-it, the plain pass fails it as a screen too short for the table (#58) — that the DOM and the engine agree on how many cards are on
-the table, and the fan floors below. Then it repeats the tightest of them with
+decides the card and the scroll it adds is the designed fallback (#5) — that the DOM and the engine agree on how many cards are on
+the table, and the fan floors below. Its guards are railed: it fails if 1100x320
+or 320x568 never reaches the floor (#59), if the floor reads differently
+anywhere in the grid (#60), and if the inflated budget runs out in every case at
+a shape — a budget that reads zero is otherwise skipped and counted in the
+inflated pass, not blamed on a missing term, and fails as a screen too short in
+the plain one (#58). Then it repeats the tightest of them with
 the spacing tokens inflated, which fails if anyone replaces the derived
 `--chrome` with a hard-coded number. Since #5 that includes the short
 landscape windows down to 1100x330 (not 1100x320, where the inflated budget

@@ -1333,6 +1333,10 @@ const UNFLOOR = ':root{ --cw: min(var(--cw-height), var(--cw-width)) !important;
 async function checkTable(browser, only, inflate) {
   console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
   let failed = 0, flooredCases = 0, flooredShortest = 0, flooredNarrow = 0, exhaustedCases = 0;
+  // Per shape: cases run, and cases whose inflated budget was exhausted. A
+  // shape where every case was exhausted asked nothing, and the rail below
+  // says so (the review of #73). And every floor read, which must agree.
+  const casesAt = {}, exhaustedAt = {}, floorsRead = new Set();
   let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
   // 'tiny window' is in the quick grid because it is the shape the width term
   // is about, and 'shortest window' because it is where the plate is taller
@@ -1419,6 +1423,8 @@ async function checkTable(browser, only, inflate) {
         // that catches it (the break "the icon bar grows on short landscape
         // windows"). 320x568 keeps about 3px of that difference, since the
         // inflated pass does not run it.
+        casesAt[vname] = (casesAt[vname] || 0) + 1;
+        floorsRead.add(Math.round(m.cwFloor * 10) / 10);
         if (!(m.cwFloor > 0))
           bad.push('the page declares no --cw-floor, so the designed card floor cannot be read');
         const floored = m.cwFloor > 0 && Math.abs(m.cwExact - m.cwFloor) < 0.5 && m.cwExact - wanted > 0.05;
@@ -1440,7 +1446,7 @@ async function checkTable(browser, only, inflate) {
           if (vname === 'narrow phone') flooredNarrow++;
         }
         if (exhausted) {
-          if (inflate) exhaustedCases++;
+          if (inflate) { exhaustedCases++; exhaustedAt[vname] = (exhaustedAt[vname] || 0) + 1; }
           else bad.push('the budget leaves no card at all here: the chrome alone is taller than the '
             + 'screen, so no card size fits — not a missing term, a screen too short for the table');
         } else {
@@ -1525,6 +1531,28 @@ async function checkTable(browser, only, inflate) {
   if (list.some(v => v[0] === 'shortest window') && !flooredShortest) {
     failed++;
     console.log(`  FAIL  no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
+  }
+  // The skip above is a guard too, and railed like the floors (the review of
+  // #73): a shape where the inflated budget ran out in every case asked
+  // nothing at all, so a defect only that shape could see — an 8px shortfall
+  // confined to short landscape, beside a correct change that exhausts the
+  // budget there — would pass with every line green. Partly exhausted is
+  // fine: the other decks still ask.
+  for (const [shape, n] of Object.entries(exhaustedAt))
+    if (n === casesAt[shape]) {
+      failed++;
+      console.log(`  FAIL  at ${shape} the inflated budget leaves no card in any case, so this pass asks `
+        + 'nothing there: the page no longer fits the inflation at that shape. Take the shape out of '
+        + 'TIGHT or ease INFLATE, and say why');
+    }
+  // One floor. --cw-floor is declared once and both clamps use it (#60); a
+  // page that overrides it in one orientation reads two floors across the
+  // grid, and the portrait one would then pass as "designed" (the review of
+  // #73).
+  if (floorsRead.size > 1) {
+    failed++;
+    console.log(`  FAIL  the card floor reads ${[...floorsRead].join('px and ')}px across the grid: `
+      + '--cw-floor is overridden somewhere, so there is no one designed floor');
   }
   // The same for portrait, whose --cw rule has a clamp of its own (issue #59):
   // at 320x568 the budget wants a hair under the floor in two decks, one of them
