@@ -170,8 +170,9 @@ the tag on origin does not name.
 **`node tools/package_release.mjs`** — since 1.0.1 it builds **both** targets,
 the APK and the Windows executable (`DESKTOP.md`). It checks that every version
 declaration agrees with `versionName` in `app/build.gradle`, and that
-`versionCode` is higher than the previous milestone tag's (#69), before anything
-builds, then `npm ci` in `mobile/`, so the Capacitor runtime comes from the
+`versionCode` is higher than the previous milestone tag's (#69) — the tag origin
+has, on the commit origin names, so a clone missing it or holding a stale one is
+refused — before anything builds, then `npm ci` in `mobile/`, so the Capacitor runtime comes from the
 committed lockfile and not from whatever `node_modules` held (#68), `cap sync`,
 `gradlew assembleRelease`, refuse an unsigned APK,
 `apksigner verify`, the desktop build, refuse an implausible `.exe`, the desktop

@@ -13,7 +13,7 @@ import {
   parseCertDigest, certificateMatches, isPlaceholderCert, signatureVerdict,
   parseChecksums, checksumProblems, releaseCreateArgs,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, releaseNotes,
-  pickJdk, parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames,
+  pickJdk, parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames, milestoneProblem,
 } from './release_lib.mjs';
 import { stageAssets } from './stage_assets.mjs';
 
@@ -229,6 +229,27 @@ test("origin's tag names are read from ls-remote, each once, peeled lines folded
   // And what the packager does with them: origin knowing a milestone below this
   // version that the clone does not is a refusal, not "nothing to compare".
   assert.equal(previousMilestone(remoteTagNames(ls), '1.0.2'), 'v1.0.1');
+});
+
+// The refusal itself, as a function, so deleting it turns a test red (the
+// re-review of #72): the clone must find origin's previous milestone, on the
+// same commit, before its versionCode is believed.
+test("the clone's previous milestone has to be origin's, on the same commit", () => {
+  const c1 = '1'.repeat(40), c2 = '2'.repeat(40);
+  const base = { tag: 'v1.0.2', localPrev: 'v1.0.1', localCommit: c1,
+                 originPrev: 'v1.0.1', originCommit: c1, shallow: false };
+  assert.equal(milestoneProblem(base), null);
+  assert.equal(milestoneProblem({ ...base, localPrev: null, localCommit: null,
+                                  originPrev: null, originCommit: null }), null, 'a first release');
+  assert.match(milestoneProblem({ ...base, localPrev: null, localCommit: null }),
+    /origin's previous milestone below v1\.0\.2 is v1\.0\.1, but this clone has no milestone tag.*git fetch --tags origin/s);
+  assert.match(milestoneProblem({ ...base, localPrev: null, localCommit: null, shallow: true }),
+    /git fetch --unshallow --tags origin/);
+  assert.match(milestoneProblem({ ...base, localPrev: 'v1.0.0' }), /this clone finds v1\.0\.0/);
+  // A stale local tag: origin's name, another commit. fetch --tags will not
+  // move it, so its versionCode would be read from the wrong commit.
+  assert.match(milestoneProblem({ ...base, localCommit: c2 }),
+    new RegExp(`v1\\.0\\.1 here names ${c2}, origin's names ${c1}.*git tag -d v1\\.0\\.1`, 's'));
 });
 
 test("the repository's versionCode is a positive integer", () => {

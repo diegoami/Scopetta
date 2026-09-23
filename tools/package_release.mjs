@@ -45,9 +45,9 @@ import { fileURLToPath } from 'node:url';
 import {
   EXPECTED_CERT, JDK_MAJOR, newestBuildTools, signatureVerdict, pickJdk,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem,
-  parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames,
+  parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames, milestoneProblem,
 } from './release_lib.mjs';
-import { formatSource, treeProblems } from './source_tag.mjs';
+import { formatSource, tagCommit, treeProblems } from './source_tag.mjs';
 import { stageAssets } from './stage_assets.mjs';
 
 const WIN = process.platform === 'win32';
@@ -153,10 +153,13 @@ const prevTag = previousMilestone(tagsHere, version);
 const remote = git(['ls-remote', '--tags', 'origin']);
 if (remote.status !== 0) fail(`git ls-remote origin failed, so origin's milestones cannot be checked:\n${remote.stderr}`);
 const prevOnOrigin = previousMilestone(remoteTagNames(remote.stdout), version);
-if (prevOnOrigin && prevOnOrigin !== prevTag)
-  fail(`origin's previous milestone below ${tag} is ${prevOnOrigin}, but this clone ` +
-       `${prevTag ? `finds ${prevTag}` : 'has no milestone tag'} merged into HEAD. ` +
-       'Fetch the tags (git fetch --tags origin) and package again, or check that HEAD descends from it.');
+const milestone = milestoneProblem({
+  tag, localPrev: prevTag, originPrev: prevOnOrigin,
+  localCommit: prevTag ? git(['rev-parse', `${prevTag}^{commit}`]).stdout.trim() : null,
+  originCommit: prevOnOrigin ? tagCommit(remote.stdout, prevOnOrigin) : null,
+  shallow: git(['rev-parse', '--is-shallow-repository']).stdout.trim() === 'true',
+});
+if (milestone) fail(milestone);
 const previous = prevTag
   ? { tag: prevTag, versionCode: parseVersionCode(git(['show', `${prevTag}:mobile/android/app/build.gradle`]).stdout) }
   : null;

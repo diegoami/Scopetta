@@ -199,6 +199,25 @@ export function remoteTagNames(lsRemote){
   return names;
 }
 
+// Why the clone's previous milestone cannot be trusted, or null. It has to be
+// origin's (by name) and name the same commit as origin's, or the versionCode
+// read from it is not the released one: a missing tag would read as a first
+// release, and a stale local tag — which `git fetch --tags` does not move —
+// would read the wrong commit (the reviews of #72). Commits are full SHAs.
+export function milestoneProblem({ tag, localPrev, localCommit, originPrev, originCommit, shallow }){
+  if (!originPrev) return null;
+  if (originPrev !== localPrev)
+    return `origin's previous milestone below ${tag} is ${originPrev}, but this clone ` +
+           `${localPrev ? `finds ${localPrev}` : 'has no milestone tag'} merged into HEAD. ` +
+           (shallow
+             ? 'This clone is shallow: git fetch --unshallow --tags origin, then package again.'
+             : 'Fetch the tags (git fetch --tags origin) and package again, or check that HEAD descends from it.');
+  if (localCommit !== originCommit)
+    return `${originPrev} here names ${localCommit}, origin's names ${originCommit}: a stale local tag, ` +
+           `which git fetch --tags does not move. Replace it: git tag -d ${originPrev} && git fetch --tags origin`;
+  return null;
+}
+
 // Why this versionCode cannot ship, or null. Android refuses an update whose
 // versionCode is not higher than the installed one, so a release that forgets
 // the bump builds, passes, publishes, and updates nobody. `previous` is the
