@@ -306,12 +306,18 @@ test("the script's dry run exits clean and never calls gh release create",
     git(tmp, 'push', '-q', 'origin', 'main');
     const commit = git(tmp, 'rev-parse', 'HEAD');
     const tree = git(tmp, 'rev-parse', 'HEAD^{tree}');
-    writeFileSync(path.join(tmp, 'dist-release', 'v1.0.0.source'), `commit ${commit}\ntree ${tree}\n`);
+    const sourceFile = path.join(tmp, 'dist-release', 'v1.0.0.source');
 
     const publish = () => spawnSync(process.execPath, [path.join(tmp, 'tools', 'publish_release.mjs')], {
       encoding: 'utf8', cwd: tmp,
       env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
     });
+
+    // No source record: refused, since nothing says which commit was built.
+    const unrecorded = publish();
+    assert.equal(unrecorded.status, 1, 'a staging with no source record is refused');
+    assert.match(unrecorded.stderr, /v1\.0\.0\.source is missing/);
+    writeFileSync(sourceFile, `commit ${commit}\ntree ${tree}\n`);
 
     // Not tagged on origin: refused, dry run included.
     const untagged = publish();
@@ -335,7 +341,28 @@ test("the script's dry run exits clean and never calls gh release create",
     const res = publish();
     assert.equal(res.status, 0, res.stderr);
     assert.match(res.stdout, /dry run/);
-    assert.ok(res.stdout.includes(commit), 'the notes name the tagged commit');
+    // In the notes, not anywhere in the output: the publisher also logs the
+    // commit, and asserting on the whole of stdout passed a mutant whose notes
+    // named nothing (the review of #66).
+    const notes = res.stdout.split('Notes that would be used:')[1] ?? '';
+    assert.match(notes, new RegExp(`Sorgente:.*\`v1\\.0\\.0\`.*\`${commit}\``),
+      'the notes name the tag and the tagged commit');
     assert.equal(existsSync(marker), false,
       'a dry run must not reach gh release create');
+
+    // A tag on a commit that is not on origin/main: refused. The commit reaches
+    // origin with the tag, but no branch of main's contains it.
+    git(tmp, 'switch', '-q', '-c', 'side');
+    git(tmp, 'commit', '-q', '--allow-empty', '-m', 'side');
+    const offMain = git(tmp, 'rev-parse', 'HEAD');
+    writeFileSync(sourceFile, `commit ${offMain}\ntree ${git(tmp, 'rev-parse', 'HEAD^{tree}')}\n`);
+    git(tmp, 'switch', '-q', 'main');
+    git(tmp, 'push', '-q', 'origin', ':refs/tags/v1.0.0');
+    git(tmp, 'tag', '-d', 'v1.0.0');
+    git(tmp, 'tag', '-a', 'v1.0.0', '-m', 'off main', offMain);
+    git(tmp, 'push', '-q', 'origin', 'v1.0.0');
+    const off = publish();
+    assert.equal(off.status, 1, 'a tag off main is refused');
+    assert.match(off.stderr, /is not on origin\/main/);
+    assert.equal(existsSync(marker), false, 'no refusal reaches gh release create');
   });

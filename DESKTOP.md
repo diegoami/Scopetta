@@ -149,8 +149,8 @@ refuses to build unless they all agree, and so does `tools/release.test.mjs` on
 every pull request, so a missed one turns CI red before release day. The
 packager refuses an `.exe` that is missing, under 1 MB or not a PE binary, runs
 the smoke against it, and stages `Scopetta-X.Y.Z-android.apk`,
-`Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt`, replacing any earlier
-directory. The publisher requires exactly those two assets: an APK-only
+`Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt`, having cleared any
+earlier staging of the version before it built. The publisher requires exactly those two assets: an APK-only
 directory is half a release, not a smaller one.
 
 This is Tressette's 1.0.4, ported into this repository's own release scripts

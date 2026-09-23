@@ -6,10 +6,10 @@
  *   node tools/package_release.mjs
  *
  * Steps, in order, stopping at the first failure:
- *   0. the working tree is exactly HEAD (tools/source_tag.mjs), and HEAD's
+ *   1. every version declaration agrees with Android's versionName
+ *   1b. the working tree is exactly HEAD (tools/source_tag.mjs), and HEAD's
  *      commit and tree are what this build will be recorded as; any earlier
  *      staging of this version is removed before anything builds
- *   1. every version declaration agrees with Android's versionName
  *   2. cap sync android   — copy public/ into the Android project
  *   3. gradlew assembleRelease
  *   4. refuse an unsigned APK (a silently unsigned build is worse than none)
@@ -18,7 +18,8 @@
  *   7. refuse an implausible executable (missing, truncated, not PE)
  *   8. tools/smoke_desktop.mjs against that executable
  *   9. stage dist-release/vX.Y.Z/ with both assets and SHA256SUMS.txt, then
- *      read back and verify what was staged, and record the source beside it in
+ *      read back and verify what was staged; ask the tree again, and only if
+ *      it is still exactly the HEAD of step 1b, record the source beside it in
  *      dist-release/vX.Y.Z.source, which publish_release.mjs checks the tag against
  *
  * The version comes from mobile/android/app/build.gradle's versionName, and
@@ -112,7 +113,7 @@ if (disagree.length)
 const tag = `v${version}`;
 console.log(`packaging Scopetta ${tag}`);
 
-// --- 0: build only committed source, and remember which ---
+// --- 1b: build only committed source, and remember which ---
 // A release is the tagged commit (CLAUDE.md, "Each milestone"), so a build that
 // no commit contains cannot be published. Untracked files count, and ignored
 // ones under public/, which the build bundles; treeProblems says why it avoids
@@ -193,7 +194,7 @@ if (problem) fail(`${problem} (${path.relative(ROOT, exe)}).`);
 step('smoke the desktop app', process.execPath, [path.join(ROOT, 'tools', 'smoke_desktop.mjs'), exe]);
 
 // --- 9: stage both, then read it back, then record the source ---
-// (any earlier directory was removed at step 0)
+// (any earlier directory was removed at step 1b)
 mkdirSync(outDir, { recursive: true });
 const assets = releaseAssets(version);
 const [apkName, exeName] = assets;
@@ -208,6 +209,18 @@ writeFileSync(path.join(outDir, 'SHA256SUMS.txt'), sums.join('\n') + '\n');
 const problems = checksumProblems(readFileSync(path.join(outDir, 'SHA256SUMS.txt'), 'utf8'),
   hashOf, { expected: assets, present: readdirSync(outDir) });
 if (problems.length) fail(`what was staged does not verify: ${problems.join('; ')}`);
+// The build takes minutes, so the tree is asked again before it is recorded:
+// a commit, checkout or edit made meanwhile would otherwise be recorded as
+// what was built. The staging stays, and the publisher refuses it without a
+// record (the review of #66).
+let after;
+try { after = treeProblems(ROOT); } catch (e) { fail(e.message); }
+const now = { commit: git(['rev-parse', 'HEAD']).stdout.trim(), tree: git(['rev-parse', 'HEAD^{tree}']).stdout.trim() };
+if (after.length || now.commit !== source.commit || now.tree !== source.tree)
+  fail('the working tree changed while the release was building, so the build matches no ' +
+       'one commit. Nothing was recorded; package again.\n' +
+       [...after, ...(now.commit !== source.commit ? [`HEAD moved: ${source.commit} -> ${now.commit}`] : [])]
+         .map((p) => `  ${p}`).join('\n'));
 // Last, so a source record exists only beside a staging that verified.
 writeFileSync(sourceFile, formatSource(source));
 
