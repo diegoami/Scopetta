@@ -72,15 +72,18 @@ prompt over in chat and does not wait for it. A milestone is:
 
 **The issue records the review.** Its title is `Milestone review: <milestone>`,
 and its body holds the prompt itself and the commit range. The range starts at
-the **reviewed end** recorded in the last closed `independent-review` issue,
-exclusive, or covers all of history if there is none. It ends at the SHA of
+the **reviewed end** recorded in the last closed `independent-review` issue that
+has one, exclusive, or covers all of history if there is none. An issue the owner
+closes without running records no reviewed end, so its commits fall to the next
+review. It ends at the SHA of
 `main` when the issue is opened, recorded as a SHA. That issue is how the next
 milestone finds its range.
 
-**A review by another model never blocks anything.** The owner runs it when
+**A milestone review never blocks anything.** The owner runs it when
 they can, however long that takes, or not at all. An open `independent-review`
 issue is not a to-do for Claude and not a condition on any change: every change
-still merges on its own subagent review. If a new milestone arrives while an
+still merges on its own subagent review. Claude only checks it for a posted
+summary, at the start of a session and before extending it. If a new milestone arrives while an
 earlier review's issue is still open, Claude does not open a second issue. It
 updates the open one in place: the title and the milestones it names, the range
 end moved to the current `main` SHA, and the prompt. If the owner has already
