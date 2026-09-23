@@ -35,11 +35,12 @@ commands and how many times the full suite runs before a push — are in
 [`AGENTS.md`](AGENTS.md). Read the principles; run the gates.
 
 **Under Claude Code, Claude runs each change end to end, and the independent
-review comes at milestones.** That is the owner's decision (#44, and #47 for the
-second half). The cross-model review and its two stages are OpenCode's, in
-`AGENTS.md`, and apply only there.
+review comes at milestones.** That is the owner's decision, recorded on #44 and
+#47. The cross-model review and its two stages are OpenCode's, in `AGENTS.md`,
+and apply only there.
 
-**Each change.** A trivial change goes straight to `main`, per `PRINCIPLES.md`.
+**Each change.** A trivial change may be committed straight to `main`, per
+`PRINCIPLES.md`.
 A **non-trivial** change takes **no design stage** and needs nothing from the
 owner: Claude opens a pull request, runs the gates in `AGENTS.md`, and spawns a
 **fresh-context reviewer subagent**. The subagent is given the pull request, any
@@ -49,9 +50,14 @@ reproduces what it reports and does not edit the change. It posts its verdict on
 the pull request with `gh pr comment`, ending in `AGREE` or `BLOCK`, and signs it
 `— <model name> (<model id>), fresh-context subagent, reviewer`. The builder fixes
 the change in the same pull request, and **a re-review may continue the same
-subagent**. On `AGREE` and green CI, Claude merges. A finding the builder
-disagrees with goes to the owner, not around the reviewer. Findings outside the
-change are filed as issues.
+subagent**. Claude merges on an `AGREE` **given on the revision being merged**
+and green CI. Any push after the `AGREE` needs a fresh verdict, unless it
+changes only commit messages, whitespace or a typo that alters no behaviour, no
+assertion and no process text. A finding the builder disagrees with goes to the
+owner, not around the reviewer. A finding outside the change is routed as
+`PRINCIPLES.md` says. The **owner may also review**, as an independent option,
+but an owner is **not automatically a fresh context** — and is not one if they
+directed or wrote the change.
 
 **Each milestone.** When a milestone is reached, Claude gives the owner a **prompt
 for an independent review of the repository** by a model of **another family** —
@@ -62,15 +68,24 @@ milestone is:
 - a run of merged pull requests worth an outside look;
 - or whenever the owner asks.
 
-The prompt names the milestone, the commit range since the last milestone review,
-what to read and what to question. It asks the reviewer to:
+**Each milestone review is recorded in an issue.** Claude opens it when it hands
+over the prompt. The title is `Milestone review: <milestone>`, and the body holds
+the prompt itself and the commit range: from the head recorded in the last closed
+milestone-review issue, or from the start of the repository if there is none, to
+the current `main`. That issue is how the next milestone finds its range.
+
+The prompt names the milestone, the range, what to read and what to question. It
+asks the reviewer to:
 - reproduce every finding before stating it;
 - edit nothing;
 - file each finding as a GitHub issue (`defect` when it is one), after checking
-  the open issues first;
-- sign with `— <display name> (<model id>), reviewer`.
+  the open issues first, and linking the milestone-review issue;
+- post a summary on the milestone-review issue, even if it found nothing, listing
+  the issues it filed;
+- sign both with `— <display name> (<model id>), milestone reviewer`.
 
-Claude then works those issues like any other. This is where a blind spot Claude
+When the summary is posted, Claude closes the milestone-review issue and works the
+filed issues like any other. This is where a blind spot Claude
 shares with its own subagent gets caught, so the prompt asks for what to doubt,
 not for a checklist to confirm. Everything in `PRINCIPLES.md` applies either way.
 

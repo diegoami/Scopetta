@@ -1852,7 +1852,7 @@ the same rate and budget for it.
   playing, after an iteration has merged, is an issue too, labelled `defect`,
   closed by a pull request that fixes the page *and* adds the assertion that
   would have caught it, written against the broken commit first.
-- **No project board, no milestones, no issue per iteration.** This document
+- **No project board, no GitHub milestones, no issue per iteration.** This document
   holds the plan; a second copy goes stale. A design issue is the exception, and
   it is one per non-trivial change, not one per iteration.
 - **A pull request does not merge while its review is still running.**
