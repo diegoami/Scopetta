@@ -13,8 +13,9 @@ import {
   parseCertDigest, certificateMatches, isPlaceholderCert, signatureVerdict,
   parseChecksums, checksumProblems, releaseCreateArgs,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, releaseNotes,
-  pickJdk,
+  pickJdk, parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames, milestoneProblem,
 } from './release_lib.mjs';
+import { stageAssets } from './stage_assets.mjs';
 
 // --- the newest staged version is the highest number, not the last string
 
@@ -184,6 +185,101 @@ test("the repository's version declarations agree with each other", () => {
   const version = all['mobile/android/app/build.gradle versionName'];
   assert.ok(parseVersion(`v${version}`), `versionName ${version} is X.Y.Z`);
   assert.deepEqual(versionDisagreements(version, all), []);
+});
+
+// Issue #69: Android will not install an update whose versionCode is not higher
+// than the installed one, so a release that forgets to bump it publishes an APK
+// that cannot update anybody.
+test("versionCode is read, and has to be higher than the previous milestone's", () => {
+  assert.equal(parseVersionCode(declared('1.0.1').gradle), 2);
+  assert.equal(parseVersionCode('versionName "1.0.1"'), null);
+  assert.equal(parseVersionCode('versionCode 0'), 0);
+
+  // The previous milestone is the newest tag below the version being built,
+  // by number, ignoring anything that is not vX.Y.Z and the version itself.
+  assert.equal(previousMilestone(['v1.0.1', 'v1.0.2', 'v1.0.10', 'nonsense'], '1.0.10'), 'v1.0.2');
+  assert.equal(previousMilestone(['v1.0.1'], '1.0.1'), null, 're-packaging a release compares with nothing');
+  assert.equal(previousMilestone(['v1.0.9', 'v1.0.10'], '1.1.0'), 'v1.0.10');
+  assert.equal(previousMilestone([], '1.0.2'), null);
+
+  assert.equal(versionCodeProblem({ versionCode: 3, previous: { tag: 'v1.0.1', versionCode: 2 } }), null);
+  assert.match(versionCodeProblem({ versionCode: 2, previous: { tag: 'v1.0.1', versionCode: 2 } }),
+    /versionCode 2 is not higher than v1.0.1's 2/);
+  assert.match(versionCodeProblem({ versionCode: 1, previous: { tag: 'v1.0.1', versionCode: 2 } }), /not higher/);
+  assert.match(versionCodeProblem({ versionCode: 3, previous: { tag: 'v1.0.1', versionCode: null } }),
+    /could not read v1.0.1's versionCode/);
+  assert.match(versionCodeProblem({ versionCode: null, previous: null }), /not a positive integer/);
+  assert.match(versionCodeProblem({ versionCode: 0, previous: null }), /not a positive integer/);
+  assert.equal(versionCodeProblem({ versionCode: 2, previous: null }), null, 'no earlier milestone: nothing to compare');
+});
+
+// The review of #72: a milestone tag missing from this clone must not read as
+// "no earlier milestone". The packager also asks origin for its tags, parsed
+// here from `git ls-remote --tags` output.
+test("origin's tag names are read from ls-remote, each once, peeled lines folded in", () => {
+  const ls = [
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\trefs/tags/v1.0.1',
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\trefs/tags/v1.0.1^{}',
+    'cccccccccccccccccccccccccccccccccccccccc\trefs/tags/v1.0.2',
+    'dddddddddddddddddddddddddddddddddddddddd\trefs/heads/main',
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\trefs/tags/old/v0.9.0',
+  ].join('\r\n') + '\r\n';
+  assert.deepEqual(remoteTagNames(ls), ['v1.0.1', 'v1.0.2', 'old/v0.9.0']);
+  assert.deepEqual(remoteTagNames(''), []);
+  // And what the packager does with them: origin knowing a milestone below this
+  // version that the clone does not is a refusal, not "nothing to compare".
+  assert.equal(previousMilestone(remoteTagNames(ls), '1.0.2'), 'v1.0.1');
+});
+
+// The refusal itself, as a function, so deleting it turns a test red (the
+// re-review of #72): the clone must find origin's previous milestone, on the
+// same commit, before its versionCode is believed.
+test("the clone's previous milestone has to be origin's, on the same commit", () => {
+  const c1 = '1'.repeat(40), c2 = '2'.repeat(40);
+  const base = { tag: 'v1.0.2', localPrev: 'v1.0.1', localCommit: c1,
+                 originPrev: 'v1.0.1', originCommit: c1, shallow: false };
+  assert.equal(milestoneProblem(base), null);
+  assert.equal(milestoneProblem({ ...base, localPrev: null, localCommit: null,
+                                  originPrev: null, originCommit: null }), null, 'a first release');
+  assert.match(milestoneProblem({ ...base, localPrev: null, localCommit: null }),
+    /origin's previous milestone below v1\.0\.2 is v1\.0\.1, but this clone has no milestone tag.*git fetch --tags origin/s);
+  assert.match(milestoneProblem({ ...base, localPrev: null, localCommit: null, shallow: true }),
+    /git fetch --unshallow --tags origin/);
+  assert.match(milestoneProblem({ ...base, localPrev: 'v1.0.0' }), /this clone finds v1\.0\.0/);
+  // A stale local tag: origin's name, another commit. fetch --tags will not
+  // move it, so its versionCode would be read from the wrong commit.
+  assert.match(milestoneProblem({ ...base, localCommit: c2 }),
+    new RegExp(`v1\\.0\\.1 here names ${c2}, origin's names ${c1}.*git tag -d v1\\.0\\.1`, 's'));
+});
+
+test("the repository's versionCode is a positive integer", () => {
+  const code = parseVersionCode(readFileSync(new URL('../mobile/android/app/build.gradle', import.meta.url), 'utf8'));
+  assert.ok(Number.isInteger(code) && code > 0, `versionCode ${code}`);
+});
+
+// Issue #70: the manifest is written from the SOURCES, before copying, and the
+// staged copies are checked against it, so a copy that went wrong is caught.
+// Hashing the staged copies to write the manifest and then checking them
+// against it compared a reading with itself, and could only fail on the set.
+test("staging checks the copies against hashes of the sources", () => {
+  const tmp = mkdtempSync(path.join(tmpdir(), 'scopetta-stage-'));
+  const src = path.join(tmp, 'src'), out = path.join(tmp, 'out');
+  mkdirSync(src); mkdirSync(out);
+  const files = releaseAssets('1.0.2').map((name) => {
+    writeFileSync(path.join(src, name), `built ${name}`);
+    return [name, path.join(src, name)];
+  });
+  const good = stageAssets(out, files);
+  assert.deepEqual(good.problems, []);
+  assert.deepEqual(good.sums, files.map(([name, p]) =>
+    `${createHash('sha256').update(readFileSync(p)).digest('hex')}  ${name}`));
+  assert.equal(readFileSync(path.join(out, 'SHA256SUMS.txt'), 'utf8'), good.sums.join('\n') + '\n');
+
+  // A copy that lands different bytes: the old read-back passed this.
+  const out2 = path.join(tmp, 'out2'); mkdirSync(out2);
+  const bad = stageAssets(out2, files, {
+    copy: (from, to) => writeFileSync(to, readFileSync(from, 'utf8') + ', damaged') });
+  assert.deepEqual(bad.problems, files.map(([name]) => `${name} does not match SHA256SUMS.txt`));
 });
 
 // The JDK Android Studio bundles was 25 when Tressette wrote this, and Gradle

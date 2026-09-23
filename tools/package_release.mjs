@@ -10,7 +10,9 @@
  *   1b. the working tree is exactly HEAD (tools/source_tag.mjs), and HEAD's
  *      commit and tree are what this build will be recorded as; any earlier
  *      staging of this version is removed before anything builds
- *   2. cap sync android   — copy public/ into the Android project
+ *   1c. versionCode is higher than the previous milestone tag's
+ *   2. npm ci (mobile), then cap sync android — the Capacitor runtime from
+ *      mobile/package-lock.json at this commit, then public/ into the project
  *   3. gradlew assembleRelease
  *   4. refuse an unsigned APK (a silently unsigned build is worse than none)
  *   5. apksigner verify    — the signature must actually check out, on our key
@@ -36,16 +38,17 @@
  * functions are Tressette's (DESKTOP.md), ported into these scripts.
  */
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   EXPECTED_CERT, JDK_MAJOR, newestBuildTools, signatureVerdict, pickJdk,
-  releaseAssets, versionDeclarations, versionDisagreements, exeProblem, checksumProblems,
+  releaseAssets, versionDeclarations, versionDisagreements, exeProblem,
+  parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames, milestoneProblem,
 } from './release_lib.mjs';
-import { formatSource, treeProblems } from './source_tag.mjs';
+import { formatSource, tagCommit, treeProblems } from './source_tag.mjs';
+import { stageAssets } from './stage_assets.mjs';
 
 const WIN = process.platform === 'win32';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -133,6 +136,39 @@ const source = {
 try { formatSource(source); } catch (e) { fail(`could not read HEAD: ${e.message}`); }
 console.log(`source ${source.commit}`);
 
+// --- 1c: versionCode goes up from the previous milestone ---
+// Android refuses an update whose versionCode is not higher than the installed
+// one (issue #69). The previous milestone is the newest vX.Y.Z tag merged into
+// HEAD that is below this version; its build.gradle is read from the tag.
+//
+// A tag missing from this clone must not read as "no earlier milestone": a
+// shallow or --no-tags clone has none. So origin is asked too, and a milestone
+// origin has below this version that the clone lacks is a refusal (the review
+// of #72). A git that fails is a refusal as well, never "nothing to compare".
+const versionCode = parseVersionCode(read('mobile/android/app/build.gradle'));
+const tagList = git(['tag', '--merged', 'HEAD', '--list', 'v*']);
+if (tagList.status !== 0) fail(`git tag failed, so the previous milestone cannot be found:\n${tagList.stderr}`);
+const tagsHere = tagList.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+const prevTag = previousMilestone(tagsHere, version);
+const remote = git(['ls-remote', '--tags', 'origin']);
+if (remote.status !== 0) fail(`git ls-remote origin failed, so origin's milestones cannot be checked:\n${remote.stderr}`);
+const prevOnOrigin = previousMilestone(remoteTagNames(remote.stdout), version);
+const milestone = milestoneProblem({
+  tag, localPrev: prevTag, originPrev: prevOnOrigin,
+  localCommit: prevTag ? git(['rev-parse', `${prevTag}^{commit}`]).stdout.trim() : null,
+  originCommit: prevOnOrigin ? tagCommit(remote.stdout, prevOnOrigin) : null,
+  shallow: git(['rev-parse', '--is-shallow-repository']).stdout.trim() === 'true',
+});
+if (milestone) fail(milestone);
+const previous = prevTag
+  ? { tag: prevTag, versionCode: parseVersionCode(git(['show', `${prevTag}:mobile/android/app/build.gradle`]).stdout) }
+  : null;
+const codeProblem = versionCodeProblem({ versionCode, previous });
+if (codeProblem) fail(codeProblem);
+console.log(previous
+  ? `versionCode ${versionCode}, above ${previous.tag}'s ${previous.versionCode}`
+  : `versionCode ${versionCode}; no milestone tag below ${tag} here, so there is nothing to compare it with`);
+
 // Any earlier staging of this version goes now, before a long build that can
 // fail: a failed rerun must not leave the last build staged for publishing.
 const outDir = path.join(ROOT, 'dist-release', tag);
@@ -148,6 +184,11 @@ if (!existsSync(path.join(ANDROID, 'keystore.properties')))
 // --- 2 & 3: sync the web assets, then build ---
 const apkDir = path.join(ANDROID, 'app', 'build', 'outputs', 'apk', 'release');
 rmSync(apkDir, { recursive: true, force: true }); // never mistake a stale APK for this one
+// The Capacitor runtime and plugins the APK is built with live in
+// mobile/node_modules, which git ignores, so without this the tagged commit does
+// not determine the APK: it would be built from whatever was installed last
+// (issue #68). The desktop build does the same in desktop/ at step 6.
+step('npm ci (mobile)', 'npm', ['ci', '--no-audit', '--no-fund'], { cwd: MOBILE });
 step('cap sync android', 'npx', ['cap', 'sync', 'android'], { cwd: MOBILE });
 step('gradlew assembleRelease', path.join(ANDROID, 'gradlew.bat'),
      ['assembleRelease', '--console=plain'], { cwd: ANDROID });
@@ -196,18 +237,10 @@ step('smoke the desktop app', process.execPath, [path.join(ROOT, 'tools', 'smoke
 // --- 9: stage both, then read it back, then record the source ---
 // (any earlier directory was removed at step 1b)
 mkdirSync(outDir, { recursive: true });
-const assets = releaseAssets(version);
-const [apkName, exeName] = assets;
-copyFileSync(apk, path.join(outDir, apkName));
-copyFileSync(exe, path.join(outDir, exeName));
-const hashOf = (name) => {
-  const p = path.join(outDir, name);
-  return existsSync(p) ? createHash('sha256').update(readFileSync(p)).digest('hex') : null;
-};
-const sums = assets.map((name) => `${hashOf(name)}  ${name}`);
-writeFileSync(path.join(outDir, 'SHA256SUMS.txt'), sums.join('\n') + '\n');
-const problems = checksumProblems(readFileSync(path.join(outDir, 'SHA256SUMS.txt'), 'utf8'),
-  hashOf, { expected: assets, present: readdirSync(outDir) });
+// The manifest comes from the built files and the check from the staged
+// copies, so a copy that went wrong fails here (stage_assets.mjs, issue #70).
+const [apkName, exeName] = releaseAssets(version);
+const { sums, problems } = stageAssets(outDir, [[apkName, apk], [exeName, exe]]);
 if (problems.length) fail(`what was staged does not verify: ${problems.join('; ')}`);
 // The build takes minutes, so the tree is asked again before it is recorded:
 // a commit, checkout or edit made meanwhile would otherwise be recorded as

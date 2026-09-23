@@ -1,6 +1,7 @@
 /**
  * Ties a staged release to the source it was built from. Discola's, from
- * diegoami/discola-web, ported unchanged below this header (issue #65).
+ * diegoami/discola-web (issue #65), unchanged below this header but for one
+ * addition to treeProblems, the flagged-entries check (issue #67).
  *
  * The packager refuses a working tree that is not exactly HEAD, and records the
  * commit and tree it built (`dist-release/vX.Y.Z.source`, beside the staged
@@ -35,6 +36,10 @@ const OID = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
  *   ignores status.showUntrackedFiles=no.
  * - ignored files count too under `bundled` (public/), since the build copies
  *   that whole directory; a global core.excludesFile can hide anything there.
+ * - a tracked file flagged --skip-worktree or --assume-unchanged is reported
+ *   whatever its content, because git trusts the flag and every question above
+ *   then reads it as clean. `git ls-files -v` tags skip-worktree entries `S`
+ *   and assume-unchanged ones in lower case (issue #67; Scopetta's addition).
  */
 export function treeProblems(cwd, bundled = ['public/']){
   const git = (args) => {
@@ -47,6 +52,8 @@ export function treeProblems(cwd, bundled = ['public/']){
     ...git(['ls-files', '--others', '--exclude-standard']).map((p) => `untracked  ${p}`),
     ...git(['ls-files', '--others', '--ignored', '--exclude-standard', '--', ...bundled])
       .map((p) => `ignored    ${p}`),
+    ...git(['ls-files', '-v']).filter((l) => /^([a-z]|S) /.test(l))
+      .map((l) => `flagged    ${l.slice(2)}`),
   ];
 }
 
