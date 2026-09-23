@@ -1213,13 +1213,16 @@ const measure = () => {
 
   // What the budget WANTS, before the clamp: --cw-height and --cw-width, read
   // through a probe because a custom property's computed value is its text,
-  // not a length. Below CARD_FLOOR the clamp decides the card, not the budget,
+  // not a length. Below --cw-floor the clamp decides the card, not the budget,
   // and the table pass reads these to tell when that is so — issue #5.
   const probe = document.createElement('div');
   probe.style.cssText = 'position:absolute;visibility:hidden;height:0';
   document.body.appendChild(probe);
   const want = v => { probe.style.width = `var(${v})`; return probe.getBoundingClientRect().width; };
   const cwHeight = want('--cw-height'), cwWidth = want('--cw-width');
+  // The designed floor, from the page's own token rather than a number here
+  // (issue #60): what the table pass calls "on the floor" follows the page.
+  const cwFloor = want('--cw-floor');
   probe.remove();
 
   // Past the screen edge, and the name plates. These live in the audit too, but
@@ -1267,7 +1270,7 @@ const measure = () => {
     plateBad,
     sayH: say ? Math.round(say.height) : 0,
     cw: Math.round(cw),
-    cwExact: cw, cwHeight, cwWidth,
+    cwExact: cw, cwHeight, cwWidth, cwFloor,
     rowStats,
     overlapsHand,
     // §3.7: one row in landscape, two in portrait once there is more than one
@@ -1326,12 +1329,14 @@ const INFLATE = `:root{
 // floor binds, to ask whether the budget itself fits the screen (issue #5). At
 // !important it beats the portrait rule's own clamp as well as the root one.
 const UNFLOOR = ':root{ --cw: min(var(--cw-height), var(--cw-width)) !important; }';
-// The lower bound of both --cw clamps in index.html, landscape and portrait.
-const CARD_FLOOR = 32;
 
 async function checkTable(browser, only, inflate) {
   console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
-  let failed = 0, flooredCases = 0, flooredShortest = 0;
+  let failed = 0, flooredCases = 0, flooredShortest = 0, flooredNarrow = 0, exhaustedCases = 0;
+  // Per shape: cases run, and cases whose inflated budget was exhausted. A
+  // shape where every case was exhausted asked nothing, and the rail below
+  // says so (the review of #73). And every floor read, which must agree.
+  const casesAt = {}, exhaustedAt = {}, floorsRead = new Set();
   let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
   // 'tiny window' is in the quick grid because it is the shape the width term
   // is about, and 'shortest window' because it is where the plate is taller
@@ -1401,7 +1406,8 @@ async function checkTable(browser, only, inflate) {
         // Only the DESIGNED floor earns this. A card held up by any other floor —
         // "the portrait card has a floor of its own" raises it to 36px — is a
         // defect the strict rule has to see, so a card that is not exactly
-        // CARD_FLOOR wide is held to "no scrolling" whatever the budget wants.
+        // the designed floor's width (the page's --cw-floor token, read by
+        // measure) is held to "no scrolling" whatever the budget wants.
         const wanted = Math.min(m.cwHeight, m.cwWidth);
         // Floored means both: the card is the designed floor's width, AND it is
         // wider than the budget wants. With the floor lowered to 20px, a card at
@@ -1417,20 +1423,45 @@ async function checkTable(browser, only, inflate) {
         // that catches it (the break "the icon bar grows on short landscape
         // windows"). 320x568 keeps about 3px of that difference, since the
         // inflated pass does not run it.
-        const floored = Math.abs(m.cwExact - CARD_FLOOR) < 0.5 && m.cwExact - wanted > 0.05;
-        const fit = floored ? await (async () => {
+        casesAt[vname] = (casesAt[vname] || 0) + 1;
+        floorsRead.add(Math.round(m.cwFloor * 10) / 10);
+        if (!(m.cwFloor > 0))
+          bad.push('the page declares no --cw-floor, so the designed card floor cannot be read');
+        const floored = m.cwFloor > 0 && Math.abs(m.cwExact - m.cwFloor) < 0.5 && m.cwExact - wanted > 0.05;
+        // Issue #58. The budget can also run out: when the chrome alone is
+        // taller than the screen, --cw-height is negative and the probe reads 0.
+        // Lifting the floor then leaves a card of nothing, the page still
+        // overflows by the deficit, and "a term of --chrome is missing" would
+        // blame a term that is there. Measured on correctly budgeted pages at
+        // 1100x330, inflated: plate rows at 1.6 x --t-tiny leave 0.69px and fit,
+        // at 1.7 x the budget reads 0.00 and overflows 4px. So "exhausted" is a
+        // budget that reads zero, and it is asked apart. In the inflated pass it
+        // is not a defect of the page — the inflation made the screen too short
+        // — so the case is skipped and the summary counts it; in the plain pass
+        // it is one, and it fails with its own message.
+        const exhausted = floored && wanted < 0.05;
+        if (floored) {
           flooredCases++;
           if (vname === 'shortest window') flooredShortest++;
-          await page.addStyleTag({ content: UNFLOOR });
-          await page.waitForTimeout(40);
-          return page.evaluate(measure);
-        })() : m;
-        const lifted = floored ? 'with the card\'s floor lifted, ' : '';
-        if (fit.tableScroll > 1)
-          bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
-        if (fit.youSeatBottom > fit.viewportH + 1)
-          bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
-            + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
+          if (vname === 'narrow phone') flooredNarrow++;
+        }
+        if (exhausted) {
+          if (inflate) { exhaustedCases++; exhaustedAt[vname] = (exhaustedAt[vname] || 0) + 1; }
+          else bad.push('the budget leaves no card at all here: the chrome alone is taller than the '
+            + 'screen, so no card size fits — not a missing term, a screen too short for the table');
+        } else {
+          const fit = floored ? await (async () => {
+            await page.addStyleTag({ content: UNFLOOR });
+            await page.waitForTimeout(40);
+            return page.evaluate(measure);
+          })() : m;
+          const lifted = floored ? 'with the card\'s floor lifted, ' : '';
+          if (fit.tableScroll > 1)
+            bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
+          if (fit.youSeatBottom > fit.viewportH + 1)
+            bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
+              + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
+        }
 
         if (m.tavolaInsideTable > 1)
           bad.push(`the table row runs ${m.tavolaInsideTable}px outside the table`);
@@ -1499,12 +1530,43 @@ async function checkTable(browser, only, inflate) {
   // rule above went unasked and this pass would look exactly as if it held.
   if (list.some(v => v[0] === 'shortest window') && !flooredShortest) {
     failed++;
-    console.log(`  FAIL  no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
+    console.log(`  FAIL  the landscape floor rail\n        no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
+  }
+  // The skip above is a guard too, and railed like the floors (the review of
+  // #73): a shape where the inflated budget ran out in every case asked
+  // nothing at all, so a defect only that shape could see — an 8px shortfall
+  // confined to short landscape, beside a correct change that exhausts the
+  // budget there — would pass with every line green. Partly exhausted is
+  // fine: the other decks still ask.
+  for (const [shape, n] of Object.entries(exhaustedAt))
+    if (n === casesAt[shape]) {
+      failed++;
+      console.log(`  FAIL  the exhausted-budget rail at ${shape}\n        the inflated budget leaves no card in any case, so this pass asks `
+        + 'nothing there: the page no longer fits the inflation at that shape. Take the shape out of '
+        + 'TIGHT or ease INFLATE, and say why');
+    }
+  // One floor. --cw-floor is declared once and both clamps use it (#60); a
+  // page that overrides it in one orientation reads two floors across the
+  // grid, and the portrait one would then pass as "designed" (the review of
+  // #73).
+  if (floorsRead.size > 1) {
+    failed++;
+    console.log(`  FAIL  the one-floor rail\n        the card floor reads ${[...floorsRead].join('px and ')}px across the grid: `
+      + '--cw-floor is overridden somewhere, so there is no one designed floor');
+  }
+  // The same for portrait, whose --cw rule has a clamp of its own (issue #59):
+  // at 320x568 the budget wants a hair under the floor in two decks, one of them
+  // Trevisane, which the quick grid runs. A portrait floor lowered below what
+  // the budget wants floors nothing there, and without this nothing would say so.
+  if (list.some(v => v[0] === 'narrow phone') && !flooredNarrow) {
+    failed++;
+    console.log(`  FAIL  the portrait floor rail\n        no case at 320x568 was on the card's clamp floor, so the portrait floor rule was never asked`);
   }
   const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
     + `${list.length} viewports x ${deckN} decks x ${sizeN} table sizes`
-    + (flooredCases ? `, ${flooredCases} on the clamp floor` : ''));
+    + (flooredCases ? `, ${flooredCases} on the clamp floor` : '')
+    + (exhaustedCases ? `, ${exhaustedCases} where the inflated budget leaves no card, so the floor rule was not asked` : ''));
   return failed;
 }
 

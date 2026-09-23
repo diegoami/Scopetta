@@ -196,7 +196,11 @@
       calc((100dvh - var(--chrome) - var(--seat-overhang)) / var(--ratio)));
   --cw-width: calc((100vw - 2 * var(--pad-inline) - 4 * var(--gap)
                     - var(--seat-extra)) / var(--seat-span));
-  --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 156px);
+  /* The card's floor, one token for both clamps — this one and portrait's below.
+     check_ui.mjs reads it from the page to know which floor is the designed one,
+     so the page and the check cannot hold two different numbers (issue #60). */
+  --cw-floor: 32px;
+  --cw: clamp(var(--cw-floor), min(var(--cw-height), var(--cw-width)), 156px);
   --ratio: 2.0833;
   --ch: calc(var(--cw) * var(--ratio));
   --sheet: url("decks/trevisane.png");
@@ -1415,7 +1419,7 @@ button.card:disabled{ cursor: default; }
        where the budget wants about 32px and a floor of 36 insisted, so the seat
        runs 15px below the fold and the table hands back a scrollbar. A rail is
        for catching a page that has run out of room, not for deciding it has. */
-    --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);
+    --cw: clamp(var(--cw-floor), min(var(--cw-height), var(--cw-width)), 168px);
     /* In portrait the seat row stacks, so the widest row is the hand's three
        cards rather than five — but the table row is what binds here, and it
        is allowed to overlap. Keeping five is the conservative choice: it never
