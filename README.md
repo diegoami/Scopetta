@@ -137,8 +137,9 @@ There is an Android app — the same `public/` directory in an APK, no build ste
 — published at
 <https://github.com/diegoami/scopetta-releases/releases/latest> and described in
 [`ANDROID.md`](ANDROID.md). Because the fonts ship with the page, it plays with
-the radio off. A Windows wrapper in `desktop/` does the same with Tauri,
-described in [`DESKTOP.md`](DESKTOP.md).
+the radio off. From 1.0.1 the same release carries a Windows executable,
+portable and unsigned, built by a Tauri wrapper in `desktop/` and described in
+[`DESKTOP.md`](DESKTOP.md).
 
 The opponent is this game's own. There was no 1997 Scopa to transcribe, so the
 formula was designed here and tuned by self-play; its seven weights and the

@@ -5,8 +5,9 @@ the build is checked. Companion to [`ANDROID.md`](ANDROID.md), which does the
 same for the APK.
 
 **Status.** The [`desktop/`](desktop/README.md) wrapper is built and passes
-`tools/smoke_desktop.mjs` (below). Releasing it beside the APK is the next
-change, and is not wired up yet. Installers and code signing are deferred.
+`tools/smoke_desktop.mjs` (below). A release carries it beside the APK from
+1.0.1 on, and the rules screen and `/windows` link to it. Installers and code
+signing are deferred.
 
 ## Recorded decision
 
@@ -117,13 +118,39 @@ in a row met the same two choices.
 
 ## Releasing
 
-Not wired up yet. The next change ships the executable beside the APK as one
-GitHub Release on
+Both targets ship as one GitHub Release on
 [`diegoami/scopetta-releases`](https://github.com/diegoami/scopetta-releases),
-at 1.0.1, following Tressette's 1.0.4: the packager builds both, smokes the
-exe, and stages them with `SHA256SUMS.txt`; every version declaration has to
-agree before anything is built; and the about screen and a `/windows` redirect
-link to it.
+on one version line, from this machine: it holds the Android signing key and
+the Rust toolchain.
+
+```sh
+node tools/package_release.mjs            # builds both, smokes the exe, stages dist-release/vX.Y.Z/
+node tools/publish_release.mjs            # dry run: verifies, prints the notes
+node tools/publish_release.mjs --confirm
+```
+
+A version bump touches seven declarations: Android's `versionName` (and
+`versionCode`), `tauri.conf.json`, `Cargo.toml`, `desktop/package.json`, the
+two fields of `desktop/package-lock.json`, and `Cargo.lock`, which `cargo
+update -p scopetta --offline` rewrites rather than a hand. `package_release.mjs`
+refuses to build unless they all agree, and so does `tools/release.test.mjs` on
+every pull request, so a missed one turns CI red before release day. The
+packager refuses an `.exe` that is missing, under 1 MB or not a PE binary, runs
+the smoke against it, and stages `Scopetta-X.Y.Z-android.apk`,
+`Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt`, replacing any earlier
+directory. The publisher requires exactly those two assets: an APK-only
+directory is half a release, not a smaller one.
+
+This is Tressette's 1.0.4, ported into this repository's own release scripts
+rather than copied over them, since they had diverged (`isPlaceholderCert` is
+Scopetta's), so every decision is a pure function the tests hold.
+
+The executable is **unsigned**, so SmartScreen warns on first run. The release
+notes say so where a player meets it:
+
+> L'eseguibile non è firmato digitalmente, quindi Windows mostrerà l'avviso
+> «Windows ha protetto il PC»: clicca «Ulteriori informazioni», poi «Esegui
+> comunque». È portabile, senza installer: mettilo dove preferisci.
 
 ## Out of scope
 

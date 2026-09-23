@@ -182,6 +182,13 @@ const EXPECT = {
   // plain pass's lifted floor has the slack to absorb it. Only the inflated
   // pass, with --slack at 0 and those windows in TIGHT, can see it.
   "the icon bar grows on short landscape windows": "with the card's floor lifted",
+
+  // --- the two apps, linked from the rules (DESKTOP.md) ----------------------
+  "the Windows app goes unlinked in English": "do not link to the Windows app",
+  "the Android app goes unlinked in Italian": "do not link to the Android app",
+  // `Windows` is the same word in both languages, so the link text alone passes
+  // a sentence pasted untranslated; the phrase only Italian has is what sees it.
+  "the Windows sentence is left in English in the Italian rules": "is for a computer, in it",
   "the say line collapses when it is empty": "tall — it must cost",
   "the rows of the table drift apart": "drift apart",
 
@@ -437,6 +444,15 @@ const BREAKS = [
   ["the icon bar is taller than the budget pays for",
    ".topbar{\n  height: var(--topbar);",
    ".topbar{\n  height: calc(var(--topbar) + 12px);"],
+  ["the Windows app goes unlinked in English",
+   "app</a> and a <a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\">Windows\n        one</a>:",
+   "app</a> and a Windows one:"],
+  ["the Android app goes unlinked in Italian",
+   "un&rsquo;<a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\">app\n        per Android</a> e una",
+   "un&rsquo;app per Android e una"],
+  ["the Windows sentence is left in English in the Italian rules",
+   "Windows</a>: lo stesso gioco, da installare sul telefono o sul computer\n        e giocare senza connessione.",
+   "Windows</a>: the same game, to install on a phone or a computer and play\n        with no connection."],
   ["the icon bar grows on short landscape windows",
    "</style>",
    "@media (orientation: landscape) and (max-height: 335px){ .topbar{ height: calc(var(--topbar) + 8px); } }\n</style>"],
