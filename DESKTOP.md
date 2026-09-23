@@ -129,7 +129,8 @@ reviewed SHA, and the release is packaged from a clean checkout of that tag.
 The scripts hold both ends (#65, `tools/source_tag.mjs`, from discola-web):
 `package_release.mjs` refuses a working tree that is not exactly HEAD —
 checked by content, not by `git status`, which `cap sync`'s LF rewrites fool
-here — and records the commit and tree it built in `dist-release/vX.Y.Z.source`;
+here, and including any file flagged `--skip-worktree` or `--assume-unchanged`
+(#67) — and records the commit and tree it built in `dist-release/vX.Y.Z.source`;
 `publish_release.mjs` refuses, dry run included, unless `vX.Y.Z` on origin names
 that commit and is on `origin/main`, and the notes name the commit.
 
@@ -146,10 +147,15 @@ A version bump touches seven declarations: Android's `versionName` (and
 two fields of `desktop/package-lock.json`, and `Cargo.lock`, which `cargo
 update -p scopetta --offline` rewrites rather than a hand. `package_release.mjs`
 refuses to build unless they all agree, and so does `tools/release.test.mjs` on
-every pull request, so a missed one turns CI red before release day. The
+every pull request, so a missed one turns CI red before release day.
+`versionCode` does not agree, it goes up: the packager refuses one that is not
+higher than the previous milestone tag's, since Android will not install it
+over that release (#69). The
 packager refuses an `.exe` that is missing, under 1 MB or not a PE binary, runs
 the smoke against it, and stages `Scopetta-X.Y.Z-android.apk`,
-`Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt`, having cleared any
+`Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt` — the manifest written
+from the built files and the staged copies checked against it (#70) — having
+cleared any
 earlier staging of the version before it built. The publisher requires exactly those two assets: an APK-only
 directory is half a release, not a smaller one.
 
