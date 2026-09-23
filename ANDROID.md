@@ -67,7 +67,8 @@ On this machine, present tense:
   `local.properties` and the regenerated `capacitor-cordova-android-plugins/`
   are gitignored).
 - Identity in the generated project is `com.scopetta.app` / `Scopetta`, matching
-  `capacitor.config.json`. `versionName "1.0.0"`, `versionCode 1`.
+  `capacitor.config.json`. `versionName "1.0.1"`, `versionCode 2` (1.0.0 was
+  `versionCode 1`).
 - Launcher icons generated at every density from `assets/` by
   `@capacitor/assets --android --assetPath ../assets` — the settebello on the
   felt.
@@ -214,7 +215,7 @@ This section is the release-status source of truth.
 |---|---|---|---|---|
 | 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **done** |
 | 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **done** |
-| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0> |
+| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, and v1.0.1 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1> |
 | 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **done** — installed on the owner's tablet and played |
 | 5 | Add the about-screen link, run the check | either, after 3 | **done in this change** |
 
