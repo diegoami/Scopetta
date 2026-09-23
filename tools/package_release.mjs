@@ -10,7 +10,8 @@
  *   1b. the working tree is exactly HEAD (tools/source_tag.mjs), and HEAD's
  *      commit and tree are what this build will be recorded as; any earlier
  *      staging of this version is removed before anything builds
- *   2. cap sync android   — copy public/ into the Android project
+ *   2. npm ci (mobile), then cap sync android — the Capacitor runtime from
+ *      mobile/package-lock.json at this commit, then public/ into the project
  *   3. gradlew assembleRelease
  *   4. refuse an unsigned APK (a silently unsigned build is worse than none)
  *   5. apksigner verify    — the signature must actually check out, on our key
@@ -148,6 +149,11 @@ if (!existsSync(path.join(ANDROID, 'keystore.properties')))
 // --- 2 & 3: sync the web assets, then build ---
 const apkDir = path.join(ANDROID, 'app', 'build', 'outputs', 'apk', 'release');
 rmSync(apkDir, { recursive: true, force: true }); // never mistake a stale APK for this one
+// The Capacitor runtime and plugins the APK is built with live in
+// mobile/node_modules, which git ignores, so without this the tagged commit does
+// not determine the APK: it would be built from whatever was installed last
+// (issue #68). The desktop build does the same in desktop/ at step 6.
+step('npm ci (mobile)', 'npm', ['ci', '--no-audit', '--no-fund'], { cwd: MOBILE });
 step('cap sync android', 'npx', ['cap', 'sync', 'android'], { cwd: MOBILE });
 step('gradlew assembleRelease', path.join(ANDROID, 'gradlew.bat'),
      ['assembleRelease', '--console=plain'], { cwd: ANDROID });
