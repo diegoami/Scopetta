@@ -1332,7 +1332,7 @@ const UNFLOOR = ':root{ --cw: min(var(--cw-height), var(--cw-width)) !important;
 
 async function checkTable(browser, only, inflate) {
   console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
-  let failed = 0, flooredCases = 0, flooredShortest = 0;
+  let failed = 0, flooredCases = 0, flooredShortest = 0, flooredNarrow = 0;
   let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
   // 'tiny window' is in the quick grid because it is the shape the width term
   // is about, and 'shortest window' because it is where the plate is taller
@@ -1425,6 +1425,7 @@ async function checkTable(browser, only, inflate) {
         const fit = floored ? await (async () => {
           flooredCases++;
           if (vname === 'shortest window') flooredShortest++;
+          if (vname === 'narrow phone') flooredNarrow++;
           await page.addStyleTag({ content: UNFLOOR });
           await page.waitForTimeout(40);
           return page.evaluate(measure);
@@ -1504,6 +1505,14 @@ async function checkTable(browser, only, inflate) {
   if (list.some(v => v[0] === 'shortest window') && !flooredShortest) {
     failed++;
     console.log(`  FAIL  no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
+  }
+  // The same for portrait, whose --cw rule has a clamp of its own (issue #59):
+  // at 320x568 the budget wants a hair under the floor in two decks, one of them
+  // Trevisane, which the quick grid runs. A portrait floor lowered below what
+  // the budget wants floors nothing there, and without this nothing would say so.
+  if (list.some(v => v[0] === 'narrow phone') && !flooredNarrow) {
+    failed++;
+    console.log(`  FAIL  no case at 320x568 was on the card's clamp floor, so the portrait floor rule was never asked`);
   }
   const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
