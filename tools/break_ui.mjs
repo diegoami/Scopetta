@@ -124,7 +124,10 @@ import { tmpdir } from "node:os";
 const PAGE = fileURLToPath(new URL("../public/index.html", import.meta.url));
 const PUBLIC = dirname(PAGE);
 const CHECK = fileURLToPath(new URL("./check_ui.mjs", import.meta.url));
-const TEXT = readFileSync(PAGE, "utf8");
+// LF, whatever the checkout: a `find` that spans lines is written with "\n",
+// and Git for Windows checks index.html out CRLF, where 54 of the breaks
+// matched nothing and came back INVALID — issue #43.
+const TEXT = readFileSync(PAGE, "utf8").replace(/\r\n/g, "\n");
 
 // The assertion each break must trip, as a substring of the line the check
 // prints. Substrings, so they have to be chosen to name ONE assertion: "steps"
