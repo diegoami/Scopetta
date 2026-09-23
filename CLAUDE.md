@@ -59,30 +59,36 @@ owner, not around the reviewer. A finding outside the change is routed as
 but an owner is **not automatically a fresh context** — and is not one if they
 directed or wrote the change.
 
-**Each milestone.** When a milestone is reached, Claude gives the owner a **prompt
-for an independent review of the repository** by a model of **another family** —
-Codex, GPT-5.6 Luna, or any other that is not Claude — and the owner runs it. A
-milestone is:
+**Each milestone.** When a milestone is reached, Claude opens a **GitHub issue
+requesting an independent review of the repository** by a model of **another
+family** — Codex, GPT-5.6 Luna, or any other that is not Claude. **The issue is
+the request**: it is labelled `independent-review`, it holds the prompt, and the
+owner runs it from there when they have the chance. Claude does not hand the
+prompt over in chat and does not wait for it. A milestone is:
 - an iteration or a release shipped;
 - a change to this process;
 - a run of merged pull requests worth an outside look;
 - or whenever the owner asks.
 
-**Each milestone review is recorded in an issue.** Claude opens it when it hands
-over the prompt. The title is `Milestone review: <milestone>`, and the body holds
-the prompt itself and the commit range. The range starts at the **reviewed end**
-recorded in the last closed milestone-review issue, exclusive, or covers all of
-history if there is none. It ends at the SHA of `main` when the prompt is handed
-over, recorded as a SHA. That issue is how the next milestone finds its range.
+**The issue records the review.** Its title is `Milestone review: <milestone>`,
+and its body holds the prompt itself and the commit range. The range starts at
+the **reviewed end** recorded in the last closed `independent-review` issue that
+has one, exclusive, or covers all of history if there is none. An issue the owner
+closes without running records no reviewed end, so its commits fall to the next
+review. It ends at the SHA of
+`main` when the issue is opened, recorded as a SHA. That issue is how the next
+milestone finds its range.
 
-**A milestone review never blocks work.** The owner runs it when they can,
-however long that takes. Meanwhile every change still merges on its own
-subagent review. If a new milestone arrives while an earlier review's issue is
-still open, Claude does not open a second issue. It updates the open one: the
-title and the milestones it names, the range end moved to the current `main`
-SHA, and the prompt. Claude then hands the owner the updated prompt. If the
-owner has already started the old prompt, nothing is lost, because the
-**reviewed end** is what the next range starts from, not the planned end.
+**A milestone review never blocks anything.** The owner runs it when
+they can, however long that takes, or not at all. An open `independent-review`
+issue is not a to-do for Claude and not a condition on any change: every change
+still merges on its own subagent review. Claude only checks it for a posted
+summary, at the start of a session and before extending it. If a new milestone arrives while an
+earlier review's issue is still open, Claude does not open a second issue. It
+updates the open one in place: the title and the milestones it names, the range
+end moved to the current `main` SHA, and the prompt. If the owner has already
+started the old prompt, nothing is lost, because the **reviewed end** is what
+the next range starts from, not the planned end.
 
 The prompt names the milestone, the range, what to read and what to question. It
 asks the reviewer to:

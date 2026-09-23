@@ -1790,8 +1790,9 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 
 **The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
 by tool:** OpenCode runs the cross-model review; Claude Code reviews each change
-with a fresh-context subagent of its own and hands the owner a prompt for an
-independent review of the repository at each milestone, as `CLAUDE.md` states
+with a fresh-context subagent of its own and, at each milestone, opens a
+non-blocking issue requesting an independent review of the repository by
+another model, as `CLAUDE.md` states
 (the owner's decisions on #44 and #47); and the principles both share are in
 [`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
 an explicit AGREE, then the pull request reviewed the same way — the **signed
