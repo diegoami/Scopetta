@@ -65,7 +65,9 @@ deal pass. A random deal meets a choice of capture only about a third of the
 time, and a run that never made the second tap printed the same as one that did;
 the review of #61 found it. On this deal the driver meets two choices every run,
 the smoke counts them and fails on none, and the cards played are read from the
-page rather than counted by the driver.
+page rather than counted by the driver. A choice is counted only once the page
+shows the card raised (`aria-pressed`), so the check sees the page and not the
+driver's own taps.
 
 Run on 2026-09-23 (Windows 11, Tauri 2.11.6):
 
@@ -88,7 +90,7 @@ second launch
   pass  the app wrote to the temporary profile, not the player's
 ```
 
-Made to fail first, three ways, so its checks are known to see what they name:
+Made to fail first, four ways, so its checks are known to see what they name:
 
 - **A window of the wrong size.** Built with `tauri.conf.json` at 1100 × 700,
   the smoke fails exactly one check: `the window opens at 1280x800 (1100x700)`.
@@ -104,6 +106,11 @@ Made to fail first, three ways, so its checks are known to see what they name:
   but the choice still counted, the deal stalls on the raised card: `a whole
   deal plays through (32 of 36 cards played)` fails, with the result and the
   history after it. The page's own count is what catches it.
+- **A page that never raises the card.** Built with the tap handler playing a
+  choice on the first tap, the deal still plays through (36 of 36), and the
+  choice check fails on its own: `no card was raised for a choice, so the second
+  tap was never made`. Before it read the page's `aria-pressed`, this break
+  passed every check.
 
 After each, the healthy build passes every check again, and three healthy runs
 in a row met the same two choices.

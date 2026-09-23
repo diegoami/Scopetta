@@ -94,7 +94,8 @@ async function quit({ proc, browser }) {
 //
 // The card played is the one with the most captures on offer, as check_ui.mjs
 // drives it, so the second tap is reached whenever the hand allows it — and on
-// the deal set up below it always does. Returns how many choices were met.
+// the deal set up below it always does. Returns how many choices the page
+// raised the card for and the second tap accepted.
 async function playDeal(page) {
   let plays = 0, choices = 0;
   for (let i = 0; i < 1200 && plays < YOUR_PLAYS; i++) {
@@ -119,7 +120,16 @@ async function playDeal(page) {
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     };
     await tap();
-    if (move.choices > 1) { await sleep(120); await tap(); choices++; }
+    if (move.choices > 1) {
+      // Counted only if the page raised the card, which it shows as
+      // aria-pressed. Counting the driver's own taps instead passed a page that
+      // played on the first tap and never raised anything (the review of #61).
+      const raised = await page.waitForFunction(
+        s => document.querySelector(`.hand--you .card[data-slot="${s}"]`)
+               ?.getAttribute('aria-pressed') === 'true',
+        move.slot, { timeout: 2000 }).then(() => true, () => false);
+      if (raised) { await tap(); choices++; }
+    }
     plays++;
     await page.waitForFunction(() => state.deveGiocare !== 0 || state.over,
                                null, { timeout: 5000 }).catch(() => {});
@@ -181,7 +191,8 @@ try {
   check(over && played === 2 * YOUR_PLAYS, 'a whole deal plays through',
         `${played} of ${2 * YOUR_PLAYS} cards played`);
   check(choices > 0, 'a choice of capture is accepted with a second tap',
-        choices ? `${choices} choice(s)` : 'the deal met no choice, so the second tap was never made');
+        choices ? `${choices} choice(s)`
+                : 'no card was raised for a choice, so the second tap was never made');
   await page.waitForFunction(() => !document.querySelector('#result').hidden,
                              null, { timeout: 8000 }).catch(() => {});
   const title = await page.evaluate(() => document.querySelector('#resultTitle')?.textContent.trim());
