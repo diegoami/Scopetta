@@ -70,7 +70,7 @@ columns — is `node tools/selfplay.mjs --piero 8 400` at both ranges:
 |---|---|---|---|
 | Graziano | 60.6% / 60.1% | 80.2% / 78.8% | — |
 | Franco | 59.7% / 59.9% | 80.0% / 78.7% | 7.7% / 7.3% |
-| Valerio | 59.7% / 59.6% | 79.7% / 78.9% | 16.3% / 15.8% |
+| Valerio | 59.7% / 59.6% | 79.7% / 78.9% | 8.8% / 8.9% |
 | Piero\* | 58.4–58.8% / 58.4–59.3% | 79.3–79.7% / 78.0–78.5% | 14.8–15.8% / 13.9–14.4% |
 
 The two figures are seeds 5001+ and 20001+; both are ranges nothing was tuned
