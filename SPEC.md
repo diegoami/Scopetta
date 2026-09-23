@@ -282,9 +282,10 @@ the golden fixture — 94 in all, 93 passing and 1 skipped on Windows; the UI ch
 needs `playwright-core` and a Chromium and its passes are the **document**, the
 **fonts** (every character inside the shipped subset, every `@font-face` loading
 with the network cut, no subresource from outside), the **screens** (every screen
-and every mid-deal state at seven shapes), the **table** (25 viewports × 6 decks ×
+and every mid-deal state at seven shapes), the **table** (26 viewports × 6 decks ×
 4 table sizes, then the tightest again with the spacing inflated and `--slack:
-0`), the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
+0`; where the card sits on its 32px clamp floor, the no-scrolling rule is asked
+with the floor lifted instead, #5), the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
 **plates in a fallback font**, the **sheets and the partita**, and **one whole
 deal**. `.claude/skills/ui-check/SKILL.md` explains what each threshold is
 calibrated against.
@@ -353,9 +354,16 @@ something green and wrong. The ones a newcomer should know first:
 - **`SETTEBELLO_BONUS` moves 0.45% of decisions.** It is kept on a paired
   measurement (worth about half a point) rather than on the 1% bar, which is a
   proxy for "cannot change the outcome" and fails when a point lives in one card.
-- **#5, the 1100x320 viewport question, is open.** At that shape `--cw` sits on
-  its clamp floor, so the no-scrolling assertion tests the clamp rather than the
-  derivation. It is a decision about what the check covers, not a defect.
+- **Below its 32px floor, the card stops shrinking and the table scrolls.** The
+  budget wants a smaller card at 1100x320 (four decks of six) and 1100x330 (two),
+  by a fraction of a pixel at 320x568 (two decks), and at 500x425 in every deck,
+  where the width term binds. There the clamp wins and the table may scroll by
+  what the floor adds, 6px at 1100x320. That is the designed fallback, and the
+  check says so rather than leaving the shapes out. It lifts the floor and
+  asserts the budget itself fits, and it runs the short landscape windows down to
+  1100x330 in the inflated pass, with no slack, so a small shortfall there is
+  still seen (#5). 1100x320 is not in it: inflated, its budget leaves under a
+  pixel of card.
 - **The UI check needs a browser**, so it is the one thing here with a
   dependency.
 - **Every deck sheet loads on the start screen**, because the picker previews

@@ -118,12 +118,16 @@ lands on a card in either hand, that your whole seat is above the fold, that the
 middle stays inside the table and draws one row in landscape and two in
 portrait, that nothing runs off the screen, that no name plate is wider or
 taller than its own box or lands on the cards, that **the table needs no
-scrolling at all**, that the DOM and the engine agree on how many cards are on
+scrolling at all** — or, where the card sits on its 32px clamp floor, none once
+the floor is lifted, because there the floor decides the card and the scroll it
+adds is the designed fallback (#5) — that the DOM and the engine agree on how many cards are on
 the table, and the fan floors below. Then it repeats the tightest of them with
 the spacing tokens inflated, which fails if anyone replaces the derived
-`--chrome` with a hard-coded number — but not the short landscape windows,
-where the inflation drives the card onto its clamp floor and tests the clamp
-rather than the derivation. That pass also runs with `--slack: 0`, because a
+`--chrome` with a hard-coded number. Since #5 that includes the short
+landscape windows down to 1100x330 (not 1100x320, where the inflated budget
+leaves under a pixel of card), where the inflation drives the card onto its clamp floor:
+the floor is lifted there as in the plain pass, and with no slack they are the
+only place a small shortfall on short landscape shows. That pass also runs with `--slack: 0`, because a
 budget term that is *short* by less than the slack costs nothing and shows
 nowhere: `--plates` was 8px short at every portrait viewport and the slack is
 8px.

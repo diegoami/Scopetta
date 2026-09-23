@@ -185,9 +185,9 @@
      is never taller than a card", and it was already false: at 1100x330 the
      plate is 75.8px against a 73.5px card. What that costs is small and almost
      entirely hidden — the seat stays 8px above the fold and --slack pays for
-     the rest — and the only place it shows is 1100x320, where the card is
-     70.1px and the table hands back 3px of scrolling because there is no slack
-     left to pay with. (The figure was 81px while --plate-h was derived from one
+     the rest — and the only place it shows is 1100x320, where the card is on
+     its 32px floor in most decks and the table hands back 6px of scrolling,
+     the fallback the check accepts there since #5. (The figure was 81px while --plate-h was derived from one
      row of type; deriving it from three made the plate shorter and nobody
      re-measured the sentence.) */
   --seat-overhang: calc(2 * var(--plate-h));
@@ -701,7 +701,8 @@ button.card:disabled{ cursor: default; }
    plate's height is DERIVED from the three rows it holds — the name, the role
    and the mazziere tag — and a fourth row costs 2 x --plate-row out of --plates
    and --seat-overhang, which is every card on the table at every viewport. At
-   320x568 the budget already wants 32.1px against a 32px floor.
+   320x568 the budget is already at the 32px floor, and in two decks just
+   under it (31.6px in Trevisane).
 
    So it goes in the space the budget has already paid for and nothing is using:
    the seat is `1fr auto 1fr` and --seat-extra buys TWO plate widths, one for
@@ -1411,7 +1412,7 @@ button.card:disabled{ cursor: default; }
     /* The same floor as landscape, not a larger one. The two were 36 and 32
        with no measurement behind the difference, and the larger one is what
        takes over at 320x568 — the narrowest phone still in anyone's hand —
-       where the budget wants 32.1px and the floor insists on 36, so the seat
+       where the budget wants about 32px and a floor of 36 insisted, so the seat
        runs 15px below the fold and the table hands back a scrollbar. A rail is
        for catching a page that has run out of room, not for deciding it has. */
     --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);

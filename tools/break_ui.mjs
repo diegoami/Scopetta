@@ -173,6 +173,15 @@ const EXPECT = {
 
   // --- the budget -----------------------------------------------------------
   "--chrome is hard-coded instead of derived": "below the fold",
+  // Issue #5: where the card sits on its clamp floor the strict rule is not
+  // asked, so a budget that comes up short there has to be caught with the
+  // floor lifted. The bar is 12px over its token, which is more than --slack;
+  // the budget does not change, so the card stays wherever it was.
+  "the icon bar is taller than the budget pays for": "with the card's floor lifted",
+  // The same shortfall, 8px and confined to short landscape windows, where the
+  // plain pass's lifted floor has the slack to absorb it. Only the inflated
+  // pass, with --slack at 0 and those windows in TIGHT, can see it.
+  "the icon bar grows on short landscape windows": "with the card's floor lifted",
   "the say line collapses when it is empty": "tall — it must cost",
   "the rows of the table drift apart": "drift apart",
 
@@ -425,6 +434,12 @@ const BREAKS = [
   ["the portrait card has a floor of its own",
    "    --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);",
    "    --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);"],
+  ["the icon bar is taller than the budget pays for",
+   ".topbar{\n  height: var(--topbar);",
+   ".topbar{\n  height: calc(var(--topbar) + 12px);"],
+  ["the icon bar grows on short landscape windows",
+   "</style>",
+   "@media (orientation: landscape) and (max-height: 335px){ .topbar{ height: calc(var(--topbar) + 8px); } }\n</style>"],
   ["a plate taller than a card costs nothing",
    "  --seat-overhang: calc(2 * var(--plate-h));",
    "  --seat-overhang: 0px;"],

@@ -119,35 +119,43 @@ const VIEWPORTS = [
   // rem — grows past the card's height and the seat row stops costing a card.
   ['short window',      980,  340],
   ['shorter window',   1100,  330],
-  // Not 1100x320, which was here to give the plate-overhang break somewhere to
-  // fire. The card is on its clamp floor there with nothing left over, so the
-  // six pixels the say line grew when it stopped being the smallest type on the
-  // page have nowhere to go — the budget is right and the shape is simply below
-  // what four rows of chrome and three of cards can fit in. The break fires in
-  // the inflated pass at 500x425 instead, where --slack is 0 and the plate is
-  // taller than the card by four pixels.
-  //
-  // Measured, so that this reads as a limit rather than as a pass kept green:
-  // at 1100x320 the table asks for 6px of scrolling and --cw resolves to 32px,
-  // its floor. Scrolling is the designed fallback — reaching a card by
-  // scrolling beats a card hidden under another one — so the page is not broken
-  // there, it is at the bottom of its range. Note too that 1100x330, the
-  // shortest shape still in the grid, is ALSO on the clamp floor: neither of
-  // them tests the derivation any more, and the shape that does is 980x340.
+  // Back in the grid since issue #5. The card is on its 32px clamp floor here
+  // in four decks of six, and at 1100x330 in two: the budget wants less than
+  // the floor allows, the floor wins, and the table scrolls by what it added
+  // (6px here in Trevisane). The floor also binds by a fraction of a pixel at
+  // 320x568 in two decks, at 500x425 in every deck (by the width term), and in
+  // the inflated pass at 980x385 in Bresciane. "No scrolling" at a shape like this
+  // tested the clamp rather than the derivation, which is why it was dropped,
+  // and why dropping it left short landscape with nothing testing the budget
+  // below 980x340. Wherever the designed floor binds, the table pass now lifts
+  // it and asks the budget alone whether it fits; the scroll the floor itself
+  // adds is the stated fallback.
+  ['shortest window',  1100,  320],
 ];
 
 const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
                           'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
 
 // The inflated pass runs these, and it is a list of what is IN rather than a
-// list of what is out. What is deliberately not here: the short landscape
-// windows (640x480, 980x340, 1100x330) and the narrowest phone
-// (320x568, whose budget wants 32.1px against a 32px floor). At all of them the
-// inflation drives the card onto its clamp floor, which tests the clamp rather
-// than the derivation, exactly as the note on INFLATE says. The rest are
-// simply not the tightest shapes in the grid.
+// list of what is out. The short landscape windows (640x480, 980x340, 1100x330)
+// were left out until issue #5 because inflation drives the card onto its clamp
+// floor there, which tested the clamp rather than the derivation. Since #5 the
+// table pass lifts the designed floor wherever it binds, so they are in: with
+// --slack at 0 they see a budget that is short by less than the slack on the
+// shortest windows, where a 7-9px defect confined to them otherwise survived.
+//
+// Still out, and why:
+// - 1100x320. Inflated with the floor lifted, its budget wants a card 0.8-1px
+//   wide, about 1.7px from going negative. A correctly budgeted change (plate
+//   rows at 1.5 x --t-tiny) pushed it past zero, and the pass then blamed a
+//   missing --chrome term that was not missing: #5's problem again, one floor
+//   lower. 1100x330 catches the same defects with about 12px of card to spare.
+// - The narrowest phone (320x568), whose budget sits within half a pixel of
+//   the floor, and in two decks just under it (31.6px in Trevisane). It is not
+//   the tightest portrait shape.
 const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
-               'Android small', 'small window', 'tiny window'];
+               'Android small', 'small window', 'tiny window',
+               'VGA window', 'short window', 'shorter window'];
 
 // Where an interaction is measured. The screen shapes, plus the narrow portrait
 // one where the middle row has to overlap hardest — a card's reachable strip is
@@ -1199,6 +1207,17 @@ const measure = () => {
 
   const cw = card ? card.width : 0;
 
+  // What the budget WANTS, before the clamp: --cw-height and --cw-width, read
+  // through a probe because a custom property's computed value is its text,
+  // not a length. Below CARD_FLOOR the clamp decides the card, not the budget,
+  // and the table pass reads these to tell when that is so — issue #5.
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;height:0';
+  document.body.appendChild(probe);
+  const want = v => { probe.style.width = `var(${v})`; return probe.getBoundingClientRect().width; };
+  const cwHeight = want('--cw-height'), cwWidth = want('--cw-width');
+  probe.remove();
+
   // Past the screen edge, and the name plates. These live in the audit too, but
   // the audit runs on a handful of screen shapes and these are questions about
   // the widest row on the table in a particular deck — so they belong where
@@ -1244,6 +1263,7 @@ const measure = () => {
     plateBad,
     sayH: say ? Math.round(say.height) : 0,
     cw: Math.round(cw),
+    cwExact: cw, cwHeight, cwWidth,
     rowStats,
     overlapsHand,
     // §3.7: one row in landscape, two in portrait once there is more than one
@@ -1277,12 +1297,13 @@ const measure = () => {
 // derivation with a constant, the cards stop shrinking to pay for the extra
 // space and the assertions above catch it.
 //
-// Moderate on purpose. Inflating hard enough to drive the card onto its 32px
-// clamp floor tests the clamp, not the derivation: at 980x385 the page then
-// overflows however faithfully --chrome tracked its tokens, and `.table`
-// scrolls, which is the designed fallback rather than a defect. The numbers
-// below are the largest that leave the floor unbound at the tightest viewport,
-// and they are verified to fail a hard-coded --chrome.
+// Moderate on purpose. These numbers were chosen as the largest that left the
+// 32px floor unbound at the tightest viewport, and they are verified to fail a
+// hard-coded --chrome. Since #5 the floor binds under them at several shapes
+// (980x385 in Bresciane, 500x425, and the short landscape windows), and there
+// the table pass lifts it rather than testing the clamp. What still limits
+// them is the budget's own zero: at 1100x320 they leave under a pixel of card,
+// which is why that shape is not in TIGHT.
 const INFLATE = `:root{
   --topbar: 56px !important;
   --pad-block: .95rem !important;
@@ -1296,17 +1317,27 @@ const INFLATE = `:root{
   --slack: 0px !important;
 }`;
 
+// The card with its clamp floor lifted and its cap kept out of the way: --cw is
+// whatever the budget says. Only the table pass uses it, and only where the
+// floor binds, to ask whether the budget itself fits the screen (issue #5). At
+// !important it beats the portrait rule's own clamp as well as the root one.
+const UNFLOOR = ':root{ --cw: min(var(--cw-height), var(--cw-width)) !important; }';
+// The lower bound of both --cw clamps in index.html, landscape and portrait.
+const CARD_FLOOR = 32;
+
 async function checkTable(browser, only, inflate) {
   console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
-  let failed = 0;
+  let failed = 0, flooredCases = 0, flooredShortest = 0;
   let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
   // 'tiny window' is in the quick grid because it is the shape the width term
   // is about, and 'shortest window' because it is where the plate is taller
   // than the card AND the budget has nothing left over: a break that takes a
-  // term out of the budget has to have somewhere to show up.
+  // term out of the budget has to have somewhere to show up. 'shorter window'
+  // is the short landscape shape the inflated pass runs (1100x320 is not in
+  // TIGHT), so a break confined to short windows can show up there too.
   if (QUICK) list = list.filter(v =>
     ['phone landscape', 'narrow phone', 'Android small', 'laptop',
-     'tiny window'].includes(v[0]));
+     'tiny window', 'shortest window', 'shorter window'].includes(v[0]));
 
   for (const [vname, w, h] of list) {
     // Two decks even in the quick grid: Romagnole's cards are the widest, so it
@@ -1352,12 +1383,50 @@ async function checkTable(browser, only, inflate) {
           bad.push(`the middle draws ${m.rowCount} row(s) in `
             + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
 
-        if (m.tableScroll > 1)
-          bad.push(`the table needs ${m.tableScroll}px of scrolling — a term of --chrome is missing`);
-
-        if (m.youSeatBottom > m.viewportH + 1)
-          bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold `
-            + `(${m.youSeatBottom} vs ${m.viewportH})`);
+        // Issue #5. Where the budget wants a card narrower than --cw's clamp
+        // floor, the floor decides the card, not the budget, and the table may
+        // scroll by what the floor adds: the designed fallback, since reaching a
+        // card by scrolling beats a card too small to touch. "No scrolling" there
+        // tested the clamp rather than the derivation, which is why 1100x320
+        // left the grid and why 1100x330 tested nothing. So on the floor the
+        // derivation is asked directly: lift the floor, let the card be what the
+        // budget says, and the page must fit — the same rule as everywhere else.
+        // The page as drawn, floor and all, is still held to every other rule in
+        // this pass; only its scroll is the stated fallback.
+        //
+        // Only the DESIGNED floor earns this. A card held up by any other floor —
+        // "the portrait card has a floor of its own" raises it to 36px — is a
+        // defect the strict rule has to see, so a card that is not exactly
+        // CARD_FLOOR wide is held to "no scrolling" whatever the budget wants.
+        const wanted = Math.min(m.cwHeight, m.cwWidth);
+        // Floored means both: the card is the designed floor's width, AND it is
+        // wider than the budget wants. With the floor lowered to 20px, a card at
+        // 500x425 is 31.9px because the budget wants 31.9px — near 32 and not
+        // held up by any floor — and counting it as floored would have left the
+        // rail below satisfied by a case the rule never had to lift.
+        //
+        // What this costs, and where: with the floor lifted the budget has its
+        // full --slack again, where the strict rule on the floored page had only
+        // what the floor left of it — 2-5px on the short landscape windows. A
+        // defect that small, confined to those windows, passes this pass; it is
+        // the inflated pass, with --slack at 0 and 640x480 to 1100x330 in TIGHT,
+        // that catches it (the break "the icon bar grows on short landscape
+        // windows"). 320x568 keeps about 3px of that difference, since the
+        // inflated pass does not run it.
+        const floored = Math.abs(m.cwExact - CARD_FLOOR) < 0.5 && m.cwExact - wanted > 0.05;
+        const fit = floored ? await (async () => {
+          flooredCases++;
+          if (vname === 'shortest window') flooredShortest++;
+          await page.addStyleTag({ content: UNFLOOR });
+          await page.waitForTimeout(40);
+          return page.evaluate(measure);
+        })() : m;
+        const lifted = floored ? 'with the card\'s floor lifted, ' : '';
+        if (fit.tableScroll > 1)
+          bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
+        if (fit.youSeatBottom > fit.viewportH + 1)
+          bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
+            + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
 
         if (m.tavolaInsideTable > 1)
           bad.push(`the table row runs ${m.tavolaInsideTable}px outside the table`);
@@ -1421,9 +1490,17 @@ async function checkTable(browser, only, inflate) {
       }
     }
   }
+  // The floor rule is behind a condition, so say whether it was ever asked.
+  // 1100x320 is in the grid to be on the floor; if no case there was, the
+  // rule above went unasked and this pass would look exactly as if it held.
+  if (list.some(v => v[0] === 'shortest window') && !flooredShortest) {
+    failed++;
+    console.log(`  FAIL  no case at 1100x320 was on the card's clamp floor, so the floor rule was never asked`);
+  }
   const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${list.length} viewports x ${deckN} decks x ${sizeN} table sizes`);
+    + `${list.length} viewports x ${deckN} decks x ${sizeN} table sizes`
+    + (flooredCases ? `, ${flooredCases} on the clamp floor` : ''));
   return failed;
 }
 
