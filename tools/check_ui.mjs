@@ -1332,7 +1332,7 @@ const UNFLOOR = ':root{ --cw: min(var(--cw-height), var(--cw-width)) !important;
 
 async function checkTable(browser, only, inflate) {
   console.log(inflate ? '\ntable, spacing inflated' : '\ntable');
-  let failed = 0, flooredCases = 0, flooredShortest = 0, flooredNarrow = 0;
+  let failed = 0, flooredCases = 0, flooredShortest = 0, flooredNarrow = 0, exhaustedCases = 0;
   let list = only ? VIEWPORTS.filter(v => only.includes(v[0])) : VIEWPORTS;
   // 'tiny window' is in the quick grid because it is the shape the width term
   // is about, and 'shortest window' because it is where the plate is taller
@@ -1422,20 +1422,40 @@ async function checkTable(browser, only, inflate) {
         if (!(m.cwFloor > 0))
           bad.push('the page declares no --cw-floor, so the designed card floor cannot be read');
         const floored = m.cwFloor > 0 && Math.abs(m.cwExact - m.cwFloor) < 0.5 && m.cwExact - wanted > 0.05;
-        const fit = floored ? await (async () => {
+        // Issue #58. The budget can also run out: when the chrome alone is
+        // taller than the screen, --cw-height is negative and the probe reads 0.
+        // Lifting the floor then leaves a card of nothing, the page still
+        // overflows by the deficit, and "a term of --chrome is missing" would
+        // blame a term that is there. Measured on correctly budgeted pages at
+        // 1100x330, inflated: plate rows at 1.6 x --t-tiny leave 0.69px and fit,
+        // at 1.7 x the budget reads 0.00 and overflows 4px. So "exhausted" is a
+        // budget that reads zero, and it is asked apart. In the inflated pass it
+        // is not a defect of the page — the inflation made the screen too short
+        // — so the case is skipped and the summary counts it; in the plain pass
+        // it is one, and it fails with its own message.
+        const exhausted = floored && wanted < 0.05;
+        if (floored) {
           flooredCases++;
           if (vname === 'shortest window') flooredShortest++;
           if (vname === 'narrow phone') flooredNarrow++;
-          await page.addStyleTag({ content: UNFLOOR });
-          await page.waitForTimeout(40);
-          return page.evaluate(measure);
-        })() : m;
-        const lifted = floored ? 'with the card\'s floor lifted, ' : '';
-        if (fit.tableScroll > 1)
-          bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
-        if (fit.youSeatBottom > fit.viewportH + 1)
-          bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
-            + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
+        }
+        if (exhausted) {
+          if (inflate) exhaustedCases++;
+          else bad.push('the budget leaves no card at all here: the chrome alone is taller than the '
+            + 'screen, so no card size fits — not a missing term, a screen too short for the table');
+        } else {
+          const fit = floored ? await (async () => {
+            await page.addStyleTag({ content: UNFLOOR });
+            await page.waitForTimeout(40);
+            return page.evaluate(measure);
+          })() : m;
+          const lifted = floored ? 'with the card\'s floor lifted, ' : '';
+          if (fit.tableScroll > 1)
+            bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
+          if (fit.youSeatBottom > fit.viewportH + 1)
+            bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
+              + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
+        }
 
         if (m.tavolaInsideTable > 1)
           bad.push(`the table row runs ${m.tavolaInsideTable}px outside the table`);
@@ -1517,7 +1537,8 @@ async function checkTable(browser, only, inflate) {
   const deckN = QUICK ? 2 : DECKS.length, sizeN = QUICK ? 2 : TABLE_SIZES.length;
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
     + `${list.length} viewports x ${deckN} decks x ${sizeN} table sizes`
-    + (flooredCases ? `, ${flooredCases} on the clamp floor` : ''));
+    + (flooredCases ? `, ${flooredCases} on the clamp floor` : '')
+    + (exhaustedCases ? `, ${exhaustedCases} where the inflated budget leaves no card, so the floor rule was not asked` : ''));
   return failed;
 }
 
