@@ -31,7 +31,10 @@ const ENGINE = fileURLToPath(new URL("../public/engine.js", import.meta.url));
 // could not appear.
 const TESTS = [fileURLToPath(new URL("./engine.test.mjs", import.meta.url)),
                fileURLToPath(new URL("./opponent.test.mjs", import.meta.url))];
-const TEXT = readFileSync(ENGINE, "utf8");
+// LF, whatever the checkout: a `find` that spans lines is written with "\n",
+// and Git for Windows checks engine.js out CRLF, where every such break
+// matched nothing and came back INVALID — issue #43.
+const TEXT = readFileSync(ENGINE, "utf8").replace(/\r\n/g, "\n");
 
 // Each break is [name, find, replace] and optionally a fourth entry: the
 // reason it is EQUIVALENT — a rewrite that cannot change what the engine
