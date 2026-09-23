@@ -1788,8 +1788,9 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 ### 7.3 The reviewer
 
 **The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
-by tool:** OpenCode runs the cross-model review, Claude Code does not (it cannot
-spawn another family as a subagent), and the principles both share are in
+by tool:** OpenCode runs the cross-model review; Claude Code runs a
+fresh-context review with a reviewer subagent of its own, as `CLAUDE.md` states
+(the owner's decision on #44); and the principles both share are in
 [`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
 an explicit AGREE, then the pull request reviewed the same way — the **signed
 verdict on GitHub**, and the rule that a **BLOCK goes to the owner** are stated
