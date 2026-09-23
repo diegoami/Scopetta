@@ -72,7 +72,9 @@ milestone is:
 over the prompt. The title is `Milestone review: <milestone>`, and the body holds
 the prompt itself and the commit range: from the head recorded in the last closed
 milestone-review issue, or from the start of the repository if there is none, to
-the current `main`. That issue is how the next milestone finds its range.
+the SHA of `main` when the prompt is handed over, recorded as a SHA. That issue
+is how the next milestone finds its range. A milestone reached while an earlier
+review's issue is still open waits for it, so no two ranges overlap.
 
 The prompt names the milestone, the range, what to read and what to question. It
 asks the reviewer to:
