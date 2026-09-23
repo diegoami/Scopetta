@@ -440,7 +440,11 @@ for (const [name, find, replace, why] of chosen){
   } catch (e) {
     failed = true;
     const out = String(e.stdout || "") + String(e.stderr || "");
-    failures = [...out.matchAll(/^not ok \d+ - (.*)$/gm)].map(m => m[1].trim());
+    // TAP escapes `\` and `#` in a name, so a test file that fails to load is
+    // named `C:\\Users\\…` on Windows and never equalled its entry in TESTS:
+    // the INVALID check below could not fire there — issue #46.
+    failures = [...out.matchAll(/^not ok \d+ - (.*)$/gm)]
+      .map(m => m[1].trim().replace(/\\([\\#])/g, "$1"));
     ran = (out.match(/^# tests (\d+)$/m) || [, 0])[1] | 0;
   }
   if (why){
