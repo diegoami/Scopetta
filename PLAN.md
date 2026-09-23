@@ -261,12 +261,14 @@ tools/make_icons.mjs       cuts the icon from a deck sheet, for the tab and for 
 tools/import_bresciane.mjs builds the sixth deck's sprite sheet
 tools/pack_cards.py the packer, carried over unchanged in case a deck is ever repacked
 tools/package_release.mjs, publish_release.mjs, release_lib.mjs, release.test.mjs   the Android release
+tools/smoke_desktop.mjs    the built desktop app, launched twice and played (DESKTOP.md)
 netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.html, /android redirect
 assets/             the 1024px icon layers Capacitor's asset tool reads
 mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
+desktop/            the Tauri wrapper that packages public/ as a Windows app (DESKTOP.md)
 AGENTS.md, CLAUDE.md, PRINCIPLES.md
                      the guidance, split by tool (§7.2, §7.3)
-README.md, RULES.md, REGOLE.md, ANDROID.md, SPEC.md, .claude/skills/ui-check/
+README.md, RULES.md, REGOLE.md, ANDROID.md, DESKTOP.md, SPEC.md, .claude/skills/ui-check/
 ```
 
 Only `public/` is the site. Tressette's §3.1 says why the engine is a second
@@ -1987,6 +1989,11 @@ shipped, one decision is open, and one is a follow-up rather than an open item.
   of card, and a correct change failed there. A
   bounded-scroll assertion was tried and dropped, because no break could make it
   fail on its own.
+- **The desktop build — Tauri, as Tressette and Discola.** Chosen by the owner
+  on 2026-09-23 with the proposed defaults: Tauri 2, Windows only, unsigned,
+  `com.scopetta.desktop`, shipped beside the APK from 1.0.1. The wrapper in
+  `desktop/` is Tressette's, and `tools/smoke_desktop.mjs` plays the built exe.
+  `DESKTOP.md` is the record; releasing it is the change after the wrapper.
 - **The CI action versions — a follow-up, not an open item.** `actions/checkout@v4`
   and `actions/setup-node@v4` target Node 20, which GitHub is forcing onto Node 24
   and warns about on every run. A warning today and not a failure; the bump

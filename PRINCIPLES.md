@@ -39,7 +39,7 @@ A change is **non-trivial** if it can change:
 
 Anything that meets none of (a)–(d) is **trivial**. As a **conservative floor** —
 the checklist a builder uses instead of tracing imports — a diff touching
-`public/**`, `tools/**`, `.claude/**`, `.github/**`, `mobile/**`, `netlify.toml`,
+`public/**`, `tools/**`, `.claude/**`, `.github/**`, `mobile/**`, `desktop/**`, `netlify.toml`,
 `package.json`, `package-lock.json`, or the three harness files is non-trivial
 whether or not the author believes the test is met — **unless it is a pure typo
 or comment of the kind defined below.**
@@ -114,7 +114,9 @@ Normally inspect: `public/index.html`, `public/engine.js`, `tools/*`, the root
 
 Normally ignore: `node_modules/`, `.git/`, `public/decks/`, `public/fonts/`,
 `public/icons/`, `assets/`, `mobile/android/` (open files in it individually),
-and any binary. Read `package-lock.json` only when dependencies are the task.
+`desktop/src-tauri/target/`, `desktop/src-tauri/icons/`, and any binary. Read
+`package-lock.json` and `desktop/src-tauri/Cargo.lock` only when dependencies
+are the task.
 
 Ignoring a path here does not mean it should be deleted or gitignored.
 

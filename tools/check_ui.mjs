@@ -107,6 +107,10 @@ const VIEWPORTS = [
   ['laptop',           1440,  900],
   ['laptop short',     1366,  700],
   ['desktop',          1920, 1080],
+  // The Tauri wrapper's window (desktop/src-tauri/tauri.conf.json). The app
+  // embeds public/ unchanged, so this row is the desktop build's layout check;
+  // tools/smoke_desktop.mjs asserts the window really opens at this size.
+  ['desktop window',   1280,  800],
   // Small landscape WINDOWS, which the grid had none of until iteration 3's
   // review: every landscape shape above is at least 980 wide, and the seat row
   // is the widest thing on the table. A browser window dragged down to 800x680

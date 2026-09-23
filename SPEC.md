@@ -47,8 +47,10 @@ tools/import_bresciane.mjs  builds the sixth deck from its source repo
 tools/release.test.mjs / release_lib.mjs  the release decisions, held in tests
 tools/package_release.mjs   signed APK into dist-release/
 tools/publish_release.mjs   that APK to the releases repo, on --confirm
+tools/smoke_desktop.mjs  the built desktop app, launched twice and played
 tools/pack_cards.py      carried from Discola, for repacking a deck
 mobile/              the Capacitor wrapper and the Android project
+desktop/             the Tauri wrapper, the Windows build (DESKTOP.md)
 .github/workflows/check.yml  the two CI jobs: the tests, and the UI check
 netlify.toml         publish public/, cache decks/fonts/icons, never the page,
                      and the /android redirect
@@ -56,6 +58,7 @@ package.json         scripts and playwright-core, the one dev dependency
 RULES.md / REGOLE.md the rules as this game plays them, English and Italian
 PLAN.md              the plan and the record, iteration by iteration
 ANDROID.md           the APK: what is done, and what is left and whose
+DESKTOP.md           the Windows build: the decision, and how it is checked
 AGENTS.md            OpenCode's guidance: the cross-model review and the gates
 PRINCIPLES.md        the principles both tools share
 CLAUDE.md            Claude Code's guidance: the project's own rules
@@ -282,7 +285,7 @@ the golden fixture — 94 in all, 93 passing and 1 skipped on Windows; the UI ch
 needs `playwright-core` and a Chromium and its passes are the **document**, the
 **fonts** (every character inside the shipped subset, every `@font-face` loading
 with the network cut, no subresource from outside), the **screens** (every screen
-and every mid-deal state at seven shapes), the **table** (26 viewports × 6 decks ×
+and every mid-deal state at seven shapes), the **table** (27 viewports × 6 decks ×
 4 table sizes, then the tightest again with the spacing inflated and `--slack:
 0`; where the card sits on its 32px clamp floor, the no-scrolling rule is asked
 with the floor lifted instead, #5), the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
@@ -397,6 +400,10 @@ the Napoletane sheet — the settebello — nearest-neighbour scaled by
 
 The typefaces are Bodoni Moda and Barlow (SIL Open Font License), subset to latin
 and served from `public/fonts/`.
+
+The desktop wrapper in `desktop/` is Tressette's at `9d2be25`, which forked
+Discola's at `8574702`: the same three source files and configuration, renamed,
+with the `Cargo.lock` those builds were proven on (DESKTOP.md).
 
 The page and its stylesheet are forked from
 [`diegoami/Tressette`](https://github.com/diegoami/Tressette), which forked
