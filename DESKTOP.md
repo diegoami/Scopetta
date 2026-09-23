@@ -150,7 +150,9 @@ refuses to build unless they all agree, and so does `tools/release.test.mjs` on
 every pull request, so a missed one turns CI red before release day.
 `versionCode` does not agree, it goes up: the packager refuses one that is not
 higher than the previous milestone tag's, since Android will not install it
-over that release (#69). The
+over that release (#69). It asks origin for its tags too, so a clone missing a
+milestone tag (shallow, or `--no-tags`) is refused rather than taken for a first
+release. The
 packager refuses an `.exe` that is missing, under 1 MB or not a PE binary, runs
 the smoke against it, and stages `Scopetta-X.Y.Z-android.apk`,
 `Scopetta-X.Y.Z-windows-x64.exe` and `SHA256SUMS.txt` — the manifest written

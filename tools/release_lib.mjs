@@ -186,6 +186,19 @@ export function previousMilestone(tagNames, version){
   return best;
 }
 
+// The tag names in `git ls-remote --tags` output, each once: an annotated
+// tag's peeled `^{}` line folds into its own name. The packager compares
+// origin's milestones with the clone's, so a tag this clone never fetched is
+// not taken for "no earlier milestone" (the review of #72).
+export function remoteTagNames(lsRemote){
+  const names = [];
+  for (const line of String(lsRemote).split(/\r?\n/)){
+    const m = /^[0-9a-f]+\trefs\/tags\/(.+?)(\^\{\})?$/.exec(line);
+    if (m && !names.includes(m[1])) names.push(m[1]);
+  }
+  return names;
+}
+
 // Why this versionCode cannot ship, or null. Android refuses an update whose
 // versionCode is not higher than the installed one, so a release that forgets
 // the bump builds, passes, publishes, and updates nobody. `previous` is the

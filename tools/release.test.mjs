@@ -13,7 +13,7 @@ import {
   parseCertDigest, certificateMatches, isPlaceholderCert, signatureVerdict,
   parseChecksums, checksumProblems, releaseCreateArgs,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem, releaseNotes,
-  pickJdk, parseVersionCode, previousMilestone, versionCodeProblem,
+  pickJdk, parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames,
 } from './release_lib.mjs';
 import { stageAssets } from './stage_assets.mjs';
 
@@ -211,6 +211,24 @@ test("versionCode is read, and has to be higher than the previous milestone's", 
   assert.match(versionCodeProblem({ versionCode: null, previous: null }), /not a positive integer/);
   assert.match(versionCodeProblem({ versionCode: 0, previous: null }), /not a positive integer/);
   assert.equal(versionCodeProblem({ versionCode: 2, previous: null }), null, 'no earlier milestone: nothing to compare');
+});
+
+// The review of #72: a milestone tag missing from this clone must not read as
+// "no earlier milestone". The packager also asks origin for its tags, parsed
+// here from `git ls-remote --tags` output.
+test("origin's tag names are read from ls-remote, each once, peeled lines folded in", () => {
+  const ls = [
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\trefs/tags/v1.0.1',
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\trefs/tags/v1.0.1^{}',
+    'cccccccccccccccccccccccccccccccccccccccc\trefs/tags/v1.0.2',
+    'dddddddddddddddddddddddddddddddddddddddd\trefs/heads/main',
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\trefs/tags/old/v0.9.0',
+  ].join('\r\n') + '\r\n';
+  assert.deepEqual(remoteTagNames(ls), ['v1.0.1', 'v1.0.2', 'old/v0.9.0']);
+  assert.deepEqual(remoteTagNames(''), []);
+  // And what the packager does with them: origin knowing a milestone below this
+  // version that the clone does not is a refusal, not "nothing to compare".
+  assert.equal(previousMilestone(remoteTagNames(ls), '1.0.2'), 'v1.0.1');
 });
 
 test("the repository's versionCode is a positive integer", () => {

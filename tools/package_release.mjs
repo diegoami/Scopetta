@@ -45,7 +45,7 @@ import { fileURLToPath } from 'node:url';
 import {
   EXPECTED_CERT, JDK_MAJOR, newestBuildTools, signatureVerdict, pickJdk,
   releaseAssets, versionDeclarations, versionDisagreements, exeProblem,
-  parseVersionCode, previousMilestone, versionCodeProblem,
+  parseVersionCode, previousMilestone, versionCodeProblem, remoteTagNames,
 } from './release_lib.mjs';
 import { formatSource, treeProblems } from './source_tag.mjs';
 import { stageAssets } from './stage_assets.mjs';
@@ -140,9 +140,23 @@ console.log(`source ${source.commit}`);
 // Android refuses an update whose versionCode is not higher than the installed
 // one (issue #69). The previous milestone is the newest vX.Y.Z tag merged into
 // HEAD that is below this version; its build.gradle is read from the tag.
+//
+// A tag missing from this clone must not read as "no earlier milestone": a
+// shallow or --no-tags clone has none. So origin is asked too, and a milestone
+// origin has below this version that the clone lacks is a refusal (the review
+// of #72). A git that fails is a refusal as well, never "nothing to compare".
 const versionCode = parseVersionCode(read('mobile/android/app/build.gradle'));
-const tagsHere = git(['tag', '--merged', 'HEAD', '--list', 'v*']).stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+const tagList = git(['tag', '--merged', 'HEAD', '--list', 'v*']);
+if (tagList.status !== 0) fail(`git tag failed, so the previous milestone cannot be found:\n${tagList.stderr}`);
+const tagsHere = tagList.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
 const prevTag = previousMilestone(tagsHere, version);
+const remote = git(['ls-remote', '--tags', 'origin']);
+if (remote.status !== 0) fail(`git ls-remote origin failed, so origin's milestones cannot be checked:\n${remote.stderr}`);
+const prevOnOrigin = previousMilestone(remoteTagNames(remote.stdout), version);
+if (prevOnOrigin && prevOnOrigin !== prevTag)
+  fail(`origin's previous milestone below ${tag} is ${prevOnOrigin}, but this clone ` +
+       `${prevTag ? `finds ${prevTag}` : 'has no milestone tag'} merged into HEAD. ` +
+       'Fetch the tags (git fetch --tags origin) and package again, or check that HEAD descends from it.');
 const previous = prevTag
   ? { tag: prevTag, versionCode: parseVersionCode(git(['show', `${prevTag}:mobile/android/app/build.gradle`]).stdout) }
   : null;
