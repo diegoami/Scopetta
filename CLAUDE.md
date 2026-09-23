@@ -34,15 +34,20 @@ change are in [`PRINCIPLES.md`](PRINCIPLES.md); the **verification gates** — t
 commands and how many times the full suite runs before a push — are in
 [`AGENTS.md`](AGENTS.md). Read the principles; run the gates.
 
-**Claude Code does not spawn a reviewer** of any family for this process. That
-mechanism is OpenCode's, in `AGENTS.md`, and it needs a subagent from a different
-model family. Here the lighter process applies: for a **non-trivial** change a
-**fresh-context review by a new session is required**; the **owner may also
-review**, as an independent option, but an owner is **not automatically a fresh
-context** — and is not one if they directed or wrote the change. The reviewer
-reports and the builder fixes in the same change; a finding the builder
-disagrees with goes to the owner, not around the reviewer. Everything in
-`PRINCIPLES.md` applies either way.
+**The cross-model review is OpenCode's alone.** The different-model-family
+requirement is in `AGENTS.md` and applies only there. Here the lighter process
+applies: for a **non-trivial** change a **fresh-context review is required**,
+and **Claude Code runs it itself** — it spawns a reviewer subagent that is given
+the pull request, any issue it links, and these documents, and none of the
+builder's conversation. The same model family is fine; the fresh
+context is the point. The reviewer reproduces what it reports, posts its verdict
+on the pull request with `gh pr comment`, ending in `AGREE` or `BLOCK` and
+signed `— <model name> (<model id>), fresh-context subagent, reviewer`, and does
+not edit the change. The **owner may also review**, as an independent option,
+but an owner is **not automatically a fresh context** — and is not one if they
+directed or wrote the change. The reviewer reports and the builder fixes in the
+same change; a finding the builder disagrees with goes to the owner, not around
+the reviewer. Everything in `PRINCIPLES.md` applies either way.
 
 ## The UI check, and why it exists
 
