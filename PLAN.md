@@ -615,7 +615,7 @@ iteration 5 merged.
 | Graziano | `[1, 2, 6, 0.4, 6, 0.5, 5]` | 60.6 / 80.2 | 60.1 / 78.8 | — |
 | Franco | `[4, 8, 6, 0.4, 6, 0.5, 5]` | 59.7 / 80.0 | 59.9 / 78.7 | 7.7% / 7.3% |
 | Valerio | `[1, 0, 6, 0.4, 6, 0.5, 5]` | 59.7 / 79.7 | 59.6 / 78.9 | 8.8% / 8.9% |
-| Piero | rolled: `GIFT∈[1.7,2.5]`, `PRIMIERA∈[1.5,2.1]`, `SCOPA_RISK∈[22,30]` | 58.4–58.8 / 79.3–79.7 | 58.4–59.3 / 78.0–78.5 | 14.8–15.8% / 13.9–14.4% |
+| Piero | rolled: `GIFT∈[1.7,2.5]`, `PRIMIERA∈[1.5,2.1]`, `SCOPA_RISK∈[22,30]` | 58.4–58.8 / 79.3–79.7 | 58.4–59.3 / 78.0–78.5 | 8.3–9.3% / 8.3–8.9% |
 
 Values are in `WEIGHT_KEYS` order: carte, denari, settebello, primiera, scopa
 risk, gift, tempo. The three fixed rows are `--roster 1000` at the two `SEED_FROM`
