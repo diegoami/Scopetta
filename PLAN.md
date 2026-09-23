@@ -1993,9 +1993,9 @@ shipped, one decision is open, and one is a follow-up rather than an open item.
   on 2026-09-23 with the proposed defaults: Tauri 2, Windows only, unsigned,
   `com.scopetta.desktop`, shipped beside the APK from 1.0.1. The wrapper in
   `desktop/` is Tressette's, and `tools/smoke_desktop.mjs` plays the built exe.
-  `DESKTOP.md` is the record. Releasing it beside the APK is wired up for 1.0.1:
-  one version line across seven declarations, held by the tests, and both
-  files or neither.
+  `DESKTOP.md` is the record. **v1.0.1 shipped it beside the APK** on
+  2026-09-23: one version line across seven declarations, held by the tests,
+  and both files or neither.
 - **The CI action versions — a follow-up, not an open item.** `actions/checkout@v4`
   and `actions/setup-node@v4` target Node 20, which GitHub is forcing onto Node 24
   and warns about on every run. A warning today and not a failure; the bump

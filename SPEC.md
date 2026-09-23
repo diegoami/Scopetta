@@ -380,10 +380,12 @@ something green and wrong. The ones a newcomer should know first:
   `http://localhost` origin and a WebView will not load it without the
   permission. Dropping it can only be verified by installing the result, and
   `ANDROID.md` §7 makes that the first device to try it.
-- **The APK is live**: v1.0.0 is published at
-  `diegoami/scopetta-releases`, signed and checksummed, and the owner installed
-  it on a tablet and played. `ANDROID.md` §6 is the release-status source of
-  truth.
+- **The APK and the Windows executable are live**: v1.0.1 is published at
+  `diegoami/scopetta-releases`: the APK signed and checksummed, the executable
+  checksummed and deliberately unsigned, as `ANDROID.md` and `DESKTOP.md`
+  describe; v1.0.0 before it was Android only, and the owner
+  installed it on a tablet and played. `ANDROID.md` §6 is the release-status
+  source of truth.
 
 ## 11. Provenance
 
