@@ -70,17 +70,19 @@ milestone is:
 
 **Each milestone review is recorded in an issue.** Claude opens it when it hands
 over the prompt. The title is `Milestone review: <milestone>`, and the body holds
-the prompt itself and the commit range: from the head recorded in the last closed
-milestone-review issue, or from the start of the repository if there is none, to
-the SHA of `main` when the prompt is handed over, recorded as a SHA. That issue
-is how the next milestone finds its range.
+the prompt itself and the commit range. The range starts at the **reviewed end**
+recorded in the last closed milestone-review issue, exclusive, or covers all of
+history if there is none. It ends at the SHA of `main` when the prompt is handed
+over, recorded as a SHA. That issue is how the next milestone finds its range.
 
 **A milestone review never blocks work.** The owner runs it when they can,
 however long that takes. Meanwhile every change still merges on its own
 subagent review. If a new milestone arrives while an earlier review's issue is
-still open, Claude does not open a second issue. It moves that issue's range end
-to the current `main` SHA and updates its prompt, so the pending review covers
-both milestones and no two ranges overlap.
+still open, Claude does not open a second issue. It updates the open one: the
+title and the milestones it names, the range end moved to the current `main`
+SHA, and the prompt. Claude then hands the owner the updated prompt. If the
+owner has already started the old prompt, nothing is lost, because the
+**reviewed end** is what the next range starts from, not the planned end.
 
 The prompt names the milestone, the range, what to read and what to question. It
 asks the reviewer to:
@@ -89,11 +91,13 @@ asks the reviewer to:
 - file each finding as a GitHub issue (`defect` when it is one), after checking
   the open issues first, and linking the milestone-review issue;
 - post a summary on the milestone-review issue, even if it found nothing, listing
-  the issues it filed;
+  the issues it filed and stating the range end it reviewed, as a SHA;
 - sign both with `— <display name> (<model id>), milestone reviewer`.
 
-When the summary is posted, Claude closes the milestone-review issue and works the
-filed issues like any other. This is where a blind spot Claude
+When the summary is posted, Claude records the SHA it states as the issue's
+**reviewed end**, closes the issue and works the filed issues like any other. If
+that SHA is earlier than the issue's planned end, the rest of the range is
+simply the next review's. This is where a blind spot Claude
 shares with its own subagent gets caught, so the prompt asks for what to doubt,
 not for a checklist to confirm. Everything in `PRINCIPLES.md` applies either way.
 
