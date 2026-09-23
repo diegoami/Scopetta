@@ -1981,8 +1981,10 @@ shipped, one decision is open, and one is a follow-up rather than an open item.
   in the grid. Wherever the card is on its **designed** 32px floor, the table
   pass lifts the floor and asserts the budget fits, and the scroll the floor adds
   is the stated fallback. A card held up by any other floor is still held to no
-  scrolling. The short landscape windows joined the inflated pass, because the
-  lifted floor gives the budget back the slack the strict rule did not have. A
+  scrolling. The short landscape windows down to 1100x330 joined the inflated
+  pass, because the lifted floor gives the budget back the slack the strict rule
+  did not have. 1100x320 stayed out: inflated, its budget leaves under a pixel
+  of card, and a correct change failed there. A
   bounded-scroll assertion was tried and dropped, because no break could make it
   fail on its own.
 - **The CI action versions — a follow-up, not an open item.** `actions/checkout@v4`

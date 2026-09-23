@@ -360,8 +360,10 @@ something green and wrong. The ones a newcomer should know first:
   where the width term binds. There the clamp wins and the table may scroll by
   what the floor adds, 6px at 1100x320. That is the designed fallback, and the
   check says so rather than leaving the shapes out. It lifts the floor and
-  asserts the budget itself fits, and it runs the short landscape windows in the
-  inflated pass, with no slack, so a small shortfall there is still seen (#5).
+  asserts the budget itself fits, and it runs the short landscape windows down to
+  1100x330 in the inflated pass, with no slack, so a small shortfall there is
+  still seen (#5). 1100x320 is not in it: inflated, its budget leaves under a
+  pixel of card.
 - **The UI check needs a browser**, so it is the one thing here with a
   dependency.
 - **Every deck sheet loads on the start screen**, because the picker previews

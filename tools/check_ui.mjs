@@ -137,18 +137,25 @@ const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
                           'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
 
 // The inflated pass runs these, and it is a list of what is IN rather than a
-// list of what is out. The short landscape windows (640x480, 980x340, 1100x330,
-// 1100x320) were left out until issue #5 because inflation drives the card onto
-// its clamp floor there, which tested the clamp rather than the derivation.
-// Since #5 the table pass lifts the designed floor wherever it binds, so they
-// are in: with --slack at 0 they are the only place a budget that is short by
-// less than the slack shows on short landscape. Without them, a 7-9px defect
-// on those windows alone survived. Still out: the narrowest phone (320x568),
-// whose budget sits within half a pixel of the floor and in two decks just
-// under it (31.6px in Trevisane), and which is not the tightest portrait shape.
+// list of what is out. The short landscape windows (640x480, 980x340, 1100x330)
+// were left out until issue #5 because inflation drives the card onto its clamp
+// floor there, which tested the clamp rather than the derivation. Since #5 the
+// table pass lifts the designed floor wherever it binds, so they are in: with
+// --slack at 0 they see a budget that is short by less than the slack on the
+// shortest windows, where a 7-9px defect confined to them otherwise survived.
+//
+// Still out, and why:
+// - 1100x320. Inflated with the floor lifted, its budget wants a card 0.8-1px
+//   wide, about 1.7px from going negative. A correctly budgeted change (plate
+//   rows at 1.5 x --t-tiny) pushed it past zero, and the pass then blamed a
+//   missing --chrome term that was not missing: #5's problem again, one floor
+//   lower. 1100x330 catches the same defects with about 12px of card to spare.
+// - The narrowest phone (320x568), whose budget sits within half a pixel of
+//   the floor, and in two decks just under it (31.6px in Trevisane). It is not
+//   the tightest portrait shape.
 const TIGHT = ['phone landscape', 'laptop short', 'iPad', 'tablet portrait',
                'Android small', 'small window', 'tiny window',
-               'VGA window', 'short window', 'shorter window', 'shortest window'];
+               'VGA window', 'short window', 'shorter window'];
 
 // Where an interaction is measured. The screen shapes, plus the narrow portrait
 // one where the middle row has to overlap hardest — a card's reachable strip is
@@ -1290,12 +1297,13 @@ const measure = () => {
 // derivation with a constant, the cards stop shrinking to pay for the extra
 // space and the assertions above catch it.
 //
-// Moderate on purpose. Inflating hard enough to drive the card onto its 32px
-// clamp floor tests the clamp, not the derivation: at 980x385 the page then
-// overflows however faithfully --chrome tracked its tokens, and `.table`
-// scrolls, which is the designed fallback rather than a defect. The numbers
-// below are the largest that leave the floor unbound at the tightest viewport,
-// and they are verified to fail a hard-coded --chrome.
+// Moderate on purpose. These numbers were chosen as the largest that left the
+// 32px floor unbound at the tightest viewport, and they are verified to fail a
+// hard-coded --chrome. Since #5 the floor binds under them at several shapes
+// (980x385 in Bresciane, 500x425, and the short landscape windows), and there
+// the table pass lifts it rather than testing the clamp. What still limits
+// them is the budget's own zero: at 1100x320 they leave under a pixel of card,
+// which is why that shape is not in TIGHT.
 const INFLATE = `:root{
   --topbar: 56px !important;
   --pad-block: .95rem !important;
@@ -1324,10 +1332,12 @@ async function checkTable(browser, only, inflate) {
   // 'tiny window' is in the quick grid because it is the shape the width term
   // is about, and 'shortest window' because it is where the plate is taller
   // than the card AND the budget has nothing left over: a break that takes a
-  // term out of the budget has to have somewhere to show up.
+  // term out of the budget has to have somewhere to show up. 'shorter window'
+  // is the short landscape shape the inflated pass runs (1100x320 is not in
+  // TIGHT), so a break confined to short windows can show up there too.
   if (QUICK) list = list.filter(v =>
     ['phone landscape', 'narrow phone', 'Android small', 'laptop',
-     'tiny window', 'shortest window'].includes(v[0]));
+     'tiny window', 'shortest window', 'shorter window'].includes(v[0]));
 
   for (const [vname, w, h] of list) {
     // Two decks even in the quick grid: Romagnole's cards are the widest, so it
@@ -1399,7 +1409,7 @@ async function checkTable(browser, only, inflate) {
         // full --slack again, where the strict rule on the floored page had only
         // what the floor left of it — 2-5px on the short landscape windows. A
         // defect that small, confined to those windows, passes this pass; it is
-        // the inflated pass, with --slack at 0 and the same windows in TIGHT,
+        // the inflated pass, with --slack at 0 and 640x480 to 1100x330 in TIGHT,
         // that catches it (the break "the icon bar grows on short landscape
         // windows"). 320x568 keeps about 3px of that difference, since the
         // inflated pass does not run it.
