@@ -1206,7 +1206,8 @@ the only text that says what the next tap will do. The budget follows it —
 card size rather than by pushing a row off the bottom, and the check holds it to
 the floor it holds body copy to whatever its length. The six pixels it cost took
 1100x320 out of the viewport grid: the card is on its clamp floor there and the
-shape is simply below what three rows of cards and four of chrome can hold.
+shape is simply below what three rows of cards and four of chrome can hold. It is
+back since #5, with the no-scrolling rule asked there with the floor lifted.
 
 **A new hand is dealt, not shown.** Measured across a round boundary at 40ms
 intervals, three outlines became three cards in a single sample — a flicker
@@ -1974,13 +1975,14 @@ shipped, one decision is open, and one is a follow-up rather than an open item.
   <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, the owner
   installed it on a tablet and played, and the about screen carries the link.
   Item 3 is closed.
-- **The 1100x320 viewport question — issue #5.** The shape was dropped from the
-  grid when `--t-say` grew, and at that size `--cw` sits on its clamp floor, so
-  the no-scrolling assertion tests the clamp rather than the derivation. #5
-  leaves three ways and does not pick one: leave it, since scrolling is the
-  designed fallback; put it back with an exemption where `--cw` is on its floor;
-  or put it back and assert the scroll is bounded. It is a question about what
-  the check covers, not a defect.
+- **The 1100x320 viewport question — issue #5. Resolved.** The shape was dropped
+  when `--t-say` grew, because `--cw` sits on its clamp floor there and the
+  no-scrolling assertion tested the clamp rather than the derivation. It is back
+  in the grid. Wherever the card is on its **designed** 32px floor, the table
+  pass lifts the floor and asserts the budget fits, and the scroll the floor adds
+  is the stated fallback. A card held up by any other floor is still held to no
+  scrolling. A bounded-scroll assertion was tried and dropped, because no break
+  could make it fail on its own.
 - **The CI action versions — a follow-up, not an open item.** `actions/checkout@v4`
   and `actions/setup-node@v4` target Node 20, which GitHub is forcing onto Node 24
   and warns about on every run. A warning today and not a failure; the bump

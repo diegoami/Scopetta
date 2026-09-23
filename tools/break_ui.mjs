@@ -173,6 +173,11 @@ const EXPECT = {
 
   // --- the budget -----------------------------------------------------------
   "--chrome is hard-coded instead of derived": "below the fold",
+  // Issue #5: where the card sits on its clamp floor the strict rule is not
+  // asked, so a budget that comes up short there has to be caught with the
+  // floor lifted. The bar is 12px over its token — more than --slack, and not
+  // enough to lift the card off the floor at 320x568 or 1100x320.
+  "the icon bar is taller than the budget pays for": "with the card's floor lifted",
   "the say line collapses when it is empty": "tall — it must cost",
   "the rows of the table drift apart": "drift apart",
 
@@ -425,6 +430,9 @@ const BREAKS = [
   ["the portrait card has a floor of its own",
    "    --cw: clamp(32px, min(var(--cw-height), var(--cw-width)), 168px);",
    "    --cw: clamp(36px, min(var(--cw-height), var(--cw-width)), 168px);"],
+  ["the icon bar is taller than the budget pays for",
+   ".topbar{\n  height: var(--topbar);",
+   ".topbar{\n  height: calc(var(--topbar) + 12px);"],
   ["a plate taller than a card costs nothing",
    "  --seat-overhang: calc(2 * var(--plate-h));",
    "  --seat-overhang: 0px;"],
