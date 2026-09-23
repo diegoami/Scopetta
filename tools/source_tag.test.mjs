@@ -117,3 +117,22 @@ test('an LF rewrite of a CRLF checkout under autocrlf is not a change (#35)', ()
 test('outside a repository it throws rather than reporting a clean tree', () => {
   assert.throws(() => treeProblems(mkdtempSync(path.join(os.tmpdir(), 'scopetta-norepo-'))));
 });
+
+// Issue #67: a tracked file git has been told not to look at. Both flags make
+// `git diff HEAD` and `git status` trust the index, so an edited file under
+// either one reads as clean to every question above.
+test('a file flagged --skip-worktree is reported, though git status misses it (#67)', () => {
+  const dir = repo();
+  git(dir, 'update-index', '--skip-worktree', 'public/index.html');
+  writeFileSync(path.join(dir, 'public', 'index.html'), 'edited\n');
+  assert.equal(git(dir, 'status', '--porcelain'), '');   // what the checks above see
+  assert.deepEqual(treeProblems(dir), ['flagged    public/index.html']);
+});
+
+test('a file flagged --assume-unchanged is reported, though git status misses it (#67)', () => {
+  const dir = repo();
+  git(dir, 'update-index', '--assume-unchanged', 'public/index.html');
+  writeFileSync(path.join(dir, 'public', 'index.html'), 'edited\n');
+  assert.equal(git(dir, 'status', '--porcelain'), '');
+  assert.deepEqual(treeProblems(dir), ['flagged    public/index.html']);
+});
