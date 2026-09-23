@@ -14,7 +14,8 @@ a mutation harness found something green and wrong without it.
 | Idea | Owning file |
 |---|---|
 | the working principles and habits | `PRINCIPLES.md` |
-| the review process | `AGENTS.md` |
+| the review process under OpenCode (the cross-model review, its two stages) | `AGENTS.md` |
+| the review process under Claude Code (the per-change subagent review, the milestone reviews) | `CLAUDE.md` |
 | the verification gates (commands, run counts, CI schedule) | `AGENTS.md` |
 | the project's own rules (budget, frozen engine, conventions, check rationale) | `CLAUDE.md` |
 

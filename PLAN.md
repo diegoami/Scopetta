@@ -1788,9 +1788,10 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 ### 7.3 The reviewer
 
 **The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
-by tool:** OpenCode runs the cross-model review; Claude Code runs a
-fresh-context review with a reviewer subagent of its own, as `CLAUDE.md` states
-(the owner's decision on #44); and the principles both share are in
+by tool:** OpenCode runs the cross-model review; Claude Code reviews each change
+with a fresh-context subagent of its own and hands the owner a prompt for an
+independent review of the repository at each milestone, as `CLAUDE.md` states
+(the owner's decisions on #44 and #47); and the principles both share are in
 [`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
 an explicit AGREE, then the pull request reviewed the same way — the **signed
 verdict on GitHub**, and the rule that a **BLOCK goes to the owner** are stated
@@ -1800,7 +1801,7 @@ the two do not drift.
 Every pull request gets one review from a **fresh context** — a new session or
 a subagent that has not seen the work. **This is the implementation stage of the
 non-trivial route**: a trivial change takes neither stage and never reaches it,
-per `AGENTS.md`. **The reviewer is GPT-5.6 Luna at high
+per `AGENTS.md`. **Under OpenCode, the reviewer is GPT-5.6 Luna at high
 effort** (`opencode/gpt-5.6-luna#high`), run as a subagent with that model; the
 builder is DeepSeek V4.1 Flash. A fresh context matters more than a different
 model — the builder cannot see its own diff, and a reviewer that shares its
