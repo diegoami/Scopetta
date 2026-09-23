@@ -1752,7 +1752,8 @@ with:
 reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the
 two stages and the tool split, and `PRINCIPLES.md` the principles both tools
 share. Besides a `defect`, this is one of two kinds of issue; the other is
-Claude Code's milestone review and the findings it files (`CLAUDE.md`). **The
+Claude Code's milestone issue for a release, and the findings its review files
+(`CLAUDE.md`). **The
 iteration-and-pull-request flow in this section is the route for non-trivial
 work**; a **trivial** change — one that changes no behaviour, no assertion and no
 process text — takes neither stage, needs no pull request, and may be committed
@@ -1794,9 +1795,9 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 
 **The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
 by tool:** OpenCode runs the cross-model review; Claude Code reviews each change
-with a fresh-context subagent of its own and, at each milestone, opens a
-non-blocking issue requesting an independent review of the repository by
-another model, as `CLAUDE.md` states
+with a fresh-context subagent of its own, and at each milestone — a release —
+has another model review the diff since the last release tag before the new tag
+is made, as `CLAUDE.md` states
 (the owner's decisions on #44 and #47); and the principles both share are in
 [`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
 an explicit AGREE, then the pull request reviewed the same way — the **signed
@@ -1852,8 +1853,8 @@ the same rate and budget for it.
   from iteration 3; a red check does not merge, and nothing is skipped or
   quarantined to get to green. The gates, their schedule and the run count are
   stated in [`AGENTS.md`](AGENTS.md).
-- **Issues hold a design proposal, a defect, or a milestone review and its
-  findings** (the last is Claude Code's, stated in `CLAUDE.md`). A non-trivial change may open
+- **Issues hold a design proposal, a defect, or a milestone and its review's
+  findings** (the last is Claude Code's: a release, stated in `CLAUDE.md`). A non-trivial change may open
   its design as an issue, iterated with the reviewer to an explicit AGREE before
   the pull request (`AGENTS.md` states the two stages). A defect found by
   playing, after an iteration has merged, is an issue too, labelled `defect`,

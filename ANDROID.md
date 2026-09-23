@@ -161,6 +161,10 @@ in this project worth backing up somewhere that outlives the machine.
 
 ## 4. Publishing
 
+**Tag first.** A release is a milestone (`CLAUDE.md`): the annotated tag
+`vX.Y.Z` goes on the reviewed commit on `main`, and everything below runs from a
+clean checkout of that tag (`DESKTOP.md`, *Releasing*).
+
 **`node tools/package_release.mjs`** — since 1.0.1 it builds **both** targets,
 the APK and the Windows executable (`DESKTOP.md`). It checks that every version
 declaration agrees with `versionName` in `app/build.gradle` before anything

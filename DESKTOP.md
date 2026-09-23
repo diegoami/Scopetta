@@ -123,7 +123,14 @@ Both targets ship as one GitHub Release on
 on one version line, from this machine: it holds the Android signing key and
 the Rust toolchain.
 
+**Tag first, build from the tag.** A release is a milestone (`CLAUDE.md`): its
+candidate commit is reviewed, the annotated tag `vX.Y.Z` goes on exactly the
+reviewed SHA, and the release is packaged from a clean checkout of that tag.
+The release notes name the tagged commit.
+
 ```sh
+git tag -a vX.Y.Z <reviewed SHA> -m "Scopetta X.Y.Z" && git push origin vX.Y.Z
+git switch --detach vX.Y.Z
 node tools/package_release.mjs            # builds both, smokes the exe, stages dist-release/vX.Y.Z/
 node tools/publish_release.mjs            # dry run: verifies, prints the notes
 node tools/publish_release.mjs --confirm

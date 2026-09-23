@@ -36,8 +36,9 @@ commands and how many times the full suite runs before a push — are in
 
 **Under Claude Code, Claude runs each change end to end, and the independent
 review comes at milestones.** That is the owner's decision, recorded on #44 and
-#47. The cross-model review and its two stages are OpenCode's, in `AGENTS.md`,
-and apply only there.
+#47, and a milestone is a release, as the owner standardised it across their
+projects. The cross-model review and its two stages are OpenCode's, in
+`AGENTS.md`, and apply only there.
 
 **Each change.** A trivial change may be committed straight to `main`, per
 `PRINCIPLES.md`.
@@ -60,53 +61,49 @@ owner, not around the reviewer. A finding outside the change is routed as
 but an owner is **not automatically a fresh context** — and is not one if they
 directed or wrote the change.
 
-**Each milestone.** When a milestone is reached, Claude opens a **GitHub issue
-requesting an independent review of the repository** by a model of **another
-family** — Codex, GPT-5.6 Luna, or any other that is not Claude. **The issue is
-the request**: it is labelled `independent-review`, it holds the prompt, and the
-owner runs it from there when they have the chance. Claude does not hand the
-prompt over in chat and does not wait for it. A milestone is:
-- an iteration or a release shipped;
-- a change to this process;
-- a run of merged pull requests worth an outside look;
-- or whenever the owner asks.
+**Each milestone.** A milestone is a **release**: an annotated git tag `vX.Y.Z`
+on `main`, on the exact commit a published release is built from. It is not a
+branch, a pull request, a proposal, a count of merged pull requests, or a change
+to a particular file or to this process. The independent review happens per
+milestone, **before the tag**, never per pull request. Releases are published
+to `diegoami/scopetta-releases`; the tag still goes on this repository's
+`main`, and the release notes name the tagged commit. This project publishes
+no pre-releases.
 
-**The issue records the review.** Its title is `Milestone review: <milestone>`,
-and its body holds the prompt itself and the commit range. The range starts at
-the **reviewed end** recorded in the last closed `independent-review` issue that
-has one, exclusive, or covers all of history if there is none. An issue the owner
-closes without running records no reviewed end, so its commits fall to the next
-review. It ends at the SHA of
-`main` when the issue is opened, recorded as a SHA. That issue is how the next
-milestone finds its range.
+1. **The owner calls a milestone, or Claude proposes one** when a release is due
+   or a coherent set of work has landed.
+2. **Claude opens a milestone issue** in this repository, labelled `milestone`
+   and titled `Milestone vX.Y.Z`: the proposed tag, the candidate commit on
+   `main` (full SHA), the previous milestone tag, the pull requests merged
+   since it, and the gate results on the candidate — the engine tests, the full
+   UI check, and `tools/smoke_desktop.mjs` on a build of the candidate.
+3. **Claude gives the owner one review prompt**, written with the
+   `review-handoff` skill, and puts the same prompt in the milestone issue. The
+   owner runs it in a model that is not Claude, in a fresh session. The reviewer
+   checks out the candidate SHA and reviews `git diff <previous tag>..<candidate
+   SHA>`, following it into any file it touches. It opens one issue per
+   reproduced finding and posts one verdict comment, `AGREE` or `BLOCK`, on
+   the milestone issue, writing every body to a file as UTF-8 without a
+   byte-order mark and passing it with `--body-file`.
+4. **The tag waits for the review.** On `BLOCK` the findings are fixed in
+   ordinary pull requests, each reviewed as above; the candidate moves to the
+   new `main` commit; and Claude gives a re-review prompt unasked. **Three
+   rounds at most**: a third round that does not end in `AGREE` goes to the
+   owner.
+5. **On `AGREE`, Claude creates the annotated tag on exactly the reviewed SHA**,
+   never on a later commit, and pushes it, and the release is built from a
+   checkout of that tag (`ANDROID.md` §4, `DESKTOP.md`). Work merged after the
+   candidate belongs to the next milestone. Any device or manual check happens
+   before the tag. Publishing — `publish_release.mjs --confirm`, the releases
+   repository — stays with the owner's go-ahead.
+6. **The owner may tag without a review**, and the milestone issue records that.
 
-**A milestone review never blocks anything.** The owner runs it when
-they can, however long that takes, or not at all. An open `independent-review`
-issue is not a to-do for Claude and not a condition on any change: every change
-still merges on its own subagent review. Claude only checks it for a posted
-summary, at the start of a session and before extending it. If a new milestone arrives while an
-earlier review's issue is still open, Claude does not open a second issue. It
-updates the open one in place: the title and the milestones it names, the range
-end moved to the current `main` SHA, and the prompt. If the owner has already
-started the old prompt, nothing is lost, because the **reviewed end** is what
-the next range starts from, not the planned end.
-
-The prompt names the milestone, the range, what to read and what to question. It
-asks the reviewer to:
-- reproduce every finding before stating it;
-- edit nothing;
-- file each finding as a GitHub issue (`defect` when it is one), after checking
-  the open issues first, and linking the milestone-review issue;
-- post a summary on the milestone-review issue, even if it found nothing, listing
-  the issues it filed and stating the range end it reviewed, as a SHA;
-- sign both with `— <display name> (<model id>), milestone reviewer`.
-
-When the summary is posted, Claude records the SHA it states as the issue's
-**reviewed end**, closes the issue and works the filed issues like any other. If
-that SHA is earlier than the issue's planned end, the rest of the range is
-simply the next review's. This is where a blind spot Claude
-shares with its own subagent gets caught, so the prompt asks for what to doubt,
-not for a checklist to confirm. Everything in `PRINCIPLES.md` applies either way.
+**The review never blocks a change.** Every change still merges on its own
+subagent review, whatever state a milestone is in. What waits for the milestone
+review is the tag, and so the release, and the owner can waive that (6). This
+is where a blind spot Claude shares with its own subagent gets caught, so the
+prompt asks for what to doubt, not for a checklist to confirm. Everything in
+`PRINCIPLES.md` applies either way.
 
 ## The UI check, and why it exists
 
