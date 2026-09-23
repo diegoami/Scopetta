@@ -369,11 +369,13 @@ something green and wrong. The ones a newcomer should know first:
   1100x330 in the inflated pass, with no slack, so a small shortfall there is
   still seen (#5). 1100x320 is not in it: inflated, its budget leaves under a
   pixel of card. The floor is one token, `--cw-floor`, which both clamps use and
-  the check reads from the page (#60); both floored shapes, 1100x320 and
-  320x568, are railed, so a floor that stops binding is reported rather than
-  passed in silence (#59); and a budget that runs out entirely — the chrome
-  taller than the screen — is told apart from a missing term: skipped and
-  counted in the inflated pass, a failure of its own in the plain one (#58).
+  the check reads from the page; the pass fails if it reads differently anywhere
+  in the grid (#60, #73). Both floored shapes, 1100x320 and 320x568, are railed,
+  so a floor that stops binding is reported rather than passed in silence (#59).
+  A budget that runs out entirely — the chrome taller than the screen — is told
+  apart from a missing term (#58): in the plain pass it fails with its own
+  message; in the inflated pass a case is skipped and counted, but a shape where
+  every case ran out fails, because it then asks nothing (#73).
 - **The UI check needs a browser**, so it is the one thing here with a
   dependency.
 - **Every deck sheet loads on the start screen**, because the picker previews
