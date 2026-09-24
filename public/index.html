@@ -1179,6 +1179,12 @@ button.card:disabled{ cursor: default; }
 .deck-opt{
   display: grid;
   justify-items: center;
+  /* The tiles of a row stretch to the tallest deck, the Bresciane. A card
+     stretched with them takes its width from that height through its
+     aspect-ratio, and the four shortest decks came out wider than their tiles
+     and lay across the next one. A column the tile's width, and the card
+     centred at its own deck's height rather than stretched to another's. */
+  grid-template-columns: minmax(0, 1fr); align-items: center;
   min-width: 0;               /* let the grid item shrink so the row never overflows */
   padding: .3rem;
   border: 1px solid var(--rail-line);

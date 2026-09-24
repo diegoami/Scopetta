@@ -664,6 +664,20 @@ const audit = () => {
       out.push(`the deck picker is on ${tops.size} rows, not one `
         + `(${opts.length} decks at tops ${[...tops].join(', ')})`);
   }
+  // And each swatch inside its own tile. The tiles of a row stretch to the
+  // tallest deck, the Bresciane, and a card stretched with them takes its width
+  // from that height through its aspect-ratio — so the four shortest decks came
+  // out wider than their tiles and lay across the next one, 115px in a 98px
+  // tile for the Romagnole. The row still fit and nothing overflowed the page:
+  // only the card against the tile that holds it says so.
+  for (const opt of opts) {
+    const card = opt.querySelector('.card');
+    if (!card || !shown(card)) continue;
+    const t = opt.getBoundingClientRect(), c = card.getBoundingClientRect();
+    if (c.left < t.left - 1 || c.right > t.right + 1 || c.top < t.top - 1 || c.bottom > t.bottom + 1)
+      out.push(`the ${opt.dataset.deck} swatch spills out of its tile (card `
+        + `${Math.round(c.width)}x${Math.round(c.height)} in a ${Math.round(t.width)}x${Math.round(t.height)} tile)`);
+  }
 
   // Nothing on the table may sit on a hand card. Against the HAND'S OWN BOX
   // this passes while the raised card stands on two to four of the cards it is
