@@ -665,9 +665,9 @@ const audit = () => {
         + `(${opts.length} decks at tops ${[...tops].join(', ')})`);
   }
   // And each swatch inside its own tile. The tiles of a row stretch to the
-  // tallest deck, and a card stretched with them takes its width from that
-  // height through its aspect-ratio — so every deck shorter than the Trevisane
-  // came out wider than its tile and lay across the next one, 115px in a 98px
+  // tallest deck, the Bresciane, and a card stretched with them takes its width
+  // from that height through its aspect-ratio — so the four shortest decks came
+  // out wider than their tiles and lay across the next one, 115px in a 98px
   // tile for the Romagnole. The row still fit and nothing overflowed the page:
   // only the card against the tile that holds it says so.
   for (const opt of opts) {
