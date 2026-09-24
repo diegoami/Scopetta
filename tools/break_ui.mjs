@@ -829,10 +829,10 @@ const BREAKS = [
   // A swatch stretched to the row's tallest deck takes its width from that
   // height, so every shorter deck is wider than its tile and lies across the
   // next one. The row still fits the screen, so only the card against its own
-  // tile can say so.
+  // tile can say so. Both declarations go, because either one alone keeps every
+  // swatch inside — measured, identical to the pixel at 360x800 and 1440x900.
   ["the deck swatches stretch to the tallest deck",
-   "  grid-template-columns: minmax(0, 1fr); align-items: center;
-", ""],
+   "  grid-template-columns: minmax(0, 1fr); align-items: center;\n", ""],
   ["the deck row does not say which deck",
    "  if (el.deckName) el.deckName.textContent = name;", ""],
   ["the settings sheet is not told which deck was picked",
