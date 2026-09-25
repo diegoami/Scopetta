@@ -2598,6 +2598,22 @@ async function checkFallbackFonts(browser) {
       if (m.youSeatBottom > m.viewportH + 1)
         bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
 
+      // And the say line, which is in the label face too, with a card raised on
+      // the widest line it keeps. In the face the page ships, that line is 274px
+      // of text and fits a 320px screen even in a box sized by its content — so
+      // the break that takes the say line's width away, measured at −22..342 in
+      // system-ui when it was written, went quiet once the condensed face
+      // shipped, and passed everywhere the say line was asked. The rung the page
+      // picks is read back from a rendered height, so a wider face is exactly
+      // what it exists for, and a player sees that face while the webfont is
+      // still on its way.
+      await page.evaluate(poseWidestSay);
+      await page.waitForTimeout(40);
+      const raised = await page.evaluate(measure);
+      if (!await page.evaluate(() => document.querySelector('.sel-name').textContent.trim()))
+        bad.push('the say line is empty with a card raised, so the rule below was never asked');
+      for (const e of raised.offScreen) bad.push(`with a card raised, ${e} runs off the screen`);
+
       const all = [...bad, ...errs];
       if (all.length) {
         failed++;
@@ -2709,12 +2725,19 @@ async function checkSheets(browser) {
       // The bar needs a grid row of its own. Given one, the sheet starts where
       // the bar ends; given none, the bar takes the 1fr row and leaves a band
       // of bare rail under it, which is not an overflow and clips nothing.
+      // Both ways: that band is what a tall window shows, and a phone shows
+      // the opposite. Where the sheet's content fills the screen the 1fr row
+      // comes to 0px, the bar overflows it, and the sheet starts at the top of
+      // the screen UNDER the bar — 48px of it at 320x568, 24px at 360x800.
+      // Asked only for a band, the rule read that as a negative gap and
+      // passed, and the quick run renders only the phone.
       const bar = document.querySelector('#viewStart .topbar');
       const body = document.querySelector('#viewStart .sheet-body');
       if (!bar) out.push('the start sheet has no icon bar');
       else if (body) {
         const gap = Math.round(body.getBoundingClientRect().top - bar.getBoundingClientRect().bottom);
         if (gap > 1) out.push(`${gap}px of nothing between the icon bar and the start sheet`);
+        if (gap < -1) out.push(`${-gap}px of overlap between the icon bar and the start sheet`);
       }
       for (const [nav, view] of [['history', 'viewHistory'], ['settings', 'viewSettings']]) {
         const tool = document.querySelector(`#viewStart [data-nav="${nav}"]`);
@@ -3059,6 +3082,15 @@ async function checkSheets(browser) {
       return out;
     }, beforeKeys));
 
+    // The card Enter just played took the sevens, and a capture is swept a beat
+    // later. Freezing the clock below while that sweep is still running
+    // cancels the timer that ends it, so `sweeping` stays set and the hand
+    // stays dead for the rest of this pass — every key the dialog block below
+    // presses was refused by `tapped` on a healthy page as much as on a broken
+    // one. Let the page finish drawing the play; do not put its flag back by
+    // hand.
+    await page.waitForFunction(() => !sweeping && !beat, null, { timeout: 5000 }).catch(() => {});
+
     // And Escape backs out of a sheet, which is the other promise the rules
     // screen makes about it. Nothing pressed Escape anywhere in this check.
     await page.evaluate(`(() => { epoch++; clearTimeout(timer); pending = null; render(); })()`);
@@ -3082,10 +3114,23 @@ async function checkSheets(browser) {
     //
     // The table is held still first, so that "a key played a card" is a
     // question about the keys rather than a race with the opponent's turn.
+    //
+    // And the hand is dealt again, because the block above played the card in
+    // slot 1 and left it empty. `1` on an empty slot raises nothing and Enter
+    // then has nothing to play, so on that hand this rule could not fail with
+    // the guard deleted outright — its break survived every run from the
+    // iteration that wrote both blocks. A key that reaches nothing proves
+    // nothing, so the rail asks whether the hand would take a key at all: a
+    // card in slot 1, and no play still being drawn.
     await page.evaluate(`(() => { epoch++; clearTimeout(timer); pending = null;
-      state.deveGiocare = 0; render(); })()`);
+      state.tavola = [{s:1,n:7},{s:0,n:7},{s:2,n:4},{s:3,n:3}];
+      state.hands[0] = [{s:2,n:7}, {s:3,n:10}, {s:1,n:2}];
+      state.deveGiocare = 0; state.over = false;
+      state.selected = null; state.scelta = 0; render(); })()`);
     await page.click('#again');
     const guarded = await page.evaluate(() => state.plays);
+    if (!await page.evaluate(() => !!state.hands[0][0] && !sweeping && !beat))
+      bad.push('the hand is not live under the confirm, so the rule below was never asked');
     await page.keyboard.press('1');
     await page.keyboard.press('Enter');
     bad.push(...await page.evaluate(was => {

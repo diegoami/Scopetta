@@ -38,8 +38,10 @@
 //     finish`, `N plays, want 36`, `N cards in the piles, want 40`, `no capture
 //     was chosen by tapping / by accepting`, `the driver never reached the end
 //     of a round`, `the deal could not be driven to the end`, `the posed
-//     position offers only one capture`, `nothing on the crowded table is
-//     marked`, `the say line has no box while a card is raised`, `Gioca did not
+//     position offers only one capture`, `the hand is not live under the
+//     confirm`, `the say line is empty with a card raised`, `nothing on the
+//     crowded table is marked`, `the say line has no box while a card is
+//     raised`, `Gioca did not
 //     deal`, `#icon did not open #view`, `the confirm did not open over the
 //     deal that was about to end`, and `"Ancora" asked whether to abandon a
 //     smazzata that was already over` — the last of those is a rail because
@@ -298,7 +300,7 @@ const EXPECT = {
   "the deck row does not say which deck": "the deck row names",
   "the dossier stops holding its height": "does not hold its height",
   "the settings sheet is not told which deck was picked": "the settings sheet still says",
-  "the start sheet has no row for its icon bar": "of nothing between the icon bar and the start sheet",
+  "the start sheet has no row for its icon bar": "between the icon bar and the start sheet",
 
   // --- the settings sheet ---------------------------------------------------
   "the weights disclosure loses a weight": "the engine has",
@@ -591,7 +593,10 @@ const BREAKS = [
   //
   // With both gone the original defect is back exactly: at 320x568 the line
   // runs **-22px to 342px** on a 320px screen, off both edges, where iteration
-  // 3 measured -8 to 328. Portrait only — in landscape `.say` is a grid item
+  // 3 measured -8 to 328. That is in system-ui. In the condensed face the page
+  // ships, the widest line it keeps is 274px of text and fits even in a box
+  // sized by its content, which is why this break survived every pass that
+  // only asked in that face; the fallback-font pass raises a card now. Portrait only — in landscape `.say` is a grid item
   // spanning the seat and stretches whatever happens here.
   ["the say line is sized by its content",
    ["  width: 100%;\n  height: var(--say);\n  display: flex;",
