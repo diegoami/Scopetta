@@ -301,6 +301,8 @@ const EXPECT = {
   "the dossier stops holding its height": "does not hold its height",
   "the settings sheet is not told which deck was picked": "the settings sheet still says",
   "the start sheet has no row for its icon bar": "between the icon bar and the start sheet",
+  "the start sheet loses its download link": "does not link to the download",
+  "the start sheet's download link is not drawn": "link to the download is in the page but not on the screen",
 
   // --- the settings sheet ---------------------------------------------------
   "the weights disclosure loses a weight": "the engine has",
@@ -849,6 +851,15 @@ const BREAKS = [
   ["the start sheet has no row for its icon bar",
    "#viewStart{ grid-template-rows: auto minmax(0,1fr) auto; }",
    "#viewStart{ grid-template-rows: minmax(0,1fr) auto; }"],
+  // The way to the builds from the screen somebody lands on. Gone, and the
+  // only way to the app is through the rules; there but not drawn, and it is
+  // gone just as surely while the markup still says otherwise.
+  ["the start sheet loses its download link",
+   "        <p class=\"hero-link\"><a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\">Scarica per Android e Windows</a></p>\n",
+   ""],
+  ["the start sheet's download link is not drawn",
+   ".hero .hero-link{ font-size: var(--t-tiny); }",
+   ".hero .hero-link{ font-size: var(--t-tiny); display: none; }"],
   // Four lines held open, so that choosing a name does not move the deck row
   // under a thumb already on its way to it.
   // The reservation is a measured height now rather than a count of lines, so

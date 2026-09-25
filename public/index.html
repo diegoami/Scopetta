@@ -1096,6 +1096,11 @@ button.card:disabled{ cursor: default; }
   margin: 0;
 }
 .hero p{ margin: 0; color: var(--ivory-dim); font-size: var(--t-body); line-height: 1.5; }
+/* The download line under the title. `.hero .hero-link` for the same reason as
+   `.hero .last-result` below: `.hero p` would otherwise win and draw it as body
+   copy. */
+.hero .hero-link{ font-size: var(--t-tiny); }
+.hero .hero-link a{ color: var(--brass); }
 /* `.hero .last-result`, not `.last-result`. It is a <p> inside .hero, and
    `.hero p` above is (0,1,1) against this rule's (0,1,0) — so the two
    declarations written for this element, its label size and its brass, lost to
@@ -1794,6 +1799,12 @@ button.card:disabled{ cursor: default; }
         <h1>Scopetta</h1>
         <p>Scopa a due. Una smazzata, trentasei carte giocate, quattro punti
           più le scope.</p>
+        <!-- The one line out of the game, as in Tressette and Discola: the
+             builds, on the releases page the rules screen already links to.
+             Not "Regole, download e crediti" as theirs say — their link goes
+             to a README that carries all three, and this game's releases
+             README does not, so the line names only what it leads to. -->
+        <p class="hero-link"><a href="https://github.com/diegoami/scopetta-releases/releases/latest">Scarica per Android e Windows</a></p>
         <p class="last-result" id="lastResult" hidden></p>
       </div>
 
