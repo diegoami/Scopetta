@@ -303,6 +303,8 @@ const EXPECT = {
   "the start sheet has no row for its icon bar": "between the icon bar and the start sheet",
   "the start sheet loses its download link": "does not link to the download",
   "the start sheet's download link is not drawn": "link to the download is in the page but not on the screen",
+  "the start sheet's download link is hidden": "link to the download is in the page but not on the screen",
+  "the start sheet's download link is under the sheet": "link to the download is in the page but not on the screen",
 
   // --- the settings sheet ---------------------------------------------------
   "the weights disclosure loses a weight": "the engine has",
@@ -860,6 +862,16 @@ const BREAKS = [
   ["the start sheet's download link is not drawn",
    ".hero .hero-link{ font-size: var(--t-tiny); }",
    ".hero .hero-link{ font-size: var(--t-tiny); display: none; }"],
+  // A box is not a link somebody can see. Hidden, it keeps its box; pushed
+  // under the sheet, it keeps its box and its paint and still cannot be seen
+  // or tapped. Both passed the whole quick check while the rule asked only
+  // whether the link had a box.
+  ["the start sheet's download link is hidden",
+   ".hero .hero-link{ font-size: var(--t-tiny); }",
+   ".hero .hero-link{ font-size: var(--t-tiny); visibility: hidden; }"],
+  ["the start sheet's download link is under the sheet",
+   ".hero .hero-link a{ color: var(--brass); }",
+   ".hero .hero-link a{ color: var(--brass); position: relative; z-index: -1; }"],
   // Four lines held open, so that choosing a name does not move the deck row
   // under a thumb already on its way to it.
   // The reservation is a measured height now rather than a count of lines, so

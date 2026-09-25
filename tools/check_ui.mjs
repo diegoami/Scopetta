@@ -820,15 +820,22 @@ const noisy = () => false;
 // on the releases page. Tressette and Discola had it and this game did not, so
 // the only way to the Android app and the Windows build was to open the rules
 // first. Asked on both start rows, because the returning player's row puts the
-// last result in the same hero. And painted, not just present: a link nobody
-// can see is the same as no link, and the audit measures its type and its
-// clipping only once it is drawn.
+// last result in the same hero. And reached, not just present: a link nobody
+// can see is the same as no link. Asked by hit-testing its centre rather than
+// by its box, because a box is what a hidden link and a link pushed under the
+// sheet both keep — the first version asked for a box, and both of those
+// breaks passed the whole quick check.
 const startLink = () => {
   const out = [];
   const link = document.querySelector('#viewStart .hero-link a');
-  if (!link || !link.getAttribute('href').includes('scopetta-releases/releases'))
+  if (!link || !(link.getAttribute('href') || '').includes('scopetta-releases/releases')) {
     out.push('the start sheet does not link to the download');
-  else if (!link.getClientRects().length)
+    return out;
+  }
+  const r = link.getBoundingClientRect();
+  const at = r.width && r.height
+    ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+  if (!at || !link.contains(at))
     out.push("the start sheet's link to the download is in the page but not on the screen");
   return out;
 };
