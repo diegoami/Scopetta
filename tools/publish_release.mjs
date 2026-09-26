@@ -27,7 +27,7 @@ import {
 import { parseSource, tagCommit } from './source_tag.mjs';
 
 // The one line of the notes that changes from release to release.
-const SUBTITLE = 'la scelta del mazzo senza carte sovrapposte, e il link per scaricarla';
+const SUBTITLE = 'la scelta del mazzo senza carte sovrapposte, e il link per scaricare il gioco';
 
 const RELEASES_REPO = 'diegoami/scopetta-releases';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
