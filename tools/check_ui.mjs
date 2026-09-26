@@ -816,8 +816,32 @@ const noisy = () => false;
 // arrive with their screens. The mid-deal states are here because §4 iteration
 // 3 is explicit: an assertion only sees the states the check renders, and every
 // one of these exists only in the middle of a deal.
+// The one line out of the game from the screen somebody lands on: the builds
+// on the releases page. Tressette and Discola had it and this game did not, so
+// the only way to the Android app and the Windows build was to open the rules
+// first. Asked on both start rows, because the returning player's row puts the
+// last result in the same hero. And reached, not just present: a link nobody
+// can see is the same as no link. Asked by hit-testing its centre rather than
+// by its box, because a box is what a hidden link and a link pushed under the
+// sheet both keep — the first version asked for a box, and both of those
+// breaks passed the whole quick check.
+const startLink = () => {
+  const out = [];
+  const link = document.querySelector('#viewStart .hero-link a');
+  if (!link || !(link.getAttribute('href') || '').includes('scopetta-releases/releases')) {
+    out.push('the start sheet does not link to the download');
+    return out;
+  }
+  const r = link.getBoundingClientRect();
+  const at = r.width && r.height
+    ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+  if (!at || !link.contains(at))
+    out.push("the start sheet's link to the download is in the page but not on the screen");
+  return out;
+};
+
 const SCREENS = [
-  { name: 'start', open: async p => {} },
+  { name: 'start', open: async p => {}, check: startLink },
   // The start sheet with a smazzata behind it, which is what a returning player
   // sees and what no pass ever rendered: `#lastResult` is `hidden` until
   // `loadHistory` returns something, the start row opens on empty storage, and
@@ -830,7 +854,7 @@ const SCREENS = [
         { t: Date.parse("2026-02-11"), o: "Graziano", d: "Romagnole", y: 5, a: 3 }
       ]))`);
       await p.reload();
-    } },
+    }, check: startLink },
   // Both ways in, because a screen reachable from one place and not the other
   // is half a screen. The rules are the only page here that is READ, so the
   // audit's body-copy floor is the one that matters on them.
