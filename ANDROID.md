@@ -67,8 +67,8 @@ On this machine, present tense:
   `local.properties` and the regenerated `capacitor-cordova-android-plugins/`
   are gitignored).
 - Identity in the generated project is `com.scopetta.app` / `Scopetta`, matching
-  `capacitor.config.json`. `versionName "1.0.1"`, `versionCode 2` (1.0.0 was
-  `versionCode 1`).
+  `capacitor.config.json`. `versionName "1.0.2"`, `versionCode 3` (1.0.1 was
+  `versionCode 2`, 1.0.0 `versionCode 1`).
 - Launcher icons generated at every density from `assets/` by
   `@capacitor/assets --android --assetPath ../assets` — the settebello on the
   felt.
