@@ -267,7 +267,7 @@ README pushed before `--confirm` can work.
 2. **Version numbering.** `versionName` is the version, and since 1.0.1 the
    desktop wrapper declares it in six more places; `tools/release.test.mjs` holds
    all seven to it on every pull request. `versionCode` only ever increases:
-   1.0.0 was `versionCode 1`, 1.0.1 is `2`. There is still no changelog; the
+   1.0.0 was `versionCode 1`, 1.0.1 `2`, 1.0.2 `3`. There is still no changelog; the
    release notes' subtitle is the one line that says what changed.
 3. **A Play Store listing** is deliberately not in the table above: sideloading
    needs none of the paperwork, and the paperwork outweighs the code.
