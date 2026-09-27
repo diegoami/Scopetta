@@ -87,8 +87,13 @@ pre-releases.
 3. **Claude gives the owner one review prompt**, written with the
    `review-handoff` skill, and puts the same prompt in the milestone issue. The
    owner runs it in a model that is not Claude, in a fresh session. The reviewer
-   checks out the candidate SHA and reviews `git diff <previous tag>..<candidate
-   SHA>`, following it into any file it touches. It opens one issue per
+   fetches first (`git fetch origin --tags`, never `git pull`), and counts the
+   candidate as missing only if it is still not a commit after the fetch. It
+   reviews in a fresh, detached worktree of its own at exactly the candidate
+   SHA, never in the checkout it started in, and checks `git rev-parse HEAD`
+   there before it starts. It reviews `git diff <previous tag>..<candidate SHA>`,
+   following it into any file it touches, and its verdict names the worktree,
+   as a relative path, and the SHA. It opens one issue per
    reproduced finding and posts one verdict comment, `AGREE` or `BLOCK`, on
    the milestone issue, writing every body to a file as UTF-8 without a
    byte-order mark and passing it with `--body-file`.
