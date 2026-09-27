@@ -10,6 +10,10 @@ node_modules
 # Packaged release artifacts (built by tools/package_release.mjs).
 dist-release
 
+# A Claude Code fork's own worktree (CLAUDE.md, "Who works where"), so it does
+# not show up as untracked files in the main checkout.
+.claude/worktrees/
+
 # The Android wrapper's own installs and build outputs. mobile/android/ itself
 # is committed — it is generated once and then edited — but nothing Gradle or
 # the SDK writes into it is.

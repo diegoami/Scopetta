@@ -1745,11 +1745,12 @@ with:
 > `tools/selfplay.mjs`, `.claude/skills/ui-check`), then `diegoami/discola-web`
 > (`SPEC.md`), then the previous iteration's pull request. Work in a worktree
 > of your own, never in the main checkout (`CLAUDE.md`, *Who works where*):
-> run `git fetch origin`, then `git worktree add -b iteration-N-<slug>
-> <main>/../<project>-work/iteration-N-<slug> origin/<default>`, and work only
-> there. Stop at the iteration's "Done when": do not start the next one.
-> Finish with every check green, commit, push, and open a pull request with
-> the description in §7.4.
+> run `git fetch origin`, then `git worktree add --no-track -b
+> iteration-N-<slug> <main>/../<project>-work/iteration-N-<slug>
+> origin/<default>`, work only there, and push it first with
+> `git push -u origin iteration-N-<slug>`. Stop at the iteration's "Done
+> when": do not start the next one. Finish with every check green, commit,
+> push, and open a pull request with the description in §7.4.
 
 **A non-trivial change may open its design as an issue first**, iterated with the
 reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the

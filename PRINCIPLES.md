@@ -18,6 +18,7 @@ a mutation harness found something green and wrong without it.
 | the review process under Claude Code (the per-change subagent review, the milestone reviews) | `CLAUDE.md` |
 | the verification gates (commands, run counts, CI schedule) | `AGENTS.md` |
 | the project's own rules (budget, frozen engine, conventions, check rationale) | `CLAUDE.md` |
+| who works where (the main checkout, implementer and reviewer worktrees) | `CLAUDE.md` (*Who works where*) |
 
 **The table is authoritative.** A non-owning file **links** to an idea and does
 not restate it, so an idea lives in one place and cannot drift. If the table does

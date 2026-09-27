@@ -52,20 +52,27 @@ what `git symbolic-ref --short refs/remotes/origin/HEAD` prints, for example
 - In a cloud session, the session's own clone takes the place of these
   folders; the fetch and commit checks still apply.
 - A session removes only worktrees it made.
+- **In a fresh worktree, implementer's or reviewer's, the dependencies are
+  installed there** (`npm ci`, and `npm run setup` for the UI check's browser)
+  before any check runs, never copied or linked from the main checkout. On
+  Windows, `git config --global core.longpaths true` is a prerequisite: the
+  owner sets it on the machine.
 
 **Implementing.** A session asked to implement a change or a feature, which is
 not already a Claude Code fork in the tool's own worktree, first runs
 `git fetch origin`, then makes its worktree:
 
 ```sh
-git worktree add -b <branch> <main>/../<project>-work/<branch> origin/<default>
+git worktree add --no-track -b <branch> <main>/../<project>-work/<branch> origin/<default>
 ```
 
 It works only there, naming the worktree in every command, because a tool's
-shell may return to `<project>/` after each command. If it finds itself about
-to edit, commit or switch branches in `<project>/`, it stops and makes the
-worktree first. After the merge, it removes the worktree it made
-(`git worktree remove`) and deletes its merged branch.
+shell may return to `<project>/` after each command. `--no-track` keeps the new
+branch from tracking `origin/<default>`; its first push is
+`git push -u origin <branch>`. If it finds itself about to edit, commit or
+switch branches in `<project>/`, it stops and makes the worktree first. After
+the merge, it removes the worktree it made (`git worktree remove`) and deletes
+its merged branch.
 
 ## How changes are reviewed
 

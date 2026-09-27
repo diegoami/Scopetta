@@ -105,7 +105,11 @@ name, and <stamp> is the UTC time as YYYYMMDDTHHMMSSZ, so every run has a
 path of its own. Remove no worktree you did not make.
 In that worktree, git rev-parse HEAD must equal <full SHA> before you
 review; stop and say so if it does not. Every command from here on runs
-there.
+there. Before any check runs, install its dependencies in that worktree
+(npm ci, then npm run setup for the UI check's browser), never copied or
+linked from another checkout. On Windows, git config --global core.longpaths
+true is a prerequisite that the owner sets on the machine; if git reports
+"Filename too long", stop and say so.
 PREVIOUS TAG: <vA.B.C>. Review git diff <vA.B.C>..<candidate SHA>, and follow
 it into any file it touches or relies on. Problems elsewhere in the repository
 count too, as out of scope.
