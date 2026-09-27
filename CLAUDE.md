@@ -64,9 +64,8 @@ git worktree add -b <branch> <main>/../<project>-work/<branch> origin/<default>
 It works only there, naming the worktree in every command, because a tool's
 shell may return to `<project>/` after each command. If it finds itself about
 to edit, commit or switch branches in `<project>/`, it stops and makes the
-worktree first. After
-the merge, it removes the worktree it made (`git worktree remove`) and deletes
-its merged branch.
+worktree first. After the merge, it removes the worktree it made
+(`git worktree remove`) and deletes its merged branch.
 
 ## How changes are reviewed
 
