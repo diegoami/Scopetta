@@ -117,7 +117,7 @@ const tag = `v${version}`;
 console.log(`packaging Scopetta ${tag}`);
 
 // --- 1b: build only committed source, and remember which ---
-// A release is the tagged commit (CLAUDE.md, "Each milestone"), so a build that
+// A release is the tagged commit (AGENTS.md, *Releases*), so a build that
 // no commit contains cannot be published. Untracked files count, and ignored
 // ones under public/, which the build bundles; treeProblems says why it avoids
 // git status, which cap sync's LF rewrites fool on a CRLF checkout.

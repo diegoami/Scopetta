@@ -13,7 +13,7 @@
  * Nothing here redraws anything. The crop is nearest-neighbour scaled
  * (`image-rendering: pixelated`), so every output pixel is one source pixel
  * repeated — the 1997 bitmap, larger. Interpolation invents pixels, which is
- * redrawing by another name, and CLAUDE.md is explicit that the card art is
+ * redrawing by another name, and AGENTS.md is explicit that the card art is
  * not to be redrawn.
  *
  * Two crops, not one. The half card is the icon everywhere it is drawn at

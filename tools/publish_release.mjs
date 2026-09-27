@@ -65,7 +65,7 @@ const seen = gh(['release', 'view', tag, '-R', RELEASES_REPO]);
 if (seen.status === 0) fail(`${tag} already exists on ${RELEASES_REPO}. Bump the version first.`);
 
 // --- the source must be tagged: vX.Y.Z on origin/main, at the packaged commit ---
-// A release is a milestone (CLAUDE.md): the reviewed candidate on main is
+// A release is a milestone (AGENTS.md, *Releases*): the reviewed candidate on main is
 // tagged and packaged from the tag, so the tag and the build name one commit.
 // discola-web's check, ported with source_tag.mjs.
 const sourceFile = path.join(distRoot, `${tag}.source`);

@@ -9,7 +9,7 @@
  * refuses to publish unless `vX.Y.Z` exists on origin, is on origin/main, and
  * names that same commit; the release notes then name it.
  *
- * Here the tag comes first (CLAUDE.md, "Each milestone"): the reviewed
+ * Here the tag comes first (AGENTS.md, *Releases*): the reviewed
  * candidate is tagged, and the release is packaged from a checkout of the tag,
  * so the recorded commit is the tag's. Packaging the candidate first and
  * tagging it after would pass the same check; the check is that the tag and the

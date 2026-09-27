@@ -61,9 +61,8 @@ RULES.md / REGOLE.md the rules as this game plays them, English and Italian
 PLAN.md              the plan and the record, iteration by iteration
 ANDROID.md           the APK: what is done, and what is left and whose
 DESKTOP.md           the Windows build: the decision, and how it is checked
-AGENTS.md            OpenCode's guidance: the cross-model review and the gates
-PRINCIPLES.md        the principles both tools share
-CLAUDE.md            Claude Code's guidance: the project's own rules
+AGENTS.md            the one instructions file: the project, the gates, the rules
+CLAUDE.md            a one-line import of AGENTS.md, for Claude Code
 ```
 
 Nothing is generated at build time and nothing under `public/` imports
@@ -279,8 +278,9 @@ the box.
 
 ## 7. The checks
 
-The **gates** — the commands and how many times each runs before a push — are in
-[`AGENTS.md`](AGENTS.md), which is their home. Both the tests and the UI check
+The **gates** — the commands, and the schedule for when each runs before a
+push — are in [`AGENTS.md`](AGENTS.md), which is their home. Both the tests and
+the UI check
 run as CI checks, and a red one does not merge. What they cover:
 the engine tests are the rules, the traps, the roster, the release decisions and
 the golden fixture — 94 in all, 93 passing and 1 skipped on Windows; the UI check
@@ -316,8 +316,8 @@ sheet used to go down mid-render before the button that clears the bad data
 
 ## 9. What this project learned, which is most of its value
 
-The full list is in `CLAUDE.md`, each rule bought by a review or a break finding
-something green and wrong. The ones a newcomer should know first:
+The full list is in the `ui-check` skill and `AGENTS.md`, each rule bought by a
+review or a break finding something green and wrong. The ones a newcomer should know first:
 
 1. **An assertion only ever sees the states the check renders.** Iteration 3
    shipped a table whose row wrapped wrongly, a capture choice nobody could tap,

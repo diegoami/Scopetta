@@ -1,6 +1,6 @@
 # The site is plain static files — no build step. Everything that should be on
 # the web lives in public/, and nothing else is published: the repo root holds
-# PLAN.md, CLAUDE.md, the tooling and this file, none of which belong on a
+# PLAN.md, AGENTS.md, the tooling and this file, none of which belong on a
 # public URL. Discola published "." once and served its private repo's SPEC.md
 # and ROADMAP.md from the live site; this repo's root is documents almost
 # entirely, so the same mistake would cost more here, not less.

@@ -4,7 +4,7 @@
 //   node tools/break_ui.mjs            every break
 //   node tools/break_ui.mjs toast      only the breaks whose name matches
 //
-// CLAUDE.md: "a new assertion is made to fail before it is made to pass. Write
+// AGENTS.md: "a new assertion is made to fail before it is made to pass. Write
 // it against a deliberately broken page first and watch it go red, because an
 // assertion written against already-correct code encodes what the code happens
 // to do rather than what it should do."
@@ -1121,7 +1121,8 @@ const BREAKS = [
    "  redraw = requestAnimationFrame(() => { redraw = 0; render(); });"],
 
   // `recorded` is set in `play` and cleared in `newDealHere`, which is a flag
-  // with two owners — CLAUDE.md's rule, paid for by `beat` at iteration 3. The
+  // with two owners — the `ui-check` skill's rule, paid for by `beat` at
+  // iteration 3. The
   // argument that it is safe here is only worth what this break says it is.
   ["a new deal does not clear the record flag",
    "  beat = false;\n  recorded = false;", "  beat = false;"],
