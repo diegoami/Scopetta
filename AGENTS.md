@@ -31,7 +31,8 @@ context**, invoked as a subagent with an explicit model id:
 assignment**, not the rule. Whoever changes an assignment updates the table in
 the same change. **Each stage starts with a new reviewer session**; a re-review
 after fixes may continue that session (see AGREE, below). The implementer never
-shares its context with the reviewer.
+shares its context with the reviewer. **Where each works** is in `CLAUDE.md`,
+*Who works where*, and it binds OpenCode sessions too.
 
 ### The verdict goes on GitHub, signed
 

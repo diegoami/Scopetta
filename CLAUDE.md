@@ -27,6 +27,53 @@ toss, flag out-of-scope defects, show diffs, the paths to inspect and ignore,
 keeping command output short, and the session handoff. Read them there; this file
 keeps the project's own rules.
 
+## Who works where
+
+One layout for every session, whatever tool runs it. `<project>` is the main
+checkout's directory name, and `<main>` is its path: the parent directory of
+`git rev-parse --path-format=absolute --git-common-dir`. `origin/<default>` is
+what `git symbolic-ref --short refs/remotes/origin/HEAD` prints, for example
+`origin/main`.
+
+- **`<project>/`, the main checkout, is the planner's or orchestrator's only.**
+  No implementer or reviewer works there, and none checks out a branch or a
+  commit there: no `git checkout`, `git switch` or `gh pr checkout`.
+- **Every session that implements works in a worktree of its own**, one per
+  change, never in `<project>/`. A Claude Code forked subagent uses the tool's
+  own worktree isolation (`.claude/worktrees/`). Every other session first
+  makes `<project>-work/<branch>` beside the main checkout, from
+  `origin/<default>`, and works only there. That includes a new session the
+  owner opens in `<project>/` and asks to implement a feature, as well as
+  OpenCode, Codex, a headless session, and a worktree the main session makes.
+- **Reviewers work in worktrees of their own**, one per review round, detached
+  at the exact commit under review, under
+  `<project>-review/review-<SHA first 12>-<UTC stamp YYYYMMDDTHHMMSSZ>`, beside
+  the main checkout.
+- In a cloud session, the session's own clone takes the place of these
+  folders; the fetch and commit checks still apply.
+- A session removes only worktrees it made.
+- **In a fresh worktree, implementer's or reviewer's, the dependencies are
+  installed there** (`npm ci`, and `npm run setup` for the UI check's browser)
+  before any check runs, never copied or linked from the main checkout. On
+  Windows, `git config --global core.longpaths true` is a prerequisite: the
+  owner sets it on the machine.
+
+**Implementing.** A session asked to implement a change or a feature, which is
+not already a Claude Code fork in the tool's own worktree, first runs
+`git fetch origin`, then makes its worktree:
+
+```sh
+git worktree add --no-track -b <branch> <main>/../<project>-work/<branch> origin/<default>
+```
+
+It works only there, naming the worktree in every command, because a tool's
+shell may return to `<project>/` after each command. `--no-track` keeps the new
+branch from tracking `origin/<default>`; its first push is
+`git push -u origin <branch>`. If it finds itself about to edit, commit or
+switch branches in `<project>/`, it stops and makes the worktree first. After
+the merge, it removes the worktree it made (`git worktree remove`) and deletes
+its merged branch.
+
 ## How changes are reviewed
 
 The shared principles, the **ownership map** and the test for a **non-trivial**
@@ -46,9 +93,20 @@ A **non-trivial** change takes **no design stage** and needs nothing from the
 owner: Claude opens a pull request, runs the gates in `AGENTS.md`, and spawns a
 **fresh-context reviewer subagent**. The subagent is given the pull request, any
 issue it links and these documents, and none of the builder's conversation. The
-same model family is fine; the fresh context is the point. The reviewer
-reproduces what it reports and does not edit the change. It posts its verdict on
-the pull request with `gh pr comment`, ending in `AGREE` or `BLOCK`, and signs it
+same model family is fine; the fresh context is the point. The reviewer works
+where *Who works where* says:
+- **Fetch first.** It runs `git fetch origin` and `git fetch origin
+  pull/<N>/head`. A commit is not missing until it has been fetched.
+- **A worktree of its own.** It takes the pull request's head SHA from
+  `gh pr view <N> --json headRefOid` and reviews in a fresh, detached worktree
+  of its own at that SHA, under `<project>-review/`. `git rev-parse HEAD`
+  there must equal the SHA.
+- **Never the main checkout.** It never runs `gh pr checkout` or `git
+  checkout` there.
+
+The reviewer reproduces what it reports and does not edit the change. It posts
+its verdict on the pull request with `gh pr comment`, ending in `AGREE` or
+`BLOCK`, and signs it
 `— <model name> (<model id>), fresh-context subagent, reviewer`. The builder fixes
 the change in the same pull request, and **a re-review may continue the same
 subagent**. A pull request that fixes an issue closes it with a `Closes` line,
@@ -91,8 +149,9 @@ pre-releases.
    the candidate has no tag yet, so it is fetched by its SHA), and counts the
    candidate as missing only if it is still not a commit after the fetch. It
    reviews in a fresh, detached worktree of its own at exactly the candidate
-   SHA, never in the checkout it started in, and checks `git rev-parse HEAD`
-   there before it starts. It reviews `git diff <previous tag>..<candidate SHA>`,
+   SHA, under `<project>-review/`, never in the checkout it started in, and
+   checks `git rev-parse HEAD` there before it starts. It reviews
+   `git diff <previous tag>..<candidate SHA>`,
    following it into any file it touches, and its verdict names the worktree,
    as a relative path, and the SHA. It opens one issue per
    reproduced finding and posts one verdict comment, `AGREE` or `BLOCK`, on

@@ -1743,8 +1743,12 @@ with:
 > first, then `diegoami/Tressette` (`SPEC.md` first, then `CLAUDE.md`,
 > `PLAN.md`, `public/engine.js`, `public/index.html`, `tools/check_ui.mjs`,
 > `tools/selfplay.mjs`, `.claude/skills/ui-check`), then `diegoami/discola-web`
-> (`SPEC.md`), then the previous iteration's pull request. Work on a branch named
-> `iteration-N-<slug>` off the default branch. Stop at the iteration's "Done
+> (`SPEC.md`), then the previous iteration's pull request. Work in a worktree
+> of your own, never in the main checkout (`CLAUDE.md`, *Who works where*):
+> run `git fetch origin`, then `git worktree add --no-track -b
+> iteration-N-<slug> <main>/../<project>-work/iteration-N-<slug>
+> origin/<default>`, work only there, and push it first with
+> `git push -u origin iteration-N-<slug>`. Stop at the iteration's "Done
 > when": do not start the next one. Finish with every check green, commit,
 > push, and open a pull request with the description in §7.4.
 
