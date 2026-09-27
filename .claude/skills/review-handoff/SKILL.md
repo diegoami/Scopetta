@@ -100,7 +100,7 @@ that SHA, never in the checkout you started in. From where you are, run
   git worktree add --detach <main>/<path> <full SHA>
 where <main> is the parent directory of git rev-parse
 --path-format=absolute --git-common-dir, and <path> is
-../<project>-work/review-<SHA first 12>-<stamp>: <project> is <main>'s
+../<project>-review/review-<SHA first 12>-<stamp>: <project> is <main>'s
 name, and <stamp> is the UTC time as YYYYMMDDTHHMMSSZ, so every run has a
 path of its own. Remove no worktree you did not make.
 In that worktree, git rev-parse HEAD must equal <full SHA> before you
