@@ -1747,8 +1747,9 @@ with:
 > of your own, never in the main checkout (`CLAUDE.md`, *Who works where*):
 > run `git fetch origin`, then `git worktree add -b iteration-N-<slug>
 > <main>/../<project>-work/iteration-N-<slug> origin/<default>`, and work only
-> there. Stop at the iteration's "Done when": do not start the next one. Finish with every check green, commit,
-> push, and open a pull request with the description in §7.4.
+> there. Stop at the iteration's "Done when": do not start the next one.
+> Finish with every check green, commit, push, and open a pull request with
+> the description in §7.4.
 
 **A non-trivial change may open its design as an issue first**, iterated with the
 reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the

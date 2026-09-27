@@ -31,8 +31,9 @@ keeps the project's own rules.
 
 One layout for every session, whatever tool runs it. `<project>` is the main
 checkout's directory name, and `<main>` is its path: the parent directory of
-`git rev-parse --path-format=absolute --git-common-dir`. `<default>` is the
-branch `git symbolic-ref --short refs/remotes/origin/HEAD` names.
+`git rev-parse --path-format=absolute --git-common-dir`. `origin/<default>` is
+what `git symbolic-ref --short refs/remotes/origin/HEAD` prints, for example
+`origin/main`.
 
 - **`<project>/`, the main checkout, is the planner's or orchestrator's only.**
   No implementer or reviewer works there, and none checks out a branch or a
@@ -60,10 +61,10 @@ not already a Claude Code fork in the tool's own worktree, first runs
 git worktree add -b <branch> <main>/../<project>-work/<branch> origin/<default>
 ```
 
-If that branch or path exists, it adds a UTC stamp to both. It works only
-there, naming the worktree in every command, because a tool's shell may return
-to `<project>/` after each command. If it finds itself about to edit, commit or
-switch branches in `<project>/`, it stops and makes the worktree first. After
+It works only there, naming the worktree in every command, because a tool's
+shell may return to `<project>/` after each command. If it finds itself about
+to edit, commit or switch branches in `<project>/`, it stops and makes the
+worktree first. After
 the merge, it removes the worktree it made (`git worktree remove`) and deletes
 its merged branch.
 
