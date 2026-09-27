@@ -25,8 +25,8 @@ without a review, and the milestone issue records that.
 
 A tool that loads `AGENTS.md` (Codex and OpenCode, for example) sees the
 OpenCode roles there. The prompt's first line tells it that the prompt, not
-those roles, defines its job. Every `gh` call needs network access, which some
-tools sandbox by default: tell the owner to allow it.
+those roles, defines its job. The first fetch and every `gh` call need network
+access, which some tools sandbox by default: tell the owner to allow it.
 
 ## Fill in before writing
 
@@ -86,8 +86,26 @@ the code.
 
 MILESTONE: release <vX.Y.Z>, round <n> of at most 3
 THREAD: <milestone issue URL>
-CANDIDATE: <full SHA> on main. Check out that SHA before you start, and stop
-and say so if you cannot.
+CANDIDATE: <full SHA> on main.
+FETCH FIRST: git fetch origin --tags <full SHA>. Naming the SHA fetches the
+candidate itself, which has no tag yet, whatever branches the checkout you
+started in is set up to fetch. If CANDIDATE above names a pull request <N>,
+also git fetch origin pull/<N>/head. Not git pull: the checkout you started
+in may be on another branch or hold local changes.
+A commit you cannot see is not missing until you have fetched. Stop and say
+so only if git cat-file -t <full SHA> still does not print "commit" after
+the fetch.
+YOUR WORKTREE: review in a fresh, detached worktree of your own at exactly
+that SHA, never in the checkout you started in. From where you are, run
+  git worktree add --detach <main>/<path> <full SHA>
+where <main> is the parent directory of git rev-parse
+--path-format=absolute --git-common-dir, and <path> is
+../<project>-work/review-<SHA first 12>-<stamp>: <project> is <main>'s
+name, and <stamp> is the UTC time as YYYYMMDDTHHMMSSZ, so every run has a
+path of its own. Remove no worktree you did not make.
+In that worktree, git rev-parse HEAD must equal <full SHA> before you
+review; stop and say so if it does not. Every command from here on runs
+there.
 PREVIOUS TAG: <vA.B.C>. Review git diff <vA.B.C>..<candidate SHA>, and follow
 it into any file it touches or relies on. Problems elsewhere in the repository
 count too, as out of scope.
@@ -107,8 +125,9 @@ Read the repository's CLAUDE.md and PRINCIPLES.md first: their rules are the
 standard.
 
 Rules:
-- Do not edit files, commit, push or tag. Your only writes are the GitHub
-  issues and the one comment described below, made with the gh CLI.
+- Do not edit files, commit, push or tag. Your only writes are the fetch,
+  your worktree (with git's own metadata for it), and the GitHub issues and
+  the one comment described below, made with the gh CLI.
 - Write every issue and comment body to a file first, as UTF-8 without a
   byte-order mark, and pass it with --body-file. Never inline a body.
 - Reproduce every finding: cite file:line, and give the command, the input or
@@ -133,6 +152,8 @@ Rules:
    --body-file:
    VERDICT: AGREE | BLOCK        (BLOCK if any MUST-FIX issue was opened)
    Reviewed: <vA.B.C>..<candidate SHA>
+   Worktree: <path>, relative, as above, where git rev-parse HEAD printed
+   <candidate SHA>
    Issues opened: #n (MUST-FIX), #m (SHOULD), ... or "none"
    Owner decisions: questions only the owner can settle, or "none"
    Nits: one line each, or "none" (nits do not get issues)
@@ -143,7 +164,8 @@ Rules:
 ## When the owner says the review is in
 
 - Read the verdict comment on the milestone issue and every issue it lists
-  (`gh issue view <n>`). Check that the SHA it names is the current candidate.
+  (`gh issue view <n>`). Check that the SHA it names is the current candidate,
+  and that it names the worktree it reviewed in at that SHA.
 - Reproduce each finding yourself before acting on it. A reviewer can be wrong,
   and so can you.
 - **AGREE**: create the annotated tag on exactly the reviewed SHA — `git tag -a
@@ -155,10 +177,13 @@ Rules:
   subagent as usual), or rebut it with evidence on the issue and leave the close
   to the owner. When the fixes are merged, move the candidate to the new `main`
   commit, update the milestone issue, and give the owner the re-review prompt
-  unasked, with the round number. A re-review prompt names the earlier verdict
-  (its SHA and the issues it opened) and the pull requests that fixed them, so
-  the reviewer checks those first and then the whole new range. After a third
-  round that does not end in AGREE, stop and take it to the owner.
+  unasked, with the round number. A re-review prompt is the same template with
+  the new candidate SHA. The reviewer fetches first again and makes a new
+  worktree for the new SHA, never reusing the last round's. It also names the
+  earlier verdict (its SHA and the issues it opened) and the pull requests that
+  fixed them, so the reviewer checks those first and then the whole new range.
+  After a third round that does not end in AGREE, stop and take it to the
+  owner.
 - SHOULD and OUT OF SCOPE: leave each issue for its own change unless the owner
   wants it in this release. Owner decisions: put them to the owner with a
   recommended default. Nits: your call, and say which you took.
