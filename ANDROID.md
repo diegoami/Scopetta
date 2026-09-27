@@ -28,7 +28,7 @@ off, and no subresource comes from outside.
 the one card Scopa scores on its own — out of the Napoletane sheet, and writes
 `assets/` for `@capacitor/assets` and `public/icons/` for the tab.
 Nearest-neighbour scaled: every output pixel is one source pixel repeated,
-because `CLAUDE.md` is explicit that the card art is not redrawn, and
+because `AGENTS.md` is explicit that the card art is not redrawn, and
 interpolation is redrawing by another name.
 
 ## 2. The build: Capacitor 8
@@ -161,7 +161,7 @@ in this project worth backing up somewhere that outlives the machine.
 
 ## 4. Publishing
 
-**Tag first.** A release is a milestone (`CLAUDE.md`): the annotated tag
+**Tag first.** A release is a milestone (`AGENTS.md`, *Releases*): the annotated tag
 `vX.Y.Z` goes on the reviewed commit on `main`, and everything below runs from a
 clean checkout of that tag (`DESKTOP.md`, *Releasing*): the packager refuses a
 tree that is not exactly HEAD, and the publisher refuses a build whose commit
@@ -241,7 +241,8 @@ it. The build, the debug APK and the offline emulator run are recorded above.
 
 **v1.0.2 is the current release** (2026-09-27), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>: the APK
 (`versionCode 3`, signed on the same key, `fdf7ca01…`) and the Windows executable
-beside it. It is the first release made as a milestone (`CLAUDE.md`): the
+beside it. It is the first release made as a milestone (`AGENTS.md`,
+*Releases*): the
 candidate `5b2fd93` was reviewed by a model other than Claude, which gave AGREE
 on #81. The annotated tag `v1.0.2` went on exactly that commit, and the release
 was packaged from a detached checkout of the tag with `tools/package_release.mjs`,

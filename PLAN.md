@@ -61,9 +61,9 @@ nowhere else:
   disclosure is for. Tressette does the same.
 - **`recorded` keeps its two owners** — set where a deal ends, cleared where one
   begins — with the break `a new deal does not clear the record flag` as the
-  evidence. `CLAUDE.md`'s rule came from `beat`, whose clear sat in a callback
-  nothing asserted; the harm there was the missing assertion rather than the
-  distance, and this flag has one.
+  evidence. The rule in the `ui-check` skill came from `beat`, whose clear sat
+  in a callback nothing asserted; the harm there was the missing assertion
+  rather than the distance, and this flag has one.
 - **A pull request may merge on individually verified breaks** when the full
   harness has not been re-run, provided the find-string matcher is clean and the
   page changes since the last full run are named. Iteration 4 merged that way,
@@ -266,8 +266,8 @@ netlify.toml        publish "public", cache decks/fonts/icons, revalidate index.
 assets/             the 1024px icon layers Capacitor's asset tool reads
 mobile/             the Capacitor wrapper that packages public/ as an APK (ANDROID.md)
 desktop/            the Tauri wrapper that packages public/ as a Windows app (DESKTOP.md)
-AGENTS.md, CLAUDE.md, PRINCIPLES.md
-                     the guidance, split by tool (§7.2, §7.3)
+AGENTS.md           the one instructions file: the project, the gates, the rules
+CLAUDE.md           a one-line import of AGENTS.md, for Claude Code
 README.md, RULES.md, REGOLE.md, ANDROID.md, DESKTOP.md, SPEC.md, .claude/skills/ui-check/
 ```
 
@@ -444,7 +444,7 @@ gift term, and wins the argmax without help. On the shipped engine Graziano
 declines a legal sweep in **47 of 1,534** decisions that offer one, 3.06% over
 2,000 deals; on the five-weight engine it was 0.77%, so the two terms added
 since made a claim that was already false four times more so. It was restated
-in this section and in `CLAUDE.md` without being re-checked, which is the §7.5
+in this section and in `AGENTS.md` without being re-checked, which is the §7.5
 defect this iteration spent a round fixing elsewhere.
 
 What holds is the measurement. Restoring `SCOPA_BONUS` on the engine that ships
@@ -1350,9 +1350,9 @@ written and being confirmed, and a shipped project still takes defects.
 
 Copy from Tressette: `public/decks/`, `tools/pack_cards.py`,
 `tools/check_ui.mjs` and the `ui-check` skill (both **dormant** until
-iteration 3, worded so in `CLAUDE.md`), `netlify.toml`, `.gitignore`,
+iteration 3, worded so in `AGENTS.md`), `netlify.toml`, `.gitignore`,
 `.github/workflows/check.yml` with the engine job only. Expand the stub
-`CLAUDE.md` into this repo's version: the same rules, reworded for the table
+`AGENTS.md` into this repo's version: the same rules, reworded for the table
 row rather than the fan. Empty `public/index.html` with the doctype,
 `lang="it"`, the charset, the viewport meta, the title and the font links —
 four of which are the head tags the document pass asserts, the title and the
@@ -1515,7 +1515,7 @@ and shows up in history with the right score; and every dialog-over-sheet
 path Tressette's iteration 4 found has its row here.
 
 **What this iteration found, and where each of them is written down.** Three
-of the four are §3.6's, above; the fourth is a rule and is in `CLAUDE.md`.
+of the four are §3.6's, above; the fourth is a rule and is in `AGENTS.md`.
 
 - The plan put carte, denari and the settebello **on the plate**, and the
   budget cannot pay for it: a fourth plate row is every card on the table. They
@@ -1546,7 +1546,7 @@ it, and neither did any iteration before this one. `fileURLToPath` and
 pass of `tools/break_ui.mjs` caught 126 of 141 and left fifteen: six survivors
 and nine caught by an assertion other than the one written for them. Every one
 was a defect in the *check* rather than in the page, and the rule each teaches
-is in `CLAUDE.md`. Two are worth repeating here because they are about this
+is in the `ui-check` skill. Two are worth repeating here because they are about this
 iteration's own design:
 
 - **the portrait seat becoming a flex row bounded the say line a second time**,
@@ -1665,7 +1665,7 @@ URL, and the preview refuses it too (`CONNECT tunnel failed, response 403`).
 `netlify.toml` sets `publish = "public"` and its own comment records that
 Discola once published `.` and served a private repo's documents from the live
 site. The file should win over any directory set in the Netlify UI, but should
-is not a measurement, and this repo's root is `PLAN.md` and `CLAUDE.md`.
+is not a measurement, and this repo's root is `PLAN.md` and `AGENTS.md`.
 
 **The owner's call at iteration 0 was not to verify it, and to ship.** So it
 stays unverified on purpose rather than by oversight, and this paragraph is
@@ -1739,29 +1739,26 @@ There is no orchestrator agent. This document is the plan and the owner
 decides when each iteration starts. Each iteration is one session, opened
 with:
 
-> Do iteration N of PLAN.md in `diegoami/Scopetta`. Read PLAN.md in full
-> first, then `diegoami/Tressette` (`SPEC.md` first, then `CLAUDE.md`,
-> `PLAN.md`, `public/engine.js`, `public/index.html`, `tools/check_ui.mjs`,
-> `tools/selfplay.mjs`, `.claude/skills/ui-check`), then `diegoami/discola-web`
-> (`SPEC.md`), then the previous iteration's pull request. Work in a worktree
-> of your own, never in the main checkout (`CLAUDE.md`, *Who works where*):
-> run `git fetch origin`, then `git worktree add --no-track -b
-> iteration-N-<slug> <main>/../<project>-work/iteration-N-<slug>
-> origin/<default>`, work only there, and push it first with
-> `git push -u origin iteration-N-<slug>`. Stop at the iteration's "Done
-> when": do not start the next one. Finish with every check green, commit,
-> push, and open a pull request with the description in §7.4.
+> Do iteration N of PLAN.md in `diegoami/Scopetta`. Read `AGENTS.md` first —
+> it is the one instructions file — then PLAN.md in full, then
+> `diegoami/Tressette` (`SPEC.md`, its plan, `public/engine.js`,
+> `public/index.html`, `tools/check_ui.mjs`, `tools/selfplay.mjs`,
+> `.claude/skills/ui-check`), then `diegoami/discola-web` (`SPEC.md`), then the
+> previous iteration's pull request. Branch from a fresh `origin/main` (`git
+> fetch origin` first) and push the branch with `git push -u origin
+> iteration-N-<slug>`. Use a worktree only to work beside another session
+> (`AGENTS.md`, *How work flows*). Stop at the iteration's "Done when": do not
+> start the next one. Finish with every check green, commit, push, and open a
+> pull request with the description in §7.4.
 
-**A non-trivial change may open its design as an issue first**, iterated with the
-reviewer to an explicit AGREE before the pull request; `AGENTS.md` states the
-two stages and the tool split, and `PRINCIPLES.md` the principles both tools
-share. Besides a `defect`, this is one of two kinds of issue; the other is
-Claude Code's milestone issue for a release, and the findings its review files
-(`CLAUDE.md`). **The
-iteration-and-pull-request flow in this section is the route for non-trivial
-work**; a **trivial** change — one that changes no behaviour, no assertion and no
-process text — takes neither stage, needs no pull request, and may be committed
-straight to `main`, per `AGENTS.md`.
+**A change that is more than a fix may open its design as an issue first**, and
+the owner agrees it before the work; a small fix or a documentation change goes
+straight to a pull request. Besides a `defect`, a milestone issue is the other
+kind: a release, with the independent review its `AGENTS.md` *Releases* section
+describes. **The iteration-and-pull-request flow in this section is the route
+for the work**; a trivial change — one that changes no behaviour, no assertion
+and no process text — takes no issue, needs no pull request, and may be
+committed straight to `main`.
 
 Why one iteration and not several: the defects this kind of page ships are
 invisible in a diff and show up only in the check or at the table, and a
@@ -1797,38 +1794,27 @@ to read the ancestors can be the small tier. Iterations 2 and 3 run alone.
 
 ### 7.3 The reviewer
 
-**The live statement of this process is [`AGENTS.md`](AGENTS.md), which split it
-by tool:** OpenCode runs the cross-model review; Claude Code reviews each change
-with a fresh-context subagent of its own, and at each milestone — a release —
-has another model review the diff since the last release tag before the new tag
-is made, as `CLAUDE.md` states
-(the owner's decisions on #44 and #47); and the principles both share are in
-[`PRINCIPLES.md`](PRINCIPLES.md). The **two stages** — a design issue iterated to
-an explicit AGREE, then the pull request reviewed the same way — the **signed
-verdict on GitHub**, and the rule that a **BLOCK goes to the owner** are stated
-there; this section keeps the reasoning, and the mechanics live in those files so
-the two do not drift.
+**Only a release is reviewed** (`AGENTS.md`, *Releases*). An ordinary pull
+request gets no second model: the builder verifies it with the gates, and the
+owner merges. The independent review runs once per release, on the candidate,
+before the tag — a model that implemented none of the release, in a fresh
+session, started from OpenCode on a model the owner names:
+`opencode run -m <provider/model> --command review-release <issue>`, or
+`/review-release <issue>` in the TUI after picking the model with `/models`.
+Neither the command nor the agent sets a model, so the owner's pick is the one
+used. This is how the owner standardised it across their projects: the release
+review is the one that protects what ships.
 
-Every pull request gets one review from a **fresh context** — a new session or
-a subagent that has not seen the work. **This is the implementation stage of the
-non-trivial route**: a trivial change takes neither stage and never reaches it,
-per `AGENTS.md`. **Under OpenCode, the reviewer is GPT-5.6 Luna at high
-effort** (`opencode/gpt-5.6-luna#high`), run as a subagent with that model; the
-builder is DeepSeek V4.1 Flash. A fresh context matters more than a different
-model — the builder cannot see its own diff, and a reviewer that shares its
-context cannot either — but the two roles are deliberately different models, so
-one model's blind spot is not the other's.
+The reviewer's job is written once, in `.opencode/agents/release-reviewer.md`;
+another tool can be pointed at that file and follows it the same way. It starts
+with no context and reads everything it needs from the milestone issue. It
+reviews the diff since the previous tag, follows it into any file it touches or
+relies on, opens one issue per reproduced finding, and posts one verdict
+comment, `AGREE` or `BLOCK`, on the milestone issue. A **BLOCK** goes to the
+owner; so does a third round that does not end in AGREE.
 
-**The review is posted where the work is, not handed back to the builder.** A
-review that lives only in a conversation is one the owner cannot see and the
-next session cannot read: the **design** verdict on the issue, the
-**implementation** verdict on the pull request, each signed as the reviewer so a
-reader can tell it from the builder's own comments. `AGENTS.md` gives the
-commands. This is not ceremony: the owner asked for it after a review that
-existed only in a subagent's reply.
-
-The reviewer is given three things: this document, the diff, and the check
-output pasted into the pull request. It checks, in order:
+This document, §2 and §3.4, the diff and the check output pasted into the
+milestone issue are the reviewer's material. It checks, in order:
 
 1. the rules against §2, line by line — the order single-before-sum, the
    compulsory capture, the scopa on the last card, the leftovers, the redeal,
@@ -1836,14 +1822,13 @@ output pasted into the pull request. It checks, in order:
 2. the opponent against §3.4 — the formula as written, the weights named as
    listed and no more, no DOM or `Math.random` in `engine.js`, the search
    scoring with the real `scoreDeal`;
-3. that the UI check actually ran, on this commit, and that every assertion
+3. that the UI check actually ran, on this candidate, and that every assertion
    still names a defect and every new one was shown to fail first;
-4. the iteration's "Done when", item by item;
-5. Italian on the page, English in comments and commits.
+4. the release's claims, item by item, and Italian on the page with English in
+   comments and commits.
 
-The reviewer reports; it does not fix. The builder fixes in the same pull
-request, and the reviewer looks once more. A finding the builder disagrees
-with goes to the owner, in the pull request, not into a silent merge.
+The reviewer reports; it does not fix. The builder fixes the MUST-FIX findings
+in ordinary pull requests, moves the candidate, and the review runs again.
 Tressette's reviews found, across four iterations, fourteen defects in the
 page and six tests that could not fail, and none of them in a break; expect
 the same rate and budget for it.
@@ -1855,24 +1840,18 @@ the same rate and budget for it.
   verbatim; what was left out and why.
 - **CI is the merge gate**: the engine tests from iteration 1, the UI check
   from iteration 3; a red check does not merge, and nothing is skipped or
-  quarantined to get to green. The gates, their schedule and the run count are
-  stated in [`AGENTS.md`](AGENTS.md).
-- **Issues hold a design proposal, a defect, or a milestone and its review's
-  findings** (the last is Claude Code's: a release, stated in `CLAUDE.md`). A non-trivial change may open
-  its design as an issue, iterated with the reviewer to an explicit AGREE before
-  the pull request (`AGENTS.md` states the two stages). A defect found by
-  playing, after an iteration has merged, is an issue too, labelled `defect`,
-  closed by a pull request that fixes the page *and* adds the assertion that
-  would have caught it, written against the broken commit first.
-- **No project board, no GitHub milestones, no issue per iteration.** This document
-  holds the plan; a second copy goes stale. A design issue is the exception, and
-  it is one per non-trivial change, not one per iteration.
-- **A pull request does not merge while its review is still running.**
-  Tressette's iteration 5 merged with its review in flight, and the review
-  then found the iteration's central conclusion wrong, which the next pull
-  request had to undo and redo. If the owner asks to merge while a review is
-  out, say so and what the last reviews found, and let them decide with that
-  in hand.
+  quarantined to get to green. The gates and their schedule are stated in
+  [`AGENTS.md`](AGENTS.md).
+- **Issues hold a design proposal, a defect, or a milestone.** A change that is
+  more than a fix may open its design as an issue first, and the owner agrees
+  it before the work. A defect found by playing, after an iteration has merged,
+  is an issue too, labelled `defect`, closed by a pull request that fixes the
+  page *and* adds the assertion that would have caught it, written against the
+  broken commit first. A milestone is a release, with its own review
+  (`AGENTS.md`, *Releases*).
+- **No project board, no GitHub milestones, no issue per iteration.** This
+  document holds the plan; a second copy goes stale. A design issue is the
+  exception, and it is one per change, not one per iteration.
 - **Commit messages** as in the house's history: one line saying what changed
   and why, in English, imperative mood, no ticket numbers.
 
@@ -1880,7 +1859,7 @@ the same rate and budget for it.
 
 Nothing lives in a session's memory. Anything learned goes into one of three
 files: a decision into §0 of this document, a rule the builder must follow
-into `CLAUDE.md`, and, at iteration 6, everything a stranger needs into
+into `AGENTS.md`, and, at iteration 6, everything a stranger needs into
 `SPEC.md`. If a session ends with something only it knows, that is a defect
 in the handoff.
 
@@ -1893,7 +1872,7 @@ the one measurement in §3.4 says what it counted.
 shipped a table that clipped the deck and a name plate off the right edge, with
 every assertion that would have caught it already written and already green,
 because the nineteen viewports held no landscape window narrower than 980px.
-The same sentence as the one above it in `CLAUDE.md`, one level up: an
+The same sentence as the one above it in the `ui-check` skill, one level up: an
 assertion only sees the states the check renders, and a viewport is a state.
 When a rule is about the widest thing on the screen, the grid needs the
 narrowest screen the rule has to hold on.

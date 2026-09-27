@@ -91,7 +91,7 @@ function rngSeed(seed){
   // generator is cheaper than remembering which draw is safe to use.
   //
   // Changing this changes every deal every seed produces, and so every figure
-  // in PLAN.md that cites a seed. See CLAUDE.md.
+  // in PLAN.md that cites a seed. See AGENTS.md.
   for (let i = 0; i < 8; i++) next();
   return next;
 }

@@ -402,7 +402,7 @@ const playLastLeftovers = `(() => {
   // The rest of a position 35 plays in: the dealer plays last, so it is the
   // opponent; and 35 cards are in the piles, not none. Nothing asserts either
   // today — but a pose that only holds together where the assertions look is
-  // not a position the engine can sit in, which is what CLAUDE.md asks of one.
+  // not a position the engine can sit in, which is what AGENTS.md asks of one.
   state.mazziere = 1;
   // The piles are the rest of the deck, built by EXCLUDING what is on the
   // table and in the hand rather than by slicing 35 off the front — which put

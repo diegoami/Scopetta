@@ -124,7 +124,8 @@ Both targets ship as one GitHub Release on
 on one version line, from this machine: it holds the Android signing key and
 the Rust toolchain.
 
-**Tag first, build from the tag.** A release is a milestone (`CLAUDE.md`): its
+**Tag first, build from the tag.** A release is a milestone (`AGENTS.md`,
+*Releases*): its
 candidate commit is reviewed, the annotated tag `vX.Y.Z` goes on exactly the
 reviewed SHA, and the release is packaged from a clean checkout of that tag.
 The scripts hold both ends (#65, `tools/source_tag.mjs`, from discola-web):

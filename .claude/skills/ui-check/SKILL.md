@@ -12,6 +12,26 @@ to code review and threw no error. It exists because reading the diff was
 repeatedly not enough — in Discola, where most of the thresholds below were
 calibrated, and in Tressette, which inherited the check and added the rest.
 
+The check is this game's own now — its fixtures, its table row, `scopetta`
+where it used to say `tressette` — and `check.yml` has the job that runs it.
+`SPEC.md` §7 lists what it covers; this skill says how to run it, how to read a
+failure, and which defect each threshold was written for.
+
+**The suspension ended at iteration 3.** The check was dormant while the game
+had no table; it is live now, and reading the diff was repeatedly not enough.
+Every UI defect Discola shipped was invisible in the diff and threw no error:
+cards overlapping the hand, the player's own hand pushed below the fold, the
+table drifting apart until it stopped reading as one surface, body copy at
+12.5px, and every screen rendering at once behind a click-eating overlay.
+Tressette forked that table and inherited every one of them. This game forks it
+again, so it inherits them a second time, plus the table row's own. Reading the
+diff catches none of them; the check catches each one it has a row for.
+
+`break_ui.mjs` is the other half of the check: it breaks the page on purpose,
+one defect at a time, and checks that the assertion *written for that defect*
+goes red — not merely that something did. The gate that runs it is in
+`AGENTS.md` (*Verification*).
+
 ## Run it
 
 ```sh
@@ -55,7 +75,8 @@ node tools/break_ui.mjs            # every break
 node tools/break_ui.mjs toast      # only the ones whose name matches
 ```
 
-`CLAUDE.md`: *a new assertion is made to fail before it is made to pass.* This
+`AGENTS.md` and this skill: *a new assertion is made to fail before it is made
+to pass.* This
 is that, mechanised, the way `tools/break.mjs` is for the engine. Each break is
 one edit to `public/index.html`, applied to a copy, with the check pointed at
 it; nothing in the repository changes.
@@ -362,6 +383,293 @@ value read before anything had changed it, a rule held up by two lines so that
 removing either changed nothing, and a pass that threw on a broken page and
 took its own findings with it. Run `tools/break_ui.mjs` after adding an
 assertion, not before shipping it — the survivors are the part worth reading.
+
+**Three more the owner found by playing, after six review rounds had not.** A
+new hand *appeared* — three outlines became three cards between one frame and
+the next, measured at 40ms intervals across a round boundary — which reads as a
+flicker rather than as a deal, so a card that arrives in a hand is dealt in. The
+say line was `--t-tiny`, the smallest type on the table, while being the only
+text on it that says what the next tap will DO: it has a size of its own now and
+the check holds it to the floor it holds body copy to, whatever its length,
+because length is a proxy for "is this read" and here it points the wrong way.
+And the deal ended with a total and no working — the five points are counted out
+now, with the counts beside them, because "denari" with no number is a claim;
+and each row shows what it is **worth**, because a column of counts with a
+total underneath does not say how one becomes the other. The markers down a
+column are the total, the check adds them up and compares, and the rule is
+written once in words underneath. Carte briefly carried the four suits it is
+made of, and that was a number too many: three of the four can never score and
+the fourth is the denari row again, so half the working was there to be
+discarded. **Working shown is only working if every line of it is used.**
+
+**A card the player never sees is a card that was never played.** `gioca` moves
+a capturing card from a hand straight to a pile, so a table that draws only
+what `state.tavola` holds never draws it at all: the opponent's card appears
+nowhere, and the player watches cards leave and has to work out what took them.
+The owner found that by playing the preview, after five reviews had not. So the
+card lands on the table first, among the cards it is about to gather, and the
+capture runs a beat later — which is what a hand does at a real table. A card
+that takes nothing is ringed for the same beat, because it arrives among as
+many as twelve others and nothing else says which one is new.
+
+**A state the engine refuses to sit in has to be played, not posed.** Two of
+those rows cannot be set up by assigning to `state`: a toast over a table that
+still has cards on it is not a scopa, and two empty hands are a position
+`gioca` deals its way out of before it returns — it reports the beat in
+`nuovoGiro` and the page draws it from the flag. Pose either one and the check
+passes whether or not the page can reach it. Both are played now, with the
+page's own `play`.
+
+**And measure the broken page, not the healthy one.** `.tavola`'s bounded grid
+column was taken out of the sheet on a measurement that said it changed
+nothing — and it does change nothing, on a page whose row already fits. Its
+whole job is on a page whose row does not: an auto column grows with its row,
+`width: 100%` follows it, and the assertion that watches for a row spilling
+past its own box can never fire. A line that only matters when something else
+is wrong is exactly the line a mutation harness is for, and the evidence for
+one is a pair of runs, not one.
+
+**And a CHANGE of viewport is a state too, and the hardest kind to remember:**
+every case in the grid loads the page at a size and measures it once, so a page
+that never draws itself again is a page the whole grid agrees with. Two things
+on this table are decided in script rather than in the sheet — whether the
+middle row wraps, and which rung the say line can hold — and neither was read
+again after the first paint. Measured, with no reload: rotating 980x385 to
+portrait left one row of thirteen cards with a 22.6px strip, under the floor;
+rotating 360x800 to landscape left two rows against a budget that paid for one,
+82px of scrolling and your own seat 75px below the fold; and a say line raised
+at 600x853 and resized to 320 kept its rung and stood 38px tall in a 23px box.
+The page listens for `resize` now, and the check turns the phone over.
+
+**And a viewport is a state.** The same defect a third time: iteration 3's
+nineteen viewports held no landscape window narrower than 980px, and the
+assertions that would have caught the clipped deck were all written and all
+green. When a rule is about the widest thing on the screen, the grid needs the
+narrowest screen the rule has to hold on.
+
+**And a floor is a rule, not a missing viewport.** 1100x320 left the grid in
+iteration 3 because the card sits on its 32px clamp floor there, so "no
+scrolling" tested the clamp rather than the derivation. Dropping it left short
+landscape with nothing asking whether the budget fits. It is back (#5).
+Wherever the card is on its designed floor, the table pass lifts the floor and
+asks the question of the budget alone, and the scroll the floor adds is the
+stated fallback. Only the designed floor earns that: a card held up by any other
+floor is still held to no scrolling, or the break that raises the floor would
+survive. And lifting the floor gives the budget its slack back, which the strict
+rule on the floored page did not have. A 7-9px defect on short landscape alone
+passed until those windows joined the inflated pass, where the slack is zero.
+**An exemption is paid for somewhere, and the review that found this one built
+the defect to show where.**
+
+**And the last play of a deal is a state, and so is the moment after the play
+that ends a round.** Three defects shipped in those two, all found by the sixth
+review and none by any assertion: `gioca` sets `over` on the 36th play, so a
+result panel drawn from `over` alone goes up before the card has landed and the
+three beats run behind an opaque panel, for one play in every deal; a last card
+that takes nothing is swept up *with the leftovers*, to whoever captured last,
+and was drawn going to whoever played it, which says two players took cards from
+one play; and `gioca` deals the next round before it returns, so between the
+play that empties both hands and the beat the state already holds three new
+cards a side — drawn there, a hand appears, deals in, blanks and deals in again,
+1.35s of flicker where the deal-in was meant to remove it. **When the engine
+does something extra on a play, that play is a state of its own**, and the beats
+around it need rendering separately from the ordinary ones.
+
+**A flag with two owners is a flag no assertion can watch.** A fix set `beat`
+in `play()` and left it being cleared inside a callback in another function —
+and the break written for the beat stopped tripping the assertion written for
+it, because whatever skipped the clearing now left the flag *set*: the page
+hung with both hands drawn empty instead of failing at the rule that watches
+the flag. Measured on the mutated page: `beat` true forever, `plays` stuck at 6.
+Both ends of a flag belong in one place, and if a driver or a fixture has to
+put a flag back by hand to keep working, that is the same defect showing early.
+
+**And a mark that is never taken off is a mark that means nothing.** The card a
+hand is dealt is marked `data-dealt`, and nothing removed it when the card was
+played — so a slot carried the first deal's mark into the second, and the check
+counted a stale mark as a fresh one. The deal-in could be switched off for
+rounds two to six, which is every round the beat pass actually measures, and
+the whole check still passed. `faceOf` clears it with the card now.
+
+**And the first of anything is a state too.** The first hand of a session was
+dealt in only because something had rendered the table before Gioca was pressed
+— and the only thing that does is `document.fonts.ready`. On a cold load with
+the font still on its way, the first hand a player ever sees *appears*:
+measured, `{"drawn":6,"dealt":0}` against a settled-font control of
+`{"drawn":6,"dealt":6}`. The check could not see it from either side, because
+it blocks the webfont so `fonts.ready` resolves at once, and because no pass
+looked at the first deal at all — only at a round boundary. **A slot now starts
+with `data-empty="true"` rather than with nothing**, and the rule is asserted
+on `buildHands` itself rather than on the outcome, because the outcome measures
+the boot render and not the function.
+
+**And an assertion has to be about what the thing is FOR.** "The page entered
+the beat" had a firing set strictly inside the window assertion's and could
+never go red on its own — and, worse, nothing anywhere said `BEAT` did
+anything: the hands are already empty for `LANDS + SWEEP`, so setting it to
+zero changed nothing any rule could see. What `BEAT` buys is *holding* the
+empty hands after the table has settled, so that is what is measured, sampled
+once `sweeping` and `laid` are clear rather than at the play.
+
+**And a state the seed does not reach has to be posed.** A driven deal reaches
+whichever ending its seed reaches: the deal the check drives ends in a capture,
+so the two endings where the last card takes *nothing* — onto leftovers, and
+onto a table a scopa emptied — are posed up to the play and then played. The
+break written for each of them survived until the check rendered them.
+
+**And a way into a screen is a state.** The rules screen is reachable from the
+start sheet and from the table, and Back has to return to whichever opened it —
+a Back that always lands on the start sheet abandons the deal of anyone who
+opened the rules mid-hand. A screen the check only ever enters by one door is
+half-checked, so both doors are in `SCREENS` and both are walked back.
+
+**And a box that shares a row with another box is bounded by the same token
+that pays for it.** In portrait the name plate took whatever width its content
+wanted, and that was right for as long as it was alone on its row. Iteration 4
+put the show-points box beside it, and the row became two boxes and a gap:
+`Graziano / avversario / mazziere` at max-content is 195px, the pair is 323px of
+a 288px seat at 320x568, the row wrapped, each seat cost a plate row nobody had
+budgeted for, and the table handed back **72px of scrolling with your own seat
+63px below the fold**. Both boxes are `--plate-w` in both orientations now.
+There is a second half to it: a `width: auto` box **cannot fail a `scrollWidth`
+test**, so "the plate's text fits the width the budget bought" had never been
+asserted in portrait at all, in either game.
+
+**And a number said in two places is a second thing that can be wrong about the
+same deal.** Iteration 3 put `Fine: 5 a 3` in the say line because the result
+had nowhere else to go. Iteration 4 gave it a panel and took the say line's copy
+out rather than leaving a duplicate, and the reason is a defect rather than
+tidiness: the panel is deliberately held back while the last play is still being
+drawn — that was iteration 3's own bug and its fix — and the say line is not
+under the panel until the panel goes up. **The same defect was still there, in
+the other element**, reading the score out over the last card as it landed. A
+duplicate does not merely drift; it keeps the bug the original was fixed for.
+
+**And a line that names a cause has to be able to be wrong about it.** The
+result says what decided the smazzata by scoring the deal again without each
+component and seeing which removal changes who won — and it names one only when
+**exactly one** does. At a margin of a single point every point the winner holds
+is decisive, so naming one is picking a favourite among equals, and the honest
+line there is the margin. The check asserts the property rather than the string:
+take the component the line names out of `scoreDeal`'s answer, and the other
+player has to win. A table of phrases passes that test only by accident.
+
+**And an assertion about a page's language belongs on the element that carries
+it.** "The rules are in both languages" asserted as *a `lang` attribute exists
+somewhere* passes a page whose English paragraphs are tagged Italian — the break
+written for it survived, because deleting one `lang="en"` left six English
+paragraphs behind. Each language is a `section[lang]` now and each section is
+measured on its own, which is also what a screen reader and a hyphenator read.
+
+**And a break that survives is the check confessing.** Iteration 4's mutation
+run caught 126 of 141, and every one of the fifteen it did not is the same
+family: an assertion that was never in a position to see its own subject. They
+are worth more than the breaks that passed, and the shapes repeat.
+
+- **A box bounded twice cannot be failed by removing one bound.** The say line
+  is held inside the seat by `width: 100%` *and*, since the portrait seat became
+  a flex row, by `flex: 0 0 100%`. Measured with and without the first: 16..304
+  at 320x568, identical to the pixel. Both gone, and iteration 3's defect is
+  back at −22px to 342px on a 320px screen. `break_ui.mjs` takes arrays for
+  exactly this, and a survivor is how you find out you need one.
+- **A hidden screen measures zero.** Show-points was turned off on the settings
+  sheet and the points boxes were measured *there*, where every box on the table
+  has no height whatever the setting says. An assertion has to look at the
+  screen its subject is on.
+- **A count is discriminating only when the numbers differ.** The history's
+  tally was asserted against one smazzata, so *smazzate*, *vinte*, *perse* and
+  *pari* were 1, 1, 0, 0 and three of the four cells could be wired to the wrong
+  list and still agree. It is asserted against a win, a loss and a draw now.
+- **An assertion made before anything has changed asks whether X equals X.**
+  The deck row's name was read while the deck was still the one the markup
+  ships, so the rule that writes it could be deleted entirely.
+- **And a pass that drives the page has to survive the page being broken.**
+  Eight of the nine mismatches were one cause: a click that times out on a
+  broken page threw out of the pass and took every finding it had already made
+  with it, so the harness saw eight failures with nothing in them. `checkDeal`
+  has carried that guard since iteration 3; every pass that drives needs it.
+
+**And an assertion behind a condition needs a fixture that meets the
+condition.** Three of this iteration's survivors were one shape, and it is the
+one to look for first: the rule was written correctly, and the fixture could
+not reach it. The points box measured on a screen that was not on. The tally
+measured against a single smazzata, where every count is 1. The record against
+each opponent guarded by `names.length > 1`, with every seeded row against the
+same name — so the block never rendered and the guard skipped in silence, which
+looks exactly like passing. A guard that is never entered is an assertion that
+is never made, and nothing but the break can tell you which you have.
+
+**And a reservation for text is a height, and a height is measured.** The start
+sheet holds space for the dossier so that choosing an opponent does not move the
+deck row under a thumb already on its way to it. Tressette reserves four lines;
+Franco's dossier is four lines on a laptop, five at 360x800 and **six at
+320x568**, so the number was already wrong on the narrowest screen the game
+claims to work on, before the roster has even grown. It is measured now — the
+tallest dossier the roster produces at this width, re-measured when the phone
+turns and when the webfont lands — which is the same rule the say line's rung
+follows, and the same rule `--chrome` follows.
+
+**And a guard is railed, not just written.** Five of iteration 4's assertions
+sat behind a condition with nothing watching whether it was ever entered, and
+the worst of them no viewport grid could have reached: `NOTE_OK` skipped its
+whole property check when the result's note named no component, so a
+`notaFinale` that stopped naming them and always fell back to the margin would
+have left "2 punti di scarto." on a 5–3 deal with every pass green. The others
+were a box measured on a screen that was not on, a count asserted where every
+number was 1, a record block guarded on a second opponent the fixture never
+seeded, and a collapse check that skips when the round happens to end on a
+scopa. **When an assertion is optional, say out loud what makes it optional** —
+`else out.push('… so the rule below was never asked')` — because an assertion
+that is never made looks exactly like one that passed.
+
+**And a new assertion is made to fail before it is made to pass.** Write it
+against a deliberately broken page first and watch it go red, because an
+assertion written against already-correct code encodes what the code happens to
+do rather than what it should do — Discola's gap metric was written that way
+once and passed the broken layout while failing every good one. The same rule
+covers the engine from iteration 1: every rule test is broken on purpose after
+it is written, and one that still passes is decoration.
+
+**And the check's own environment is part of the check.** The page asks Google
+Fonts for its type, and whether that request succeeds decides how wide every
+string on the table is. An assertion calibrated against the fallback metrics
+passed here — no network — and failed in CI, where the real font loaded and the
+string was narrower. A check whose answer depends on the network is not a check,
+so the three faces are served from `fonts/` and a fonts pass asserts that every
+character is inside the shipped subset, that every `@font-face` loads with the
+network cut, and that no subresource comes from the network. And **`node
+tools/check_ui.mjs` passing locally is not the
+same claim as CI being green** — read the job before saying a pull request is
+green, because `break_ui.mjs` refuses to run at all against a page the check
+fails, so a red check takes the mutation harness with it.
+
+The environment includes the machine the work is done on. With no argument the
+check resolved its own page through a `file://` URL's `pathname` and
+`path.resolve`, which on Windows is `C:\C:\Users\…`, so it could not open the
+page it exists to measure. CI is Linux and never saw it, and neither did three
+iterations. `fileURLToPath` and `pathToFileURL` are identical on Linux and
+correct on both.
+
+**And the font a plate falls back to is not the one the page ships.** Iteration 4
+shipped a name plate that fitted here and spilled 3px in CI at every 360x800
+case in all five decks, with the local check green — the same shape as the
+defect that made blocking necessary, one level down. `--font-label` ends in
+`system-ui`, which is Segoe UI on Windows and DejaVu or Liberation Sans on a
+Linux runner, and the second is wider. **A check whose answer depends on which
+fonts the machine happens to have is not a check**, so it asks the question
+against a spread of real metrics instead: the pass *the plates in a fallback
+font* renders the plates in five label faces at six shapes. Anything sized to
+fit text needs that treatment, not just a measurement taken once on one machine.
+
+**And a box is derived from the type it has to hold, not from the type next to
+it.** `--plate-w` was `7.5 × --t-pick` — the size of the NAME — when what sets
+the plate's minimum is `avversario` beneath it at `--t-tiny`, which §5 measured
+as longer than any name in the roster. The two agree until the scales come
+apart, and they come apart exactly where both hit their floors: at 320 and 360
+`--t-pick` is 16px and `--t-tiny` is 12.5px, so the token bought 120px against
+125px of content. Deriving from the wrong one of two tokens is a coincidence
+that holds until it does not, which is the same failure as hard-coding, wearing
+a derivation.
 
 ## Reading a failure
 

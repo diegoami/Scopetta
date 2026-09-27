@@ -292,7 +292,7 @@ export function checksumProblems(manifestText, hashOf, { expected, present } = {
 // the one place a player meets the unsigned-first decision (DESKTOP.md): it
 // says what SmartScreen will show and how to get past it. `subtitle` is the
 // one line that changes from release to release. `tag` and `commit` name the
-// source every binary was built from (CLAUDE.md, "Each milestone"); the
+// source every binary was built from (AGENTS.md, *Releases*); the
 // publisher always passes both, having checked the tag names that commit.
 export function releaseNotes(version, { subtitle, tag, commit } = {}){
   const [apk, exe] = releaseAssets(version);
