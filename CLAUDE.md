@@ -87,7 +87,8 @@ pre-releases.
 3. **Claude gives the owner one review prompt**, written with the
    `review-handoff` skill, and puts the same prompt in the milestone issue. The
    owner runs it in a model that is not Claude, in a fresh session. The reviewer
-   fetches first (`git fetch origin --tags`, never `git pull`), and counts the
+   fetches first (`git fetch origin --tags <candidate SHA>`, never `git pull`:
+   the candidate has no tag yet, so it is fetched by its SHA), and counts the
    candidate as missing only if it is still not a commit after the fetch. It
    reviews in a fresh, detached worktree of its own at exactly the candidate
    SHA, never in the checkout it started in, and checks `git rev-parse HEAD`

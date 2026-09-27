@@ -87,9 +87,11 @@ the code.
 MILESTONE: release <vX.Y.Z>, round <n> of at most 3
 THREAD: <milestone issue URL>
 CANDIDATE: <full SHA> on main.
-FETCH FIRST: git fetch origin --tags, and if this prompt names a pull
-request, also git fetch origin pull/<N>/head. Not git pull: the checkout you
-started in may be on another branch or hold local changes.
+FETCH FIRST: git fetch origin --tags <full SHA>. Naming the SHA fetches the
+candidate itself, which has no tag yet, whatever branches the checkout you
+started in is set up to fetch. If CANDIDATE above names a pull request <N>,
+also git fetch origin pull/<N>/head. Not git pull: the checkout you started
+in may be on another branch or hold local changes.
 A commit you cannot see is not missing until you have fetched. Stop and say
 so only if git cat-file -t <full SHA> still does not print "commit" after
 the fetch.
