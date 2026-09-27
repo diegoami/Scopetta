@@ -226,7 +226,7 @@ This section is the release-status source of truth.
 |---|---|---|---|---|
 | 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **done** |
 | 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **done** |
-| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, and v1.0.1 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1> |
+| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, v1.0.1 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, and v1.0.2 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2> |
 | 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **done** — installed on the owner's tablet and played |
 | 5 | Add the about-screen link, run the check | either, after 3 | **done in this change** |
 
@@ -239,13 +239,19 @@ All five steps are done: the key exists, the releases repo exists and carries
 v1.0.0, it was published from this machine, and the owner installed and played
 it. The build, the debug APK and the offline emulator run are recorded above.
 
-**v1.0.1 is the current release** (2026-09-23), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>: the APK
-(`versionCode 2`, signed on the same key, `fdf7ca01…`) and, for the first time,
-the Windows executable beside it (`DESKTOP.md`). It was packaged from `main` at
-`5e1669c` with `tools/package_release.mjs`, which built both, smoked the exe and
-verified the staging, and published with `publish_release.mjs --confirm` on the
-owner's go-ahead. The executable downloaded back from the release matches its
-checksum.
+**v1.0.2 is the current release** (2026-09-27), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>: the APK
+(`versionCode 3`, signed on the same key, `fdf7ca01…`) and the Windows executable
+beside it. It is the first release made as a milestone (`CLAUDE.md`): the
+candidate `5b2fd93` was reviewed by a model other than Claude, which gave AGREE
+on #81. The annotated tag `v1.0.2` went on exactly that commit, and the release
+was packaged from a detached checkout of the tag with `tools/package_release.mjs`,
+which built both, smoked the exe and verified the staging. It was published with
+`publish_release.mjs --confirm` on the owner's go-ahead. Both assets, downloaded
+back from the release, match `SHA256SUMS.txt`.
+
+**v1.0.1** (2026-09-23), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, was the first release to carry the
+Windows executable beside the APK (`versionCode 2`). It was packaged from `main`
+at `5e1669c`, before releases were built from a tag.
 
 Two things worth knowing when publishing, both learned on Tressette:
 `storeFile` in `keystore.properties` is read as a Java properties value, so a
