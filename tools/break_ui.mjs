@@ -1225,8 +1225,11 @@ const judge = async ([name, find, replace]) => {
   const out = await run(join(work, "index.html"), why ? null : want);
   if (why){
     if (out === null) return [`equivalent ${name}`, () => equivalent.push([name, why])];
-    return [`NOT EQUIV ${name} — the equivalence claim is wrong`,
-            () => mismatched.push([name, "claimed equivalent, but the check caught it", ""])];
+    // With what the check said, as a MISMATCH does: a claim that fails once in
+    // a full run and passes alone is otherwise a verdict nobody can explain.
+    const said = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim()).slice(0, 2).join(" | ");
+    return [`NOT EQUIV ${name} — the equivalence claim is wrong\n         saw:    ${said}`,
+            () => mismatched.push([name, "claimed equivalent, but the check caught it", said])];
   }
   if (out === null) return [`SURVIVED ${name}`, () => survived.push(name)];
 
