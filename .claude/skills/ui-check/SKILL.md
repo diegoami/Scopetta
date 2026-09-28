@@ -95,6 +95,14 @@ claims, and only the second is worth anything.
 It runs with `QUICK=1`, which trims the viewport grid. A quick run is for
 proving an assertion bites, never for clearing one.
 
+It checks several breaks at once (`JOBS=n`, default 4 or the core count if
+lower; `JOBS=1` is one at a time), and stops a break's check as soon as the
+assertion written for it has fired, since that is all its verdict reads.
+Survivors, mismatches, the equivalence claims and the unbroken page still run
+to the end. The report is printed in the order of the breaks either way. On a
+4-core Linux container the whole harness went from 2h12m to 50 minutes, with
+every verdict unchanged.
+
 ## What it covers
 
 **Document pass** — one page load, four facts about the document rather than its
