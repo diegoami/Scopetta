@@ -38,10 +38,15 @@ goes red — not merely that something did. The gate that runs it is in
 node tools/check_ui.mjs
 ```
 
-Exit code 0 means clean. It takes about twenty-five minutes — twelve passes, and
-the sheets pass iteration 4 added drives more of the page than any other; let it
-finish rather than interrupting it. It prints the Chromium it used, because that is part of
-the answer — `check.yml` pins `playwright-core` so CI runs the same one.
+Exit code 0 means clean. It is twelve passes and over a thousand fresh pages,
+and each pass runs its cases side by side, up to four at a time (or the machine's
+core count, if lower): on a 4-core Linux container that took the whole check
+from 9.3 minutes to 4.6. `WORKERS=n` sets the width, and `WORKERS=1` is the
+serial check, case for case; the report is printed in the serial order either
+way, so a failure reads the same. It prints each pass's time, then the total;
+let it finish rather than interrupting it. It prints the Chromium it used,
+because that is part of the answer — `check.yml` pins `playwright-core` so CI
+runs the same one.
 
 **And then read the `ui` job on the pull request.** Locally the browser, its
 fonts and the fallback faces are this machine's; in CI they are the runner's,
