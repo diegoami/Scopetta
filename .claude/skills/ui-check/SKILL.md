@@ -103,9 +103,17 @@ verdict reads, and exits 1 as a finished run would. A check that prints the
 line and counts no failure is still clean: the harness reads the verdict off
 the check's exit code, never off the lines alone (`tools/break_ui.test.mjs`
 holds it to that). Survivors, mismatches, the equivalence claims and the
-unbroken page run to the end. The report is printed in the order of the breaks either way. On a
-4-core Linux container the whole harness went from 2h12m to 50 minutes, with
-every verdict unchanged.
+unbroken page run to the end. The report is printed in the order of the breaks
+either way.
+
+Each check it runs gets `WORKERS` = cores / `JOBS` (at least 1), so the machine
+runs about as many pages as it has cores. Four checks at the check's own
+default ran sixteen pages on four cores, and the states pass, which samples a
+capture's second beat at 700ms inside a 600-900ms window, sampled it late:
+"the capture was not drawn leaving the table", on a page that passes alone. On
+a 4-core Linux container the whole harness went from 2h12m to about an hour
+(64 minutes, measured with a fifth check looping beside it), every verdict
+unchanged.
 
 ## What it covers
 
