@@ -1153,14 +1153,23 @@ const chosen = filter ? BREAKS.filter(b => b[0].includes(filter)) : BREAKS;
 if (!chosen.length){ console.error(`no break matches ${JSON.stringify(filter)}`); process.exit(2); }
 
 const dir = mkdtempSync(join(tmpdir(), "scopetta-ui-"));
-const env = { ...process.env, QUICK: "1" };
-
 // How many breaks are checked at once. Each is its own check on its own copy
 // of the page, with its own Chromium, and nothing but the report is shared —
 // which is printed in the order of BREAKS, whatever finishes first. JOBS=1 is
 // one break at a time.
 const JOBS = Math.max(1, Math.floor(Number(process.env.JOBS))
   || Math.min(4, availableParallelism()));
+
+// And how many pages each of those checks keeps open, so that the machine as a
+// whole runs about as many pages as it has cores. The check's own default is
+// sized for a check that has the machine to itself; four of them at four pages
+// each ran sixteen on four cores, and the states pass, which samples a beat
+// 600-900ms after a play at 700ms, sampled it late and found the capture
+// already gone: "the capture was not drawn leaving the table", on a page it
+// passes alone. It failed an equivalence claim once in a full run and once in
+// four runs looped under one. A WORKERS set by hand is passed through as it is.
+const env = { ...process.env, QUICK: "1",
+  WORKERS: process.env.WORKERS || String(Math.max(1, Math.floor(availableParallelism() / JOBS))) };
 
 // Runs the check on `file`: null if it exits 0, else everything it printed —
 // the same rule the harness always had, and the only place a verdict of
