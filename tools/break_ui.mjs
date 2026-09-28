@@ -19,6 +19,10 @@
 // repository. It runs with QUICK=1, which trims the viewport grid: a quick run
 // is for proving an assertion bites, never for clearing one.
 //
+// Several breaks are checked at once (JOBS, below), and a break's check stops
+// as soon as the assertion written for it has fired, which is the only thing
+// its verdict reads. Neither changes a verdict or the report: see `run`.
+//
 // A break must be caught by the assertion written for it, not merely by some
 // assertion — EXPECT names which, and a break caught only by others is
 // MISMATCH and red. That distinction is the whole point: "the check went red"
@@ -118,10 +122,10 @@
 // timer ever fired. The first is deleted and the second plays a card first.
 
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, availableParallelism } from "node:os";
 
 const PAGE = fileURLToPath(new URL("../public/index.html", import.meta.url));
 const PUBLIC = dirname(PAGE);
@@ -1149,21 +1153,50 @@ if (!chosen.length){ console.error(`no break matches ${JSON.stringify(filter)}`)
 const dir = mkdtempSync(join(tmpdir(), "scopetta-ui-"));
 const env = { ...process.env, QUICK: "1" };
 
-const run = file => {
-  try {
-    execFileSync(process.execPath, [CHECK, file],
-      { stdio: "pipe", timeout: 600000, maxBuffer: 64 * 1024 * 1024, env });
-    return null;                                  // clean
-  } catch (e) {
-    return String(e.stdout || "") + String(e.stderr || "");
-  }
-};
+// How many breaks are checked at once. Each is its own check on its own copy
+// of the page, with its own Chromium, and nothing but the report is shared —
+// which is printed in the order of BREAKS, whatever finishes first. JOBS=1 is
+// one break at a time.
+const JOBS = Math.max(1, Math.floor(Number(process.env.JOBS))
+  || Math.min(4, availableParallelism()));
+
+// Runs the check on `file`: null if it is clean, else everything it printed.
+//
+// With `want`, the check is stopped the moment a line naming it is printed.
+// That is the whole verdict for a break: it is caught when that assertion
+// fires, anywhere, and the check prints its report in a fixed order, so the
+// first line to name it is the same line a finished run would have shown.
+// The passes after it can only add lines, and a caught break reads none of
+// them. Without `want` — the unbroken page, an equivalence claim, a break with
+// no EXPECT — and whenever the line never comes, the check runs to the end, so
+// SURVIVED, MISMATCH and "clean" are all read off a finished run, as before.
+const run = (file, want = null) => new Promise(resolve => {
+  const child = spawn(process.execPath, [CHECK, file], { env, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", seen = 0, stopped = false;
+  const stop = () => { stopped = true; child.kill(); };
+  const timer = setTimeout(stop, 600000);
+  child.stdout.on("data", d => {
+    out += d;
+    if (!want || stopped) return;
+    // Whole lines only, and only the ones a verdict is read from.
+    const end = out.lastIndexOf("\n");
+    if (end < seen) return;
+    const fresh = out.slice(seen, end).split("\n");
+    seen = end + 1;
+    if (fresh.some(l => /^\s{8}/.test(l) && l.includes(want))) stop();
+  });
+  child.stderr.on("data", d => { out += d; });
+  child.on("close", code => {
+    clearTimeout(timer);
+    resolve(code === 0 && !stopped ? null : out);
+  });
+});
 
 // The page has to pass before any of this means anything.
 {
   const base = join(dir, "base");
   cpSync(PUBLIC, base, { recursive: true });
-  if (run(join(base, "index.html")) !== null){
+  if (await run(join(base, "index.html")) !== null){
     console.error("the check does not pass on the unbroken page — fix that first");
     rmSync(dir, { recursive: true, force: true });
     process.exit(2);
@@ -1172,7 +1205,10 @@ const run = file => {
 
 let caught = 0; const survived = [], mismatched = [], invalid = [], equivalent = [];
 
-for (const [name, find, replace] of chosen){
+// One break, start to verdict. It prints nothing itself: it returns the line
+// for the report and a function that files the verdict, both applied in the
+// order of BREAKS so the report and the summary read as a serial run's would.
+const judge = async ([name, find, replace]) => {
   // A break is one edit, except where one edit cannot express the defect: two
   // rules can hold the same thing up, and removing either alone changes
   // nothing. Then `find` and `replace` are equal-length arrays and the edits
@@ -1180,38 +1216,49 @@ for (const [name, find, replace] of chosen){
   const finds = Array.isArray(find) ? find : [find];
   const reps  = Array.isArray(replace) ? replace : [replace];
   const bad = finds.map(f => TEXT.split(f).length - 1).filter(h => h !== 1).length;
-  if (bad || finds.length !== reps.length){
-    invalid.push([name, `${bad} of ${finds.length} edits did not match exactly once`]);
-    console.log(`INVALID  ${name} — ${bad} edit(s) did not match exactly once`);
-    continue;
-  }
+  if (bad || finds.length !== reps.length)
+    return [`INVALID  ${name} — ${bad} edit(s) did not match exactly once`,
+            () => invalid.push([name, `${bad} of ${finds.length} edits did not match exactly once`])];
   const work = join(dir, name.replace(/[^a-z0-9]+/gi, "-"));
   cpSync(PUBLIC, work, { recursive: true });
   writeFileSync(join(work, "index.html"),
     finds.reduce((text, f, i) => text.replace(f, reps[i]), TEXT));
 
-  const out = run(join(work, "index.html"));
   const why = EQUIVALENT[name];
-  if (why){
-    if (out === null){ equivalent.push([name, why]); console.log(`equivalent ${name}`); }
-    else { mismatched.push([name, "claimed equivalent, but the check caught it", ""]);
-           console.log(`NOT EQUIV ${name} — the equivalence claim is wrong`); }
-    continue;
-  }
-  if (out === null){ survived.push(name); console.log(`SURVIVED ${name}`); continue; }
-
   const want = EXPECT[name];
-  const lines = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim());
-  if (!want){ mismatched.push([name, "no expected assertion declared", lines[0] || ""]);
-              console.log(`UNDECLARED ${name}`); continue; }
-  const hit = lines.find(l => l.includes(want));
-  if (!hit){
-    mismatched.push([name, want, lines.slice(0, 2).join(" | ")]);
-    console.log(`MISMATCH ${name}\n         wanted: ${want}\n         saw:    ${lines.slice(0, 2).join(" | ")}`);
-    continue;
+  const out = await run(join(work, "index.html"), why ? null : want);
+  if (why){
+    if (out === null) return [`equivalent ${name}`, () => equivalent.push([name, why])];
+    return [`NOT EQUIV ${name} — the equivalence claim is wrong`,
+            () => mismatched.push([name, "claimed equivalent, but the check caught it", ""])];
   }
-  caught++;
-  console.log(`caught   ${name}  →  ${hit.slice(0, 74)}`);
+  if (out === null) return [`SURVIVED ${name}`, () => survived.push(name)];
+
+  const lines = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim());
+  if (!want) return [`UNDECLARED ${name}`,
+                     () => mismatched.push([name, "no expected assertion declared", lines[0] || ""])];
+  const hit = lines.find(l => l.includes(want));
+  if (!hit)
+    return [`MISMATCH ${name}\n         wanted: ${want}\n         saw:    ${lines.slice(0, 2).join(" | ")}`,
+            () => mismatched.push([name, want, lines.slice(0, 2).join(" | ")])];
+  return [`caught   ${name}  →  ${hit.slice(0, 74)}`, () => caught++];
+};
+
+{
+  const done = new Array(chosen.length);
+  let next = 0, printed = 0;
+  const worker = async () => {
+    while (next < chosen.length) {
+      const i = next++;
+      done[i] = await judge(chosen[i]);
+      while (printed < chosen.length && done[printed]) {
+        const [line, file] = done[printed++];
+        console.log(line);
+        file();
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(JOBS, chosen.length) }, worker));
 }
 
 rmSync(dir, { recursive: true, force: true });
