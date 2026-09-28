@@ -20,7 +20,7 @@
 // is for proving an assertion bites, never for clearing one.
 //
 // Several breaks are checked at once (JOBS, below), and a break's check stops
-// as soon as the assertion written for it has fired, which is the only thing
+// once it has failed and printed the assertion written for it, which is all
 // its verdict reads. Neither changes a verdict or the report: see `run`.
 //
 // A break must be caught by the assertion written for it, not merely by some
@@ -129,7 +129,9 @@ import { tmpdir, availableParallelism } from "node:os";
 
 const PAGE = fileURLToPath(new URL("../public/index.html", import.meta.url));
 const PUBLIC = dirname(PAGE);
-const CHECK = fileURLToPath(new URL("./check_ui.mjs", import.meta.url));
+// CHECK_UI points the harness at another check, which is how
+// tools/break_ui.test.mjs hands it a stand-in whose exit code it controls.
+const CHECK = process.env.CHECK_UI || fileURLToPath(new URL("./check_ui.mjs", import.meta.url));
 // LF, whatever the checkout: a `find` that spans lines is written with "\n",
 // and Git for Windows checks index.html out CRLF, where 54 of the breaks
 // matched nothing and came back INVALID — issue #43.
@@ -1160,35 +1162,29 @@ const env = { ...process.env, QUICK: "1" };
 const JOBS = Math.max(1, Math.floor(Number(process.env.JOBS))
   || Math.min(4, availableParallelism()));
 
-// Runs the check on `file`: null if it is clean, else everything it printed.
+// Runs the check on `file`: null if it exits 0, else everything it printed —
+// the same rule the harness always had, and the only place a verdict of
+// "clean" comes from.
 //
-// With `want`, the check is stopped the moment a line naming it is printed.
-// That is the whole verdict for a break: it is caught when that assertion
-// fires, anywhere, and the check prints its report in a fixed order, so the
-// first line to name it is the same line a finished run would have shown.
-// The passes after it can only add lines, and a caught break reads none of
-// them. Without `want` — the unbroken page, an equivalence claim, a break with
-// no EXPECT — and whenever the line never comes, the check runs to the end, so
-// SURVIVED, MISMATCH and "clean" are all read off a finished run, as before.
+// With `want`, the check is told (STOP_AFTER) to stop at the end of the first
+// pass after which it has both failed and printed a line naming `want`. That
+// is the whole verdict for a caught break, and neither half can be undone by
+// a later pass, so a finished run would end the same way. The CHECK decides
+// that it has failed, by its own count and its own exit code; the harness
+// kills nothing and infers nothing from the lines alone. A check that prints
+// the line and exits 0 is clean, as it always was (the review of #91).
+// Without `want` — the unbroken page, an equivalence claim, a break with no
+// EXPECT — the check runs to the end.
 const run = (file, want = null) => new Promise(resolve => {
-  const child = spawn(process.execPath, [CHECK, file], { env, stdio: ["ignore", "pipe", "pipe"] });
-  let out = "", seen = 0, stopped = false;
-  const stop = () => { stopped = true; child.kill(); };
-  const timer = setTimeout(stop, 600000);
-  child.stdout.on("data", d => {
-    out += d;
-    if (!want || stopped) return;
-    // Whole lines only, and only the ones a verdict is read from.
-    const end = out.lastIndexOf("\n");
-    if (end < seen) return;
-    const fresh = out.slice(seen, end).split("\n");
-    seen = end + 1;
-    if (fresh.some(l => /^\s{8}/.test(l) && l.includes(want))) stop();
-  });
+  const child = spawn(process.execPath, [CHECK, file], {
+    env: want ? { ...env, STOP_AFTER: want } : env, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; child.kill(); }, 600000);
+  child.stdout.on("data", d => { out += d; });
   child.stderr.on("data", d => { out += d; });
   child.on("close", code => {
     clearTimeout(timer);
-    resolve(code === 0 && !stopped ? null : out);
+    resolve(code === 0 && !timedOut ? null : out);
   });
 });
 

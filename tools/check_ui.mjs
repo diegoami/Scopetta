@@ -3852,26 +3852,50 @@ const browser = await chromium.launch({ ...(CHROME && { executablePath: CHROME }
 // playwright-core for the same reason: two runs that do not agree about the
 // environment are not two runs of the same check.
 console.log(`chromium ${browser.version()}`);
+// tools/break_ui.mjs sets STOP_AFTER to the assertion a break was written for.
+// Its verdict is "the check failed, and a line naming that assertion was
+// printed", so once both are true nothing a later pass does can change it:
+// `failed` only grows, and a line once printed stays printed. The check then
+// stops at the end of that pass and exits through the same door as a finished
+// run, failure count and all. It stops only on a FAILED check: a line printed
+// by a check that counted nothing is exactly what the harness must go on
+// seeing as a check that passed. Nothing else sets STOP_AFTER.
+const STOP_AFTER = process.env.STOP_AFTER || null;
+let named = false;
+if (STOP_AFTER) {
+  const log = console.log;
+  console.log = (...args) => {
+    if (args.join(' ').split('\n').some(l => /^\s{8}/.test(l) && l.trim().includes(STOP_AFTER)))
+      named = true;
+    log(...args);
+  };
+}
+
 let failed = 0;
 const T0 = Date.now();
-const timed = async (label, run) => {
+const PASSES = [
+  ['document',       () => checkDocument(browser)],
+  ['fonts',          () => checkFonts(browser)],
+  ['screens',        () => checkScreens(browser)],
+  ['table',          () => checkTable(browser, null, false)],
+  ['table inflated', () => checkTable(browser, TIGHT, true)],
+  ['choice',         () => checkChoice(browser)],
+  ['states',         () => checkStates(browser)],
+  ['rotation',       () => checkRotation(browser)],
+  ['rules',          () => checkRules(browser)],
+  ['fallback fonts', () => checkFallbackFonts(browser)],
+  ['sheets',         () => checkSheets(browser)],
+  ['deal',           () => checkDeal(browser)],
+];
+for (const [label, run] of PASSES) {
   const t = Date.now();
-  const n = await run();
+  failed += await run();
   console.log(`  [${label}: ${((Date.now() - t) / 1000).toFixed(1)}s]`);
-  return n;
-};
-failed += await timed('document', () => checkDocument(browser));
-failed += await timed('fonts', () => checkFonts(browser));
-failed += await timed('screens', () => checkScreens(browser));
-failed += await timed('table', () => checkTable(browser, null, false));
-failed += await timed('table inflated', () => checkTable(browser, TIGHT, true));
-failed += await timed('choice', () => checkChoice(browser));
-failed += await timed('states', () => checkStates(browser));
-failed += await timed('rotation', () => checkRotation(browser));
-failed += await timed('rules', () => checkRules(browser));
-failed += await timed('fallback fonts', () => checkFallbackFonts(browser));
-failed += await timed('sheets', () => checkSheets(browser));
-failed += await timed('deal', () => checkDeal(browser));
+  if (named && failed) {
+    console.log(`\nstopped after ${label}: STOP_AFTER was printed and the check has failed`);
+    break;
+  }
+}
 console.log(`  [total: ${((Date.now() - T0) / 1000).toFixed(1)}s]`);
 await browser.close();
 

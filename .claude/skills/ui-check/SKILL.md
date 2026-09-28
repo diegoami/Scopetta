@@ -96,10 +96,14 @@ It runs with `QUICK=1`, which trims the viewport grid. A quick run is for
 proving an assertion bites, never for clearing one.
 
 It checks several breaks at once (`JOBS=n`, default 4 or the core count if
-lower; `JOBS=1` is one at a time), and stops a break's check as soon as the
-assertion written for it has fired, since that is all its verdict reads.
-Survivors, mismatches, the equivalence claims and the unbroken page still run
-to the end. The report is printed in the order of the breaks either way. On a
+lower; `JOBS=1` is one at a time), and tells each check the assertion its
+break was written for (`STOP_AFTER`). The check stops at the end of the first
+pass after which it has both failed and printed that line, which is all the
+verdict reads, and exits 1 as a finished run would. A check that prints the
+line and counts no failure is still clean: the harness reads the verdict off
+the check's exit code, never off the lines alone (`tools/break_ui.test.mjs`
+holds it to that). Survivors, mismatches, the equivalence claims and the
+unbroken page run to the end. The report is printed in the order of the breaks either way. On a
 4-core Linux container the whole harness went from 2h12m to 50 minutes, with
 every verdict unchanged.
 
