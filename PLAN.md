@@ -41,6 +41,7 @@ and the sections below say what moves.
 | 6 | How a card is played | **One tap plays it**, Discola's rhythm, because a Scopa hand is three whole cards and not a fan of strips. When the rule leaves a *choice* of capture — two sevens on the table, or 4+3 and 5+2 — the tap raises the card instead, the table shows the first option, and the player picks and confirms. | Tressette's two taps everywhere would buy a preview of every capture at a tap per play; its check rows and its raised state exist already, so it is a change of default rather than of design. |
 | 7 | Where the engine lives | **`engine.js`, a classic script beside `index.html`**, as in Tressette. Still static, still no build. | See Tressette's §3.1 for what one-file-only costs the tuner. |
 | 8 | What *scopa d'assi* means, if it is ever wanted | **Not built, and not guessed at.** Raised by iteration 1: §5 lists it among the variants left out, but this plan never says what it does, and the house rule genuinely differs — in some it is another name for *asso piglia tutto*, in others a scopa scored for an asso played to an empty table. The other three variants are live branches behind constants that are off; this one is a documented gap instead, because a constant guessing between two rules would be worse than none. | Nothing, unless the owner wants it. If so, say which of the two it is and it becomes a fourth constant like the others. |
+| 9 | The UI language | **Follow the device language**: Italian for `it-*`, English otherwise; let the player choose either in Settings and save that choice. Player-facing prose, including the strategy-weights disclosure, follows the selected language; code identifiers and established card/deck/Scopa terms stay as written. | Defaults and the saved override are measured in both locales; the rules screen shows only the selected `section[lang]`, while keeping both sections in the document. Decided in #88. |
 
 **Four smaller ones were settled at iteration 4**, and they are here rather than
 in a pull request comment because §7.5 says a decision lives in this section and
@@ -54,11 +55,10 @@ nowhere else:
   screen instead of it. The guard stays in `finish`, the equivalence is recorded
   in `break_ui.mjs` with its reasoning, and the Done-when is met by a stronger
   guarantee than the row would have tested. The owner accepted the deletion.
-- **The weights disclosure stays in English.** It is the only player-facing
-  English outside the rules screen, against §1's rule, and it is deliberate:
-  those strings are the literal identifiers in `engine.js`, so a player
-  comparing the sheet with the source sees the same words, which is what a
-  disclosure is for. Tressette does the same.
+- **The weights disclosure is localized.** The owner superseded the earlier
+  decision to keep it in English in #88: explanatory prose follows the selected
+  UI language, while literal engine identifiers such as `compGioca` stay
+  unchanged so a player can still compare them with the source.
 - **`recorded` keeps its two owners** — set where a deal ends, cleared where one
   begins — with the break `a new deal does not clear the record flag` as the
   evidence. The rule in the `ui-check` skill came from `beat`, whose clear sat
@@ -108,8 +108,10 @@ The contract, in one list. Everything else is detail.
   hand can be deduced rather than guessed at, every one of them plays the last
   six cards out exactly and identically, as Tressette's do from trick
   fourteen. §3.4.
-- **Player-facing text is Italian.** Comments, commits and documents are
-  English.
+- **Player-facing copy follows the selected language.** Italian is the default
+  on `it-*` devices, English otherwise, and a saved Settings choice wins.
+  Comments, commits and project documentation are English; `REGOLE.md` is the
+  Italian long form of the rules for players.
 - **The UI check runs after every UI change**, and every threshold in it names
   the defect it was written for.
 - **What is different is different because the game is**, not because of
@@ -884,9 +886,10 @@ settings ──Cambia avversario──► confirm ─► start
   rules in both languages and for the about screen to show them, and a screen
   that is only reachable from the table is half a screen, so it opens from the
   start sheet too and Back returns to whichever opened it. Italian and English
-  are a `section[lang]` each, which is where the language belongs: half a page
-  carrying the other half's `lang` is what a screen reader and a hyphenator
-  read. What is still iteration 4's is the rest of the screen — the constants
+  are a `section[lang]` each, and only the selected section is shown; both stay
+  in the document so each is measured in its own language. A half-page carrying
+  the other half's `lang` is what a screen reader and a hyphenator read. What is
+  still iteration 4's is the rest of the screen — the constants
   of §2 named one by one, and the provenance of the cards. `RULES.md` and
   `REGOLE.md` are iteration 4's still, and this screen is their short form, not
   a substitute: a rule stated twice in two places drifts, so the long documents
@@ -1824,8 +1827,8 @@ milestone issue are the reviewer's material. It checks, in order:
    scoring with the real `scoreDeal`;
 3. that the UI check actually ran, on this candidate, and that every assertion
    still names a defect and every new one was shown to fail first;
-4. the release's claims, item by item, and Italian on the page with English in
-   comments and commits.
+4. the release's claims, item by item, and that player-facing copy follows the
+   selected UI language while comments and commits stay in English.
 
 The reviewer reports; it does not fix. The builder fixes the MUST-FIX findings
 in ordinary pull requests, moves the candidate, and the review runs again.

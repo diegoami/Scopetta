@@ -107,7 +107,7 @@ a PR (`Fixes #n`) or rebut it on the issue with evidence.
 - **After any UI change, run `node tools/check_ui.mjs`.** It is not optional,
   and not only when something looks wrong. Every UI defect this project shipped
   was invisible in the diff and threw no error. The `ui-check` skill says what
-  the twelve passes cover, how to read a failure, and which defect each
+  the fourteen passes cover, how to read a failure, and which defect each
   threshold was written for.
 - **After any engine change, run `npm test`.** The tests are deterministic
   (seeded RNG) and cover what the UI check cannot see: the capture rules, the
@@ -326,14 +326,14 @@ ran from `FormCreate`. It is a house tradition now, not a Delphi accident.
 
 ## Conventions
 
-- Player-facing text is Italian, except on the rules screen, which says
-  everything twice — the owner asked for both languages, and the check measures
-  each `section[lang]` on its own. Comments, commit messages and documents are
-  English, and `REGOLE.md` is the exception that proves it: it is the rules
-  screen's long form, for a player, so it is in the language the game is played
-  in. Those two documents **cite the screen's wording rather than restating
-  it** — a rule written twice in two places drifts, and the screen is the copy
-  a player actually reads.
+- Player-facing copy follows the selected language: Italian on `it-*` devices,
+  English otherwise, with a saved Settings choice taking precedence. Established
+  Italian card, deck and Scopa terms remain Italian. The rules screen keeps both
+  `section[lang]` sections and shows only the selected one; `RULES.md` and
+  `REGOLE.md` cite its English and Italian wording rather than restating it — a
+  rule written twice in two places drifts, and the screen is the copy a player
+  actually reads. Comments, commit messages and project documentation are
+  English; `REGOLE.md` is the Italian long form of the rules for players.
 - No build step and no runtime dependencies. `playwright-core` is for the UI
   check only and is gitignored.
 - The card art is the original 1997 bitmaps, copied byte for byte from

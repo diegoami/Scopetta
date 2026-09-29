@@ -1482,32 +1482,32 @@ button.card:disabled{ cursor: default; }
   <header class="topbar">
     <span class="wordmark">Scopetta</span>
     <nav class="tools">
-      <button class="tool" id="again" type="button" title="Nuova smazzata" aria-label="Nuova smazzata">
+      <button class="tool" id="again" type="button" data-i18n-label="newDeal" title="Nuova smazzata" aria-label="Nuova smazzata">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.7 3.3"/><path d="M20 5.5V11h-5.5"/></svg>
       </button>
-      <button class="tool" id="btnHistory" type="button" title="Storico smazzate" aria-label="Storico smazzate">
+      <button class="tool" id="btnHistory" type="button" data-i18n-label="history" title="Storico smazzate" aria-label="Storico smazzate">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.4 2"/></svg>
       </button>
-      <button class="tool" id="btnSettings" type="button" title="Impostazioni" aria-label="Impostazioni">
+      <button class="tool" id="btnSettings" type="button" data-i18n-label="settings" title="Impostazioni" aria-label="Impostazioni">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.1"/><circle cx="16" cy="12" r="2.1"/><circle cx="8" cy="17" r="2.1"/></svg>
       </button>
-      <button class="tool" id="about" type="button" title="Regole" aria-label="Regole">
+      <button class="tool" id="about" type="button" data-i18n-label="rules" title="Regole" aria-label="Regole">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>
       </button>
     </nav>
   </header>
 
   <main class="table" id="table">
-    <p class="cheat-note" id="cheatNote" hidden>Carte scoperte</p>
+    <p class="cheat-note" id="cheatNote" data-i18n="cheatNote" hidden>Carte scoperte</p>
 
     <section class="seat seat--opp">
       <div class="plate" id="plateOpp">
         <span class="turn-dot"></span>
         <span>
           <span class="plate__who" id="oppName">Graziano</span>
-          <span class="plate__role">avversario</span>
+          <span class="plate__role" data-i18n="roleOpponent">avversario</span>
         </span>
-        <span class="plate__deal" id="oppDeal" hidden>mazziere</span>
+        <span class="plate__deal" id="oppDeal" data-i18n="dealer" hidden>mazziere</span>
       </div>
       <div class="seat__cards">
         <div class="pile" id="pileOpp" data-count="0">
@@ -1545,15 +1545,15 @@ button.card:disabled{ cursor: default; }
              aria-labelledby="resultTitle">
       <!-- The counting scrolls; the two ways on below it do not. -->
       <div class="result__body">
-        <h2 class="result__title" id="resultTitle">Fine della smazzata</h2>
+        <h2 class="result__title" id="resultTitle" data-i18n="resultDone">Fine della smazzata</h2>
         <div class="result__grid" id="resultGrid"></div>
-        <p class="result__rule">Un punto per le carte, i denari, il settebello e la
+        <p class="result__rule" data-i18n="resultRule">Un punto per le carte, i denari, il settebello e la
           primiera, più un punto per ogni scopa.</p>
         <p class="result__note" id="resultNote"></p>
       </div>
       <div class="result__actions">
-        <button class="btn btn--primary" id="resultAgain" type="button">Ancora</button>
-        <button class="btn" id="resultChange" type="button">Cambia avversario o mazzo</button>
+        <button class="btn btn--primary" id="resultAgain" data-i18n="playAgain" type="button">Ancora</button>
+        <button class="btn" id="resultChange" data-i18n="changeOpponentOrDeck" type="button">Cambia avversario o mazzo</button>
       </div>
     </section>
 
@@ -1581,10 +1581,10 @@ button.card:disabled{ cursor: default; }
       <div class="plate" id="plateYou">
         <span class="turn-dot"></span>
         <span>
-          <span class="plate__who">Tu</span>
-          <span class="plate__role">giocatore</span>
+          <span class="plate__who" data-i18n="you">Tu</span>
+          <span class="plate__role" data-i18n="rolePlayer">giocatore</span>
         </span>
-        <span class="plate__deal" id="youDeal" hidden>mazziere</span>
+        <span class="plate__deal" id="youDeal" data-i18n="dealer" hidden>mazziere</span>
       </div>
     </section>
   </main>
@@ -1592,16 +1592,14 @@ button.card:disabled{ cursor: default; }
 
 <!-- ============================ the rules ============================ -->
 
-<!-- Both languages, one after the other, because the game is played in Italian
-     and read by people who are not. No toggle: a control that hides half the
-     page is a state the check has to render and a reader has to find, and the
-     two together are shorter than most rulebooks. -->
+<!-- Both language-tagged sections stay in the document; the active locale shows
+     only its own section, for readers and screen readers alike. -->
 <div class="view" id="viewRules" hidden>
   <header class="topbar">
-    <button class="tool" id="rulesBack" type="button" title="Indietro" aria-label="Indietro">
+    <button class="tool" id="rulesBack" type="button" data-i18n-label="back" title="Indietro" aria-label="Indietro">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <span class="wordmark">Regole</span>
+    <span class="wordmark" data-i18n="rules">Regole</span>
     <span class="tools" aria-hidden="true"></span>
   </header>
   <div class="sheet-body">
@@ -1686,7 +1684,7 @@ button.card:disabled{ cursor: default; }
         e giocare senza connessione.</p>
       </section>
 
-      <section lang="en">
+      <section lang="en" hidden>
         <h2>Scopa for two</h2>
 
         <p>Forty cards in four suits: denari, coppe, spade, bastoni. The
@@ -1765,9 +1763,9 @@ button.card:disabled{ cursor: default; }
       </section>
 
       <p class="prose__foot">
-        <a href="https://github.com/diegoami/Scopetta">Sorgente di questo gioco</a> &middot;
+        <a href="https://github.com/diegoami/Scopetta" data-i18n="sourceLink">Sorgente di questo gioco</a> &middot;
         <a href="https://github.com/diegoami/Tressette">Tressette</a> &middot;
-        <a href="https://github.com/diegoami/discola-web">Discola, la briscola del 1997</a>
+        <a href="https://github.com/diegoami/discola-web" data-i18n="discolaLink">Discola, la briscola del 1997</a>
       </p>
     </div>
   </div>
@@ -1785,10 +1783,10 @@ button.card:disabled{ cursor: default; }
        opened it. -->
   <header class="topbar topbar--start">
     <nav class="tools">
-      <button class="tool" data-nav="history" type="button" title="Storico smazzate" aria-label="Storico smazzate">
+      <button class="tool" data-nav="history" type="button" data-i18n-label="history" title="Storico smazzate" aria-label="Storico smazzate">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.4 2"/></svg>
       </button>
-      <button class="tool" data-nav="settings" type="button" title="Impostazioni" aria-label="Impostazioni">
+      <button class="tool" data-nav="settings" type="button" data-i18n-label="settings" title="Impostazioni" aria-label="Impostazioni">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.1"/><circle cx="16" cy="12" r="2.1"/><circle cx="8" cy="17" r="2.1"/></svg>
       </button>
     </nav>
@@ -1797,26 +1795,26 @@ button.card:disabled{ cursor: default; }
     <div class="sheet-inner">
       <div class="hero">
         <h1>Scopetta</h1>
-        <p>Scopa a due. Una smazzata, trentasei carte giocate, quattro punti
+        <p data-i18n="tagline">Scopa a due. Una smazzata, trentasei carte giocate, quattro punti
           più le scope.</p>
         <!-- The one line out of the game, as in Tressette and Discola: the
              builds, on the releases page the rules screen already links to.
              Not "Regole, download e crediti" as theirs say — their link goes
              to a README that carries all three, and this game's releases
              README does not, so the line names only what it leads to. -->
-        <p class="hero-link"><a href="https://github.com/diegoami/scopetta-releases/releases/latest">Scarica per Android e Windows</a></p>
+        <p class="hero-link"><a href="https://github.com/diegoami/scopetta-releases/releases/latest" data-i18n="download">Scarica per Android e Windows</a></p>
         <p class="last-result" id="lastResult" hidden></p>
       </div>
 
       <div class="group">
-        <div class="group-head"><span class="eyebrow">Avversario</span></div>
+        <div class="group-head"><span class="eyebrow" data-i18n="opponent">Avversario</span></div>
         <div class="chips" id="opponents"></div>
         <p class="dossier" id="dossier" aria-live="polite"></p>
       </div>
 
       <div class="group">
         <div class="group-head">
-          <span class="eyebrow">Mazzo</span><span class="pick" id="deckName">Trevisane</span>
+          <span class="eyebrow" data-i18n="deck">Mazzo</span><span class="pick" id="deckName">Trevisane</span>
         </div>
         <div class="decks" id="decks"></div>
       </div>
@@ -1825,28 +1823,28 @@ button.card:disabled{ cursor: default; }
            screen had one in its bar until the bar went, and a screen reachable
            from one place and not the other is half a screen — which is why both
            doors are in the check's SCREENS. -->
-      <button class="btn" id="aboutStart" type="button">Regole del gioco</button>
+      <button class="btn" id="aboutStart" data-i18n="gameRules" type="button">Regole del gioco</button>
     </div>
   </div>
   <footer class="start-foot">
-    <button class="btn btn--primary btn--big" id="play" type="button">Gioca</button>
+    <button class="btn btn--primary btn--big" id="play" data-i18n="play" type="button">Gioca</button>
   </footer>
 </div>
 
 <!-- ============================ settings ============================ -->
 <div class="view" id="viewSettings" hidden>
   <header class="topbar">
-    <button class="tool" type="button" data-back title="Indietro" aria-label="Indietro">
+    <button class="tool" type="button" data-back data-i18n-label="back" title="Indietro" aria-label="Indietro">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <span class="wordmark">Impostazioni</span>
+    <span class="wordmark" data-i18n="settings">Impostazioni</span>
     <span class="tools" aria-hidden="true"></span>
   </header>
   <div class="sheet-body">
     <div class="sheet-inner">
       <div class="group">
-        <span class="eyebrow">Tavolo</span>
-        <label class="field" for="deckSel">Mazzo
+        <span class="eyebrow" data-i18n="table">Tavolo</span>
+        <label class="field" for="deckSel"><span data-i18n="deck">Mazzo</span>
           <select id="deckSel">
             <option value="Trevisane">Trevisane</option>
             <option value="Piacentine">Piacentine</option>
@@ -1856,33 +1854,41 @@ button.card:disabled{ cursor: default; }
             <option value="Bresciane">Bresciane</option>
           </select>
         </label>
-        <label class="field" for="feltSel">Panno
+        <label class="field" for="feltSel"><span data-i18n="cloth">Panno</span>
           <input type="color" id="feltSel" value="#1e5140">
         </label>
-        <label class="field" for="speedSel">Ritmo
+        <label class="field" for="speedSel"><span data-i18n="pace">Ritmo</span>
           <input type="range" id="speedSel" min="200" max="2000" step="100" value="1300">
         </label>
-        <label class="toggle" for="pointsSel">Mostra i punti
+        <label class="toggle" for="pointsSel"><span data-i18n="showPoints">Mostra i punti</span>
           <input type="checkbox" id="pointsSel" checked>
         </label>
-        <label class="toggle" for="soundSel">Suono
+        <label class="toggle" for="soundSel"><span data-i18n="sound">Suono</span>
           <input type="checkbox" id="soundSel" checked>
         </label>
       </div>
 
       <div class="group">
-        <span class="eyebrow">Smazzata</span>
-        <button class="btn" id="changeOpponent" type="button">Cambia avversario</button>
+        <span class="eyebrow" data-i18n="deal">Smazzata</span>
+        <button class="btn" id="changeOpponent" data-i18n="changeOpponent" type="button">Cambia avversario</button>
       </div>
 
       <details class="group">
-        <summary class="eyebrow" style="cursor:pointer;list-style:revert">Pesi della strategia</summary>
-        <p class="prose">I sette pesi con cui <code>compGioca</code> sceglie la
+        <summary class="eyebrow" data-i18n="weights" style="cursor:pointer;list-style:revert">Pesi della strategia</summary>
+        <p class="prose" data-i18n-html="weightsNote">I sette pesi con cui <code>compGioca</code> sceglie la
         carta e la presa, per l&rsquo;avversario scelto. Nell&rsquo;ultimo giro
         non ne usa nessuno: lì il mazzo è finito, le carte in mano all&rsquo;altro
         si deducono, e la posizione si gioca per intero.</p>
         <table class="weights" id="weightsTable"><tbody></tbody></table>
       </details>
+      <div class="group">
+        <label class="field" for="langSel"><span data-i18n="language">Lingua · Language</span>
+          <select id="langSel">
+            <option value="it" lang="it">Italiano</option>
+            <option value="en" lang="en">English</option>
+          </select>
+        </label>
+      </div>
     </div>
   </div>
 </div>
@@ -1890,10 +1896,10 @@ button.card:disabled{ cursor: default; }
 <!-- ============================ history ============================ -->
 <div class="view" id="viewHistory" hidden>
   <header class="topbar">
-    <button class="tool" type="button" data-back title="Indietro" aria-label="Indietro">
+    <button class="tool" type="button" data-back data-i18n-label="back" title="Indietro" aria-label="Indietro">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
-    <span class="wordmark">Storico</span>
+    <span class="wordmark" data-i18n="historyTitle">Storico</span>
     <span class="tools" aria-hidden="true"></span>
   </header>
   <div class="sheet-body">
@@ -1905,11 +1911,11 @@ button.card:disabled{ cursor: default; }
      it is asked from the table and from the settings sheet alike. -->
 <div class="scrim" id="confirmScrim" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-    <h2 id="confirmTitle">Abbandonare la smazzata?</h2>
-    <p>La smazzata in corso va persa e non viene registrata nello storico.</p>
+    <h2 id="confirmTitle" data-i18n="confirmTitle">Abbandonare la smazzata?</h2>
+    <p data-i18n="confirmNote">La smazzata in corso va persa e non viene registrata nello storico.</p>
     <div class="result__actions">
-      <button class="btn btn--primary" id="confirmNo" type="button">Continua a giocare</button>
-      <button class="btn btn--quiet" id="confirmYes" type="button">Abbandona</button>
+      <button class="btn btn--primary" id="confirmNo" data-i18n="confirmNo" type="button">Continua a giocare</button>
+      <button class="btn btn--quiet" id="confirmYes" data-i18n="confirmYes" type="button">Abbandona</button>
     </div>
   </div>
 </div>
@@ -1925,6 +1931,141 @@ button.card:disabled{ cursor: default; }
    --------------------------------------------------------------------------- */
 
 /* --- decks ------------------------------------------------------------------ */
+
+// Italian copy stays in the markup; the English table is its one-to-one
+// counterpart. Text built by the page uses the same tables through `t`, so a
+// language change reaches both the sheets and the live game.
+const IT = {
+  playCard: name => `Gioca ${art(name)}`,
+  chooseCapture: name => `Scegli come prendere con ${art(name)}`,
+  takeWith: (cards, card) => `Prendi ${cards} con ${art(card)}`,
+  takeCards: cards => `Prendi ${cards}`,
+  takeMarkedOne: "Prendi la carta segnata",
+  takeMarkedMany: n => `Prendi le ${n} carte segnate`,
+  yes: "sì",
+  pointNames: ["carte", "ori", "settebello", "primiera", "scope"],
+  resultRows: ["carte", "denari", "settebello", "primiera", "scope"],
+  resultTotal: "totale",
+  won: "Hai vinto", lost: "Hai perso", drawn: "Pareggio",
+  finalTie: (score, missing) => missing.length
+    ? `Pareggio a ${score}. Nessuno ha preso: ${missing.join(", ")}.`
+    : `Pareggio a ${score}.`,
+  decided: {
+    carte: "Le carte hanno deciso la smazzata.",
+    denari: "I denari hanno deciso la smazzata.",
+    settebello: "Il settebello ha deciso la smazzata.",
+    primiera: "La primiera ha deciso la smazzata.",
+    scope: "Hanno deciso le scope."
+  },
+  marginOne: "Decisa per un punto.",
+  margin: n => `${n} punti di scarto.`,
+  lastResult: (y, a, opponent) => `Ultima smazzata: hai ${y > a ? "vinto" : y < a ? "perso" : "pareggiato"} ${y}–${a} contro ${opponent}`,
+  historyEmpty: "Nessuna smazzata ancora. Lo storico resta in questo browser.",
+  historyTally: ["smazzate", "vinte", "perse", "pari"],
+  wonAgainst: "Vinte contro",
+  resultLetter: { w: "V", l: "S", d: "P" },
+  clearHistory: "Cancella lo storico",
+  deckLabel: name => `Mazzo ${name}`,
+  locale: "it-IT",
+  dossier: {
+    Franco: "Punta su carte e denari: per lui ogni carta presa vale molto e un denaro ancor di più, così gioca per prendere e bada poco a quello che lascia. È il più aggressivo dei quattro, e a volte lascia in tavola più di quanto vorrebbe.",
+    Graziano: "Lo standard della casa. Equilibrato: conta le carte uscite, non lascia in tavola una somma che tu possa spazzare, e l'ultimo giro lo gioca esatto — come tutti gli altri, perché lì i pesi non servono più.",
+    Valerio: "Gioca per il mazzo delle carte, non per gli ori: un denaro vale per lui come qualunque altra carta. Il settebello però resta un punto a sé, e quello lo prende. Prende molto, ma il punto dei denari spesso lo lascia a te.",
+    Piero: "Tirato a sorte a ogni sessione, come in Discola: le sue inclinazioni cambiano e ogni volta è un giocatore un po' diverso — ma sempre il prudente. Non lascia in tavola una carta che valga qualcosa, dà peso ai sette e ai sei dei semi dove sei corto, e teme la scopa più di chiunque altro."
+  }
+};
+
+const EN = {
+  newDeal: "New deal", history: "Deal history", settings: "Settings", rules: "Rules",
+  cheatNote: "Cards face up", roleOpponent: "opponent", dealer: "dealer", you: "You",
+  rolePlayer: "player", resultDone: "Deal complete",
+  resultRule: "One point for cards, denari, the settebello and primiera, plus one point per scopa.",
+  playAgain: "Play again", changeOpponentOrDeck: "Change opponent or deck",
+  back: "Back", sourceLink: "This game's source", discolaLink: "Discola, the 1997 Briscola game",
+  tagline: "Two-player Scopa. One deal, thirty-six cards played, four points plus scopas.",
+  download: "Download for Android and Windows", opponent: "Opponent", deck: "Deck",
+  gameRules: "Rules of the game", play: "Play", table: "Table", cloth: "Cloth",
+  pace: "Pace", showPoints: "Show points", sound: "Sound", deal: "Deal",
+  changeOpponent: "Change opponent", weights: "Strategy weights",
+  weightsNote: "The seven weights used by <code>compGioca</code> to choose a card and capture for the selected opponent. They are not used in the last round: the deck is empty, the other hand can be deduced, and the position is played out exactly.",
+  language: "Lingua · Language", historyTitle: "Deal history",
+  confirmTitle: "Abandon this deal?",
+  confirmNote: "The deal in progress will be lost and will not be recorded in the history.",
+  confirmNo: "Keep playing", confirmYes: "Abandon",
+  playCard: name => `Play ${art(name)}`,
+  chooseCapture: name => `Choose a capture with ${art(name)}`,
+  takeWith: (cards, card) => `Take ${cards} with ${art(card)}`,
+  takeCards: cards => `Take ${cards}`,
+  takeMarkedOne: "Take the marked card",
+  takeMarkedMany: n => `Take the ${n} marked cards`,
+  yes: "yes",
+  pointNames: ["cards", "denari", "settebello", "primiera", "scopas"],
+  resultRows: ["cards", "denari", "settebello", "primiera", "scopas"],
+  resultTotal: "total",
+  won: "You won", lost: "You lost", drawn: "Draw",
+  finalTie: (score, missing) => missing.length
+    ? `Draw at ${score}. Nobody took: ${missing.join(", ")}.`
+    : `Draw at ${score}.`,
+  decided: {
+    carte: "The cards decided the deal.",
+    denari: "Denari decided the deal.",
+    settebello: "The settebello decided the deal.",
+    primiera: "Primiera decided the deal.",
+    scope: "The scopas decided the deal."
+  },
+  marginOne: "Decided by one point.",
+  margin: n => `${n}-point margin.`,
+  lastResult: (y, a, opponent) => `Last deal: you ${y > a ? "won" : y < a ? "lost" : "drew"} ${y}–${a} against ${opponent}`,
+  historyEmpty: "No deals yet. The history stays in this browser.",
+  historyTally: ["deals", "won", "lost", "drawn"],
+  wonAgainst: "Won against",
+  resultLetter: { w: "W", l: "L", d: "D" },
+  clearHistory: "Clear the history",
+  deckLabel: name => `${name} deck`,
+  locale: "en-GB",
+  dossier: {
+    Franco: "He prizes cards and denari: each card he captures matters, and a denaro matters even more, so he plays to capture and pays little attention to what he leaves behind. The most aggressive of the four, he sometimes leaves more on the table than he meant to.",
+    Graziano: "The house standard. Balanced: he counts the cards played, avoids leaving a sum you can sweep, and plays the last round exactly — as they all do, because weights no longer matter there.",
+    Valerio: "He plays for the cards, not the denari: each denaro is worth the same to him as any other card. The settebello is still its own point, and he takes it. He captures a lot, but often leaves you the denari point.",
+    Piero: "Rolled at random each session, as in Discola: his tendencies change, so each time he is a slightly different player — but always the cautious one. He never leaves a valuable card on the table, values sevens and sixes in suits where you are short, and fears a scopa more than anyone else."
+  }
+};
+
+function snapshotItalian(){
+  for (const node of document.querySelectorAll("[data-i18n]"))
+    IT[node.dataset.i18n] = node.textContent.trim();
+  for (const node of document.querySelectorAll("[data-i18n-html]"))
+    IT[node.dataset.i18nHtml] = node.innerHTML.trim();
+  for (const node of document.querySelectorAll("[data-i18n-label]"))
+    IT[node.dataset.i18nLabel] = node.getAttribute("aria-label");
+}
+
+function strings(){ return state.lang === "en" ? EN : IT; }
+function t(key, ...args){
+  const value = strings()[key];
+  return typeof value === "function" ? value(...args) : value;
+}
+
+const deviceLang = () => /^it(?:-|$)/i.test(navigator.language || "") ? "it" : "en";
+
+function applyLanguage(lang){
+  state.lang = lang;
+  document.documentElement.lang = lang;
+  for (const node of document.querySelectorAll("[data-i18n]"))
+    node.textContent = t(node.dataset.i18n);
+  for (const node of document.querySelectorAll("[data-i18n-html]"))
+    node.innerHTML = t(node.dataset.i18nHtml);
+  for (const node of document.querySelectorAll("[data-i18n-label]")){
+    const label = t(node.dataset.i18nLabel);
+    node.title = label;
+    node.setAttribute("aria-label", label);
+  }
+  for (const section of document.querySelectorAll("#viewRules section[lang]"))
+    section.hidden = section.lang !== lang;
+  if (el.langSel) el.langSel.value = lang;
+}
+
+snapshotItalian();
 
 // Each sheet was packed from its own 1997 bitmaps and they are not the same
 // shape, so the deck carries a ratio and the card budget uses it. The settings
@@ -1965,11 +2106,15 @@ function applyDeck(name){
 // where the line WRAPS is a width, and measured.
 const LABEL_CHARS = 39;
 
-const NOMI = ["asso", "due", "tre", "quattro", "cinque", "sei", "sette",
-              "fante", "cavallo", "re"];
+const NOMI_IT = ["asso", "due", "tre", "quattro", "cinque", "sei", "sette",
+                 "fante", "cavallo", "re"];
+const NOMI_EN = ["ace", "two", "three", "four", "five", "six", "seven",
+                 "jack", "knight", "king"];
 const SEMI = ["denari", "coppe", "spade", "bastoni"];
-const nomeDi = c => `${NOMI[c.n - 1]} di ${SEMI[c.s]}`;
-const breve  = c => NOMI[c.n - 1];
+const nomeDi = c => state.lang === "en"
+  ? `${NOMI_EN[c.n - 1]} of ${SEMI[c.s]}`
+  : `${NOMI_IT[c.n - 1]} di ${SEMI[c.s]}`;
+const breve = c => (state.lang === "en" ? NOMI_EN : NOMI_IT)[c.n - 1];
 
 // A card named on the say line. The value alone is enough — "Prendi il sette
 // con il sette" — right up to the one position where the line matters most: two
@@ -1984,7 +2129,8 @@ const nomePresa = c =>
 // "il asso" is not Italian. Only one of the ten names begins with a vowel, but
 // it is the one the table names most often — an asso takes and is taken by
 // everything — so the article is written rather than assumed.
-const art = name => /^[aeiou]/i.test(name) ? `l'${name}` : `il ${name}`;
+const art = name => state.lang === "en" ? `the ${name}`
+  : /^[aeiou]/i.test(name) ? `l'${name}` : `il ${name}`;
 
 /* --- state ------------------------------------------------------------------ */
 
@@ -2000,15 +2146,11 @@ const PROFILES = rollProfiles(Math.random);
 //
 // Only Franco existed until iteration 5, whose measurement decided how many
 // corners the weights make and therefore how many names go on this sheet.
-const DOSSIER = {
-  Franco: "Punta su carte e denari: per lui ogni carta presa vale molto e un denaro ancor di più, così gioca per prendere e bada poco a quello che lascia. È il più aggressivo dei quattro, e a volte lascia in tavola più di quanto vorrebbe.",
-  Graziano: "Lo standard della casa. Equilibrato: conta le carte uscite, non lascia in tavola una somma che tu possa spazzare, e l'ultimo giro lo gioca esatto — come tutti gli altri, perché lì i pesi non servono più.",
-  Valerio: "Gioca per il mazzo delle carte, non per gli ori: un denaro vale per lui come qualunque altra carta. Il settebello però resta un punto a sé, e quello lo prende. Prende molto, ma il punto dei denari spesso lo lascia a te.",
-  Piero: "Tirato a sorte a ogni sessione, come in Discola: le sue inclinazioni cambiano e ogni volta è un giocatore un po' diverso — ma sempre il prudente. Non lascia in tavola una carta che valga qualcosa, dà peso ai sette e ai sei dei semi dove sei corto, e teme la scopa più di chiunque altro."
-};
+const DOSSIER = { it: IT.dossier, en: EN.dossier };
 
 const state = {
   hands: [], opponent: "Graziano", deck: "Trevisane", felt: "#1e5140",
+  lang: "en", langPicked: false,
   speed: 900, showPoints: true, sound: true, cheat: false,
   dealt: false, over: false,
   selected: null, scelta: 0,
@@ -2124,7 +2266,7 @@ for (const id of ["table","tavola","oppHand","youHand","pileOpp","pileYou","mazz
   "viewRules","about","aboutStart","rulesBack",
   "viewSettings","viewHistory","btnHistory","btnSettings",
   "opponents","dossier","decks","deckName","lastResult",
-  "deckSel","feltSel","speedSel","pointsSel","soundSel","changeOpponent","weightsTable",
+  "deckSel","feltSel","speedSel","pointsSel","soundSel","changeOpponent","weightsTable","langSel",
   "historyBody","confirmScrim","confirmNo","confirmYes"])
   el[id] = document.getElementById(id);
 
@@ -2232,8 +2374,7 @@ function render(){
     const raises = card && state.selected !== slot
       && prese(state.tavola, card).length > 1;
     node.setAttribute("aria-label", card
-      ? (raises ? `Scegli come prendere con ${art(nomeDi(card))}`
-                : `Gioca ${art(nomeDi(card))}`)
+      ? (raises ? t("chooseCapture", nomeDi(card)) : t("playCard", nomeDi(card)))
       : "");
   });
 
@@ -2301,18 +2442,18 @@ function renderPoints(box, who){
   const prim = state.prese ? primieraTotale(pile) : null;
   const scope = state.scope ? state.scope[who] : 0;
   box.replaceChildren(...[
-    ["carte", String(pile.length), true],
-    ["ori", String(ori), true],
+    [t("pointNames")[0], String(pile.length), true],
+    [t("pointNames")[1], String(ori), true],
     // A dash rather than nothing: a row that empties is a row whose neighbours
     // move, and "nobody has it yet" is a fact where a blank is an absence the
     // reader has to interpret.
-    ["settebello", sette ? "sì" : "—", sette],
-    ["primiera", prim === null || prim === undefined ? "—" : String(prim),
+    [t("pointNames")[2], sette ? t("yes") : "—", sette],
+    [t("pointNames")[3], prim === null || prim === undefined ? "—" : String(prim),
       prim !== null && prim !== undefined],
     // The fifth point, and the one the running score used to leave to the marks
     // on the pile: a scopa accumulates through the deal like the other four, and
     // the running score and the result panel list the same five now.
-    ["scope", String(scope), scope > 0],
+    [t("pointNames")[4], String(scope), scope > 0],
   ].map(([label, value, has]) => {
     const row = document.createElement("div");
     const l = document.createElement("span");
@@ -2364,11 +2505,11 @@ function renderResult(){
   // scopa: the markers down the right of each column are the sum, and the
   // line under the table says the rule in words once.
   const rows = [
-    ["carte",      piles[BASSO].length, piles[ALTO].length, r.carte],
-    ["denari",     den(BASSO), den(ALTO), r.denari],
-    ["settebello", has(BASSO), has(ALTO), r.settebello],
-    ["primiera",   prim(BASSO), prim(ALTO), r.primiera],
-    ["scope",      r.scope[BASSO], r.scope[ALTO], "scope"],
+    [t("resultRows")[0], piles[BASSO].length, piles[ALTO].length, r.carte],
+    [t("resultRows")[1], den(BASSO), den(ALTO), r.denari],
+    [t("resultRows")[2], has(BASSO), has(ALTO), r.settebello],
+    [t("resultRows")[3], prim(BASSO), prim(ALTO), r.primiera],
+    [t("resultRows")[4], r.scope[BASSO], r.scope[ALTO], "scope"],
   ];
 
   const label = (text, cls) => {
@@ -2393,7 +2534,7 @@ function renderResult(){
     return d;
   };
 
-  const out = [label("", "r-head"), label("Tu", "r-head"), label(state.opponent, "r-head")];
+  const out = [label("", "r-head"), label(t("you"), "r-head"), label(state.opponent, "r-head")];
   for (const [name, mine, theirs, won] of rows){
     const pts = who => won === "scope" ? r.scope[who] : (won === who ? 1 : 0);
     out.push(label(name, "r-label"));
@@ -2402,14 +2543,14 @@ function renderResult(){
   }
   const win = r.punti[BASSO] === r.punti[ALTO] ? null
             : r.punti[BASSO] > r.punti[ALTO] ? BASSO : ALTO;
-  out.push(label("totale", "r-label r-total"));
+  out.push(label(t("resultTotal"), "r-label r-total"));
   out.push(num(r.punti[BASSO], "r-num r-total", 0));
   out.push(num(r.punti[ALTO], "r-num r-total", 0));
   if (win !== null) out[out.length - (win === BASSO ? 2 : 1)].dataset.won = "true";
   el.resultGrid.replaceChildren(...out);
 
   el.resultTitle.textContent =
-    win === BASSO ? "Hai vinto" : win === ALTO ? "Hai perso" : "Pareggio";
+    win === BASSO ? t("won") : win === ALTO ? t("lost") : t("drawn");
   el.resultNote.textContent = notaFinale(r);
 }
 
@@ -2422,13 +2563,6 @@ function renderResult(){
 // holds is "decisive", so naming one of them would be picking a favourite among
 // equals: there the honest line is the margin. A phrase that can be wrong about
 // the deal it describes is worse than no phrase.
-const DECISE = {
-  carte:      "Le carte hanno deciso la smazzata.",
-  denari:     "I denari hanno deciso la smazzata.",
-  settebello: "Il settebello ha deciso la smazzata.",
-  primiera:   "La primiera ha deciso la smazzata.",
-  scope:      "Hanno deciso le scope.",
-};
 const PUNTI_SEMPLICI = ["carte", "denari", "settebello", "primiera"];
 
 function notaFinale(r){
@@ -2449,16 +2583,16 @@ function notaFinale(r){
     // The thing a draw has that a win does not, and Scopa's own peculiarity:
     // a tie on carte, denari or primiera gives that point to NOBODY, so a deal
     // can be decided by points that were never awarded.
-    const nessuno = PUNTI_SEMPLICI.filter(k => r[k] === null);
-    return nessuno.length
-      ? `Pareggio a ${r.punti[BASSO]}. Nessuno ha preso: ${nessuno.join(", ")}.`
-      : `Pareggio a ${r.punti[BASSO]}.`;
+    const rows = t("resultRows");
+    const nessuno = PUNTI_SEMPLICI.filter(k => r[k] === null)
+      .map(k => rows[["carte", "denari", "settebello", "primiera"].indexOf(k)]);
+    return t("finalTie", r.punti[BASSO], nessuno);
   }
 
   const decise = [...PUNTI_SEMPLICI, "scope"].filter(k => senza(k) !== finale);
-  if (decise.length === 1) return DECISE[decise[0]];
-  if (scarto === 1) return "Decisa per un punto.";
-  return `${scarto} punti di scarto.`;
+  if (decise.length === 1) return t("decided")[decise[0]];
+  if (scarto === 1) return t("marginOne");
+  return t("margin", scarto);
 }
 
 // §3.7. One row in landscape, two in portrait with the first ceil(n/2) cards
@@ -2539,7 +2673,7 @@ function renderSay(){
   // chose it, and the line never sees it.
   const presi = presa.map(i => art(nomePresa(state.tavola[i])));
   const lista = presi.length === 1 ? presi[0]
-              : `${presi.slice(0, -1).join(", ")} e ${presi[presi.length - 1]}`;
+              : `${presi.slice(0, -1).join(", ")}${state.lang === "en" ? " and " : " e "}${presi[presi.length - 1]}`;
   // Three ways to say it, shortest that fits wins. The line has one line of
   // --t-tiny and the budget pays for exactly that, so a name that does not fit
   // is not a longer line — it is a line cut in half by .say, which is the
@@ -2551,10 +2685,9 @@ function renderSay(){
   // alone, which is what §3.7 says they are for. The four-card capture the
   // check renders comes to 81 characters named in full.
   const rungs = [
-    `Prendi ${lista} con ${art(breve(card))}`,
-    `Prendi ${lista}`,
-    presa.length === 1 ? "Prendi la carta segnata"
-                       : `Prendi le ${presa.length} carte segnate`,
+    t("takeWith", lista, breve(card)),
+    t("takeCards", lista),
+    presa.length === 1 ? t("takeMarkedOne") : t("takeMarkedMany", presa.length),
   ];
   // Two conditions, and a rung has to meet both. The count is about
   // READABILITY — past 40 characters a string is something somebody reads
@@ -2923,14 +3056,10 @@ function clearHistory(){
   renderHistory();
 }
 
-const WHEN = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" });
-
 function renderLastResult(){
   const [last] = loadHistory();
   if (!last){ el.lastResult.hidden = true; return; }
-  const verbo = last.y > last.a ? "vinto" : last.y < last.a ? "perso" : "pareggiato";
-  el.lastResult.textContent =
-    `Ultima smazzata: hai ${verbo} ${last.y}–${last.a} contro ${last.o}`;
+  el.lastResult.textContent = t("lastResult", last.y, last.a, last.o);
   el.lastResult.hidden = false;
 }
 
@@ -2941,7 +3070,7 @@ function renderHistory(){
   if (!list.length){
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = "Nessuna smazzata ancora. Lo storico resta in questo browser.";
+    p.textContent = t("historyEmpty");
     el.historyBody.append(p);
     return;
   }
@@ -2951,8 +3080,8 @@ function renderHistory(){
 
   const tally = document.createElement("div");
   tally.className = "tally";
-  for (const [n, label] of [[list.length, "smazzate"], [vinte, "vinte"], [perse, "perse"],
-                            [list.length - vinte - perse, "pari"]]){
+  for (const [n, label] of [[list.length, t("historyTally")[0]], [vinte, t("historyTally")[1]],
+                            [perse, t("historyTally")[2]], [list.length - vinte - perse, t("historyTally")[3]]]){
     const cell = document.createElement("div");
     const b = document.createElement("b");
     b.textContent = String(n);
@@ -2980,7 +3109,7 @@ function renderHistory(){
     group.className = "group";
     const head = document.createElement("span");
     head.className = "eyebrow";
-    head.textContent = "Vinte contro";
+    head.textContent = t("wonAgainst");
     group.append(head);
     for (const nome of nomi){
       const line = document.createElement("div");
@@ -3004,7 +3133,7 @@ function renderHistory(){
 
     const res = document.createElement("span");
     res.className = "res " + (pari ? "res--d" : vinta ? "res--w" : "res--l");
-    res.textContent = pari ? "P" : vinta ? "V" : "S";
+    res.textContent = t("resultLetter")[pari ? "d" : vinta ? "w" : "l"];
 
     const chi = document.createElement("span");
     chi.textContent = m.o;
@@ -3015,7 +3144,8 @@ function renderHistory(){
 
     const when = document.createElement("span");
     when.className = "when";
-    when.textContent = WHEN.format(new Date(m.t));
+    when.textContent = new Intl.DateTimeFormat(t("locale"), { day: "numeric", month: "short" })
+      .format(new Date(m.t));
 
     li.append(res, chi, score, when);
     ul.append(li);
@@ -3025,7 +3155,7 @@ function renderHistory(){
   const wipe = document.createElement("button");
   wipe.type = "button";
   wipe.className = "btn btn--quiet";
-  wipe.textContent = "Cancella lo storico";
+  wipe.textContent = t("clearHistory");
   wipe.addEventListener("click", clearHistory);
   el.historyBody.append(wipe);
 }
@@ -3074,8 +3204,8 @@ function buildDecks(){
     b.type = "button";
     b.className = "deck-opt";
     b.dataset.deck = name;
-    b.title = name;
-    b.setAttribute("aria-label", `Mazzo ${name}`);
+    b.title = t("deckLabel", name);
+    b.setAttribute("aria-label", t("deckLabel", name));
     b.style.setProperty("--sheet", deckSheet(name));
     b.style.setProperty("--ratio", DECK_RATIO[name]);
     // No --col/--row here: .deck-opt .card pins the background to the top-left
@@ -3107,7 +3237,7 @@ function reserveDossier(){
   el.dossier.style.minHeight = "0px";
   let tallest = 0;
   for (const name of Object.keys(PROFILES)){
-    el.dossier.textContent = DOSSIER[name] || "";
+    el.dossier.textContent = DOSSIER[state.lang][name] || "";
     tallest = Math.max(tallest, el.dossier.getBoundingClientRect().height);
   }
   el.dossier.textContent = was;
@@ -3116,7 +3246,7 @@ function reserveDossier(){
 
 function selectOpponent(name){
   state.opponent = name;
-  el.dossier.textContent = DOSSIER[name] || "";
+  el.dossier.textContent = DOSSIER[state.lang][name] || "";
   for (const b of el.opponents.children)
     b.setAttribute("aria-pressed", String(b.dataset.name === name));
 
@@ -3145,6 +3275,7 @@ function save(){
   try{
     localStorage.setItem(KEY, JSON.stringify({
       opponent: state.opponent, deck: state.deck, felt: state.felt,
+      lang: state.langPicked ? state.lang : undefined,
       speed: state.speed, showPoints: state.showPoints, sound: state.sound
     }));
   } catch (e){ /* private window or blocked storage: settings just will not stick */ }
@@ -3287,11 +3418,24 @@ el.pointsSel.addEventListener("change", () => {
   state.showPoints = el.pointsSel.checked; render(); save();
 });
 el.soundSel.addEventListener("change", () => { state.sound = el.soundSel.checked; save(); });
+el.langSel.addEventListener("change", () => {
+  state.langPicked = true;
+  applyLanguage(el.langSel.value);
+  el.dossier.textContent = DOSSIER[state.lang][state.opponent] || "";
+  renderLastResult();
+  render();
+  if (!el.viewHistory.hidden) renderHistory();
+  reserveDossier();
+  save();
+});
 
 /* --- boot ------------------------------------------------------------------- */
 
 function boot(){
   const saved = load();
+
+  state.langPicked = saved.lang === "it" || saved.lang === "en";
+  applyLanguage(state.langPicked ? saved.lang : deviceLang());
 
   buildHands();
   buildOpponents();

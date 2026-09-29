@@ -22,10 +22,12 @@
  *    shipped latin subset, every @font-face loads with the network cut, and no
  *    subresource comes from the network.
  *
- * 1. SCREENS — every screen and every state worth looking at, at a handful of
- *    real device shapes. Catches what is wrong anywhere: more than one screen
- *    visible at once, text too small to read, clipped labels, tap targets under
- *    the thumb, sideways scroll, script errors.
+ * 0c. LANGUAGE — explicit Italian and English device locales, with and without
+ *     a saved choice. Checks defaults, overrides and which rules section is seen.
+ *
+ * 1. SCREENS — every screen and every state worth looking at, in Italian at
+ *    seven real device shapes and English at three. The English pass audits
+ *    visible copy and accessibility labels as well as layout.
  *
  * 2. TABLE — the card table only, at every viewport and in all five decks, and
  *    then the tightest of them again with the spacing tokens inflated. The card
@@ -139,6 +141,9 @@ const VIEWPORTS = [
 
 const SCREEN_VIEWPORTS = ['narrow phone', 'Android small', 'iPhone Pro Max',
                           'tablet portrait', 'phone landscape', 'tiny window', 'laptop'];
+// Copy grows differently in English. These shapes expose that without
+// repeating the table's full viewport grid.
+const EN_VIEWPORTS = ['Android small', 'phone landscape', 'laptop'];
 
 // The inflated pass runs these, and it is a list of what is IN rather than a
 // list of what is out. The short landscape windows (640x480, 980x340, 1100x330)
@@ -582,8 +587,8 @@ const SWEEP_MS = 1050;
 // request the page makes is a file:// one and the metrics are the ones that
 // ship. The page still has to be correct while the fonts are on their way,
 // which is the worst case and the state every player sees first.
-async function openPage(browser, viewport) {
-  const page = await browser.newPage({ viewport });
+async function openPage(browser, viewport, locale = 'it-IT') {
+  const page = await browser.newPage({ viewport, locale });
   return page;
 }
 
@@ -1102,7 +1107,7 @@ async function checkFonts(browser) {
 
   // Everything but the page itself is cut off, which is what an offline build
   // sees.
-  const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
+  const page = await browser.newPage({ viewport: { width: 393, height: 852 }, locale: 'it-IT' });
   const external = [];
   await page.route('**', (route) => {
     const url = route.request().url();
@@ -1143,16 +1148,20 @@ async function checkFonts(browser) {
 
 /* ---- pass 1: every screen -------------------------------------------------- */
 
-async function checkScreens(browser) {
-  console.log('\nscreens');
+async function checkScreens(browser, locale = 'it-IT') {
+  const english = !/^it\b/i.test(locale);
+  console.log(english ? '\nscreens (English)' : '\nscreens (Italian)');
   let failed = 0;
   // Two shapes in the quick grid, and the second is deliberately not a phone:
   // the phone-shaped media query re-declares every type token, so a break that
   // drops the base --t-tiny below the floor cannot show up on a phone at all.
-  for (const vname of (QUICK ? ['narrow phone', 'tiny window'] : SCREEN_VIEWPORTS)) {
+  const viewports = english
+    ? (QUICK ? ['Android small'] : EN_VIEWPORTS)
+    : (QUICK ? ['narrow phone', 'tiny window'] : SCREEN_VIEWPORTS);
+  for (const vname of viewports) {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     for (const screen of SCREENS) {
-      const page = await openPage(browser, { width: w, height: h });
+      const page = await openPage(browser, { width: w, height: h }, locale);
       const errs = [];
       page.on('pageerror', e => errs.push(String(e)));
       page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
@@ -1161,6 +1170,7 @@ async function checkScreens(browser) {
       await screen.open(page);
       await page.waitForTimeout(60);
       const bad = [...await page.evaluate(audit),
+        ...(english ? await page.evaluate(englishAudit) : []),
         ...(screen.check ? await page.evaluate(screen.check) : [])];
       const all = [...bad, ...errs];
       if (all.length) {
@@ -1172,7 +1182,113 @@ async function checkScreens(browser) {
     }
   }
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
-    + `${SCREENS.length} screens x ${QUICK ? 2 : SCREEN_VIEWPORTS.length} viewports`);
+    + `${SCREENS.length} screens x ${viewports.length} viewports`);
+  return failed;
+}
+
+// Runs against every rendered English screen/state. The key parity check catches
+// a missing translation; the visible-copy audit catches untranslated markup or
+// generated text that was never connected to a key.
+const englishAudit = () => {
+  const out = [];
+  if (document.documentElement.lang !== 'en')
+    out.push(`the English screen has html lang="${document.documentElement.lang}"`);
+  const keys = table => Object.keys(table).sort();
+  if (JSON.stringify(keys(IT)) !== JSON.stringify(keys(EN)))
+    out.push('the Italian and English translation tables do not have the same keys');
+  const shown = node => {
+    const rect = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    return rect.width > 0 && rect.height > 0
+      && style.visibility !== 'hidden' && style.display !== 'none';
+  };
+  for (const node of document.querySelectorAll('[data-i18n], [data-i18n-html], [data-i18n-label]')) {
+    const key = node.dataset.i18n || node.dataset.i18nHtml || node.dataset.i18nLabel;
+    if (!(key in EN) || !(key in IT)) out.push(`translation key "${key}" is missing from a language table`);
+    if (shown(node) && node.dataset.i18nLabel
+        && (node.title !== EN[key] || node.getAttribute('aria-label') !== EN[key]))
+      out.push(`the English title/accessible label for "${key}" is not translated`);
+    if (shown(node) && node.dataset.i18n && key !== 'resultDone'
+        && node.textContent.trim() !== EN[key])
+      out.push(`the English copy for "${key}" does not match its translation`);
+    if (shown(node) && node.dataset.i18nHtml && node.innerHTML.trim() !== EN[key])
+      out.push(`the English rich copy for "${key}" does not match its translation`);
+  }
+  const italian = /\b(?:avversario|giocatore|mazziere|mazzo|panno|ritmo|smazzata|smazzate|regole del gioco|impostazioni|storico|abbandonare|abbandona|continua a giocare|fine della smazzata|gioca|pareggio|vinto|perso|vinte|perse|pesi della strategia|mostra i punti|suono|carte scoperte|cancella lo storico|sì)\b/i;
+  for (const node of document.querySelectorAll('body *')) {
+    const rect = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    if (!rect.width || !rect.height || style.visibility === 'hidden' || style.display === 'none') continue;
+    if (node.matches('option') || node.closest('code')) continue;
+    const ownText = [...node.childNodes].filter(n => n.nodeType === 3)
+      .map(n => n.textContent.trim()).filter(Boolean).join(' ');
+    if (ownText && node.dataset.i18n !== 'language' && italian.test(ownText))
+      out.push(`Italian copy remains in the English UI: "${ownText.slice(0, 48)}"`);
+    const label = [node.getAttribute('aria-label'), node.getAttribute('title')]
+      .filter(Boolean).join(' ');
+    if (label && italian.test(label))
+      out.push(`an Italian accessible label remains in the English UI: "${label}"`);
+  }
+  const itRules = document.querySelector('#viewRules section[lang="it"]');
+  const enRules = document.querySelector('#viewRules section[lang="en"]');
+  if (!enRules || getComputedStyle(enRules).display === 'none')
+    out.push('the English rules section is not visible');
+  if (itRules && getComputedStyle(itRules).display !== 'none')
+    out.push('the Italian rules section is visible in the English UI');
+  if (!document.querySelector('#result').hidden
+      && ![EN.won, EN.lost, EN.drawn].includes(document.querySelector('#resultTitle').textContent))
+    out.push('the English result title is not a translated verdict');
+  return [...new Set(out)];
+};
+
+async function checkLanguageBehavior(browser) {
+  console.log('\nlanguage defaults and saved choice');
+  let failed = 0;
+  for (const [locale, initial, chosen] of [['it-IT', 'it', 'en'], ['en-GB', 'en', 'it']]) {
+    const page = await openPage(browser, { width: 393, height: 852 }, locale);
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    await page.goto(URL_);
+    const boot = await page.evaluate(() => ({
+      lang: state.lang,
+      documentLang: document.documentElement.lang,
+      picked: state.langPicked,
+      storedLang: JSON.parse(localStorage.getItem('scopetta.settings') || '{}').lang,
+    }));
+    const bad = [];
+    if (boot.lang !== initial || boot.documentLang !== initial || boot.picked || boot.storedLang !== undefined)
+      bad.push(`${locale} default is ${JSON.stringify(boot)}, want ${initial} without a saved choice`);
+
+    await page.click('#aboutStart');
+    const rules = await page.evaluate(() => Object.fromEntries(['it', 'en'].map(lang => {
+      const section = document.querySelector(`#viewRules section[lang="${lang}"]`);
+      return [lang, section && getComputedStyle(section).display !== 'none'];
+    })));
+    if (!rules[initial] || rules[initial === 'it' ? 'en' : 'it'])
+      bad.push(`${locale} default shows the wrong rules sections: ${JSON.stringify(rules)}`);
+    await page.click('#rulesBack');
+    await page.click('#viewStart [data-nav="settings"]');
+    await page.selectOption('#langSel', chosen);
+    const selected = await page.evaluate(() => ({
+      lang: state.lang,
+      documentLang: document.documentElement.lang,
+      storedLang: JSON.parse(localStorage.getItem('scopetta.settings') || '{}').lang,
+    }));
+    if (selected.lang !== chosen || selected.documentLang !== chosen || selected.storedLang !== chosen)
+      bad.push(`${locale} choice ${chosen} was not applied and saved: ${JSON.stringify(selected)}`);
+    await page.reload();
+    const restored = await page.evaluate(() => ({ lang: state.lang, picked: state.langPicked }));
+    if (restored.lang !== chosen || !restored.picked)
+      bad.push(`${locale} choice ${chosen} did not override the device after reload: ${JSON.stringify(restored)}`);
+    bad.push(...errors);
+    if (bad.length) {
+      failed++;
+      console.log(`  FAIL  ${locale} default / saved override`);
+      bad.forEach(line => console.log(`        ${line}`));
+    }
+    await page.close();
+  }
+  console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  device defaults, rules visibility and saved overrides`);
   return failed;
 }
 
@@ -2421,7 +2537,8 @@ async function checkRules(browser) {
     await page.addStyleTag({ content: STILL });
     const bad = [];
 
-    // Both languages, and enough of each to be the rules rather than a note.
+    // Both retained language sections, and enough of each to be the rules.
+    // The language pass separately proves only the selected section is shown.
     await page.click('#aboutStart');
     bad.push(...await page.evaluate(() => {
       const out = [];
@@ -3845,7 +3962,9 @@ console.log(`chromium ${browser.version()}`);
 let failed = 0;
 failed += await checkDocument(browser);
 failed += await checkFonts(browser);
-failed += await checkScreens(browser);
+failed += await checkLanguageBehavior(browser);
+failed += await checkScreens(browser, 'it-IT');
+failed += await checkScreens(browser, 'en-GB');
 failed += await checkTable(browser, null, false);
 failed += await checkTable(browser, TIGHT, true);
 failed += await checkChoice(browser);

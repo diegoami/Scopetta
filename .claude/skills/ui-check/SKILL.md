@@ -38,10 +38,12 @@ goes red — not merely that something did. The gate that runs it is in
 node tools/check_ui.mjs
 ```
 
-Exit code 0 means clean. It takes about twenty-five minutes — twelve passes, and
-the sheets pass iteration 4 added drives more of the page than any other; let it
-finish rather than interrupting it. It prints the Chromium it used, because that is part of
-the answer — `check.yml` pins `playwright-core` so CI runs the same one.
+Exit code 0 means clean. It takes about twenty-five minutes — fourteen passes,
+including device-language and saved-choice cases and a complete English screens
+pass; the sheets pass iteration 4 added drives more of the page than any other.
+Let it finish rather than interrupting it. It prints the Chromium it used,
+because that is part of the answer — `check.yml` pins `playwright-core` so CI
+runs the same one.
 
 **And then read the `ui` job on the pull request.** Locally the browser, its
 fonts and the fallback faces are this machine's; in CI they are the runner's,
@@ -107,8 +109,10 @@ from the network. The first of the three is why the copy cannot outgrow the
 subset without saying so; the other two are why a Google Fonts `<link>` cannot
 come back.
 
-**Screens pass** — every screen, and **every state that exists only in the
-middle of a deal**, at seven real device shapes: the start sheet; the rules,
+**Screens passes (Italian and English)** — every screen, and **every state that
+exists only in the middle of a deal**, in Italian at seven real device shapes
+and English at three:
+the start sheet; the rules,
 opened from the start sheet and again from the table; the settings, and the
 settings with the weights disclosed; the history, empty and with smazzate in
 it; the confirm over a deal in progress; the table just dealt; the table with
@@ -122,6 +126,11 @@ card on a hand card, no name plate or points box on the cards or wider than its
 own box, no
 text below its size floor, no text clipped by a container that cannot scroll, no
 tap target under 32px, and no script or console errors.
+
+Every pass pins its browser locale. The language pass proves that `it-*` picks
+Italian, other device languages pick English, and an explicit saved choice wins
+over either device. The English screens pass also checks translation-key parity
+and audits visible text and accessibility labels for Italian left untranslated.
 
 A `<details>` is opened on purpose for one of those rows. A closed one renders
 nothing the audit can measure — the text floors, the off-screen rule and the
@@ -254,8 +263,9 @@ hand synchronously, so a hand is unchanged by a deal running on behind a screen
 and an assertion on it says nothing at all.
 The language lives on the `section`, not on each paragraph: half a page not
 marked as its own language is half a page screen readers and hyphenation read
-as the other one — and, less loftily, an assertion that looks for one `lang`
-attribute anywhere passes a page whose English is tagged Italian.
+as the other one. Both language-tagged sections stay in the document, but only
+the selected one is visible; the language check verifies that selection as well
+as the English page's document `lang`.
 
 **A card arriving** — the beat the owner found missing by playing the preview.
 A capturing card never touches `state.tavola`, so a middle row that draws the
