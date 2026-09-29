@@ -7,6 +7,7 @@
  * Needs playwright-core and a Chromium binary:
  *   npm i playwright-core && npx playwright-core install chromium
  *   CHROME=/path/to/chrome node tools/check_ui.mjs   # or name one yourself
+ *   WORKERS=1 node tools/check_ui.mjs                # one page at a time
  *
  * Forked from Tressette's at dec1c74. The document pass and the audit are its
  * and Discola's, unchanged where the defect they name is the same; the table
@@ -67,6 +68,7 @@
 import { chromium } from 'playwright-core';
 import path from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // `fileURLToPath` and `pathToFileURL` rather than `.pathname` and a `file://`
@@ -180,6 +182,40 @@ const DECKS = ['Trevisane', 'Romagnole', 'Napoletane', 'Piacentine', 'Francesi',
 // not: a quick run is for proving an assertion bites, never for clearing one.
 const QUICK = !!process.env.QUICK;
 
+// How many pages a pass keeps open at once. The check spends most of its time
+// waiting on the browser rather than working — a serial quick run used 30s of
+// CPU in 64s — so the cases of a pass run side by side, each on a fresh page
+// exactly as before, and the report is printed in the serial order. WORKERS=1
+// is the serial check, case for case.
+//
+// The passes that time a beat against the page's own clock (states, rules,
+// sheets) run side by side too, and that was measured rather than assumed:
+// their margins are 100-200ms, a busy machine is what would eat them, and
+// they held seven pages wide with 4, 8 and 16 busy loops on a 4-core machine,
+// eleven runs without a failure. Their pages are waiting on timers, not
+// working. Rotation and the deal stay one page at a time: they are a handful
+// of cases and a few seconds.
+const WORKERS = Math.max(1, Math.floor(Number(process.env.WORKERS))
+  || Math.min(4, availableParallelism()));
+
+// Runs `run` on every case, WORKERS at a time, and prints what each case
+// returns in the order of `cases` — so the report reads the same however the
+// cases happened to finish. `run` returns the lines to print, none on a pass,
+// and a failed case is a case that printed something.
+async function inParallel(cases, run) {
+  const out = new Array(cases.length);
+  let next = 0, printed = 0;
+  const worker = async () => {
+    while (next < cases.length) {
+      const i = next++;
+      out[i] = await run(cases[i], i);
+      while (printed < cases.length && out[printed]) out[printed++].forEach(l => console.log(l));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(WORKERS, cases.length) }, worker));
+  return out.filter(lines => lines.length).length;
+}
+
 // How many cards the middle row is asked to hold. Not "whatever a deal
 // produced": §3.7's bound is thirteen and a random deal reaches twelve, so the
 // state that breaks the row has to be rendered on purpose.
@@ -208,7 +244,15 @@ const TAVOLA_13 = `[
 // A dealt table, then `n` cards on it. Deterministic: the page's own newDeal
 // runs first so every other part of the state is real, and only `tavola` is
 // posed.
+//
+// And nothing moves it afterwards. When the opponent leads, the deal has its
+// first play scheduled `state.speed` after Gioca; bumping the epoch makes that
+// timer a no-op, as a new deal would. A case measured one page at a time was
+// done long before it fired, but one sharing the machine with three others is
+// not promised to be, and a table the opponent has just played into is not
+// the table this fixture posed.
 const setTavola = n => `(() => {
+  epoch++;
   const all = ${TAVOLA_13};
   state.tavola = all.slice(0, ${n});
   // The longest name in §0's roster, on every case of the pass that measures
@@ -1158,29 +1202,38 @@ async function checkScreens(browser, locale = 'it-IT') {
   const viewports = english
     ? (QUICK ? ['Android small'] : EN_VIEWPORTS)
     : (QUICK ? ['narrow phone', 'tiny window'] : SCREEN_VIEWPORTS);
-  for (const vname of viewports) {
+  const cases = viewports
+    .flatMap(vname => SCREENS.map(screen => [vname, screen]));
+  failed += await inParallel(cases, async ([vname, screen]) => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
-    for (const screen of SCREENS) {
-      const page = await openPage(browser, { width: w, height: h }, locale);
-      const errs = [];
-      page.on('pageerror', e => errs.push(String(e)));
-      page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
-      await page.goto(URL_);
-      await page.addStyleTag({ content: STILL });
-      await screen.open(page);
-      await page.waitForTimeout(60);
-      const bad = [...await page.evaluate(audit),
-        ...(english ? await page.evaluate(englishAudit) : []),
-        ...(screen.check ? await page.evaluate(screen.check) : [])];
-      const all = [...bad, ...errs];
-      if (all.length) {
-        failed++;
-        console.log(`  FAIL  ${screen.name} @ ${vname}`);
-        all.forEach(b => console.log(`        ${b}`));
-      }
+    const page = await openPage(browser, { width: w, height: h }, locale);
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    const initiallyOpen = await page.evaluate(() => [...document.querySelectorAll('.view')]
+      .filter(v => getComputedStyle(v).display !== 'none').length);
+    if (initiallyOpen !== 1) {
       await page.close();
+      return [`  FAIL  ${screen.name} @ ${vname}`,
+        `        ${initiallyOpen} screens visible at once`];
     }
-  }
+    const driveBad = [];
+    // A broken screen can make the click that poses a case impossible. Keep
+    // the pass alive long enough to read the assertion that names the defect,
+    // rather than letting Playwright's timeout erase the useful report.
+    page.setDefaultTimeout(8000);
+    try { await screen.open(page); }
+    catch (e) { driveBad.push(`could not open ${screen.name}: ${String(e).split('\n')[0]}`); }
+    await page.waitForTimeout(60);
+    const bad = [...driveBad, ...await page.evaluate(audit),
+      ...(english ? await page.evaluate(englishAudit) : []),
+      ...(screen.check ? await page.evaluate(screen.check) : [])];
+    const all = [...bad, ...errs];
+    await page.close();
+    return all.length ? [`  FAIL  ${screen.name} @ ${vname}`, ...all.map(b => `        ${b}`)] : [];
+  });
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
     + `${SCREENS.length} screens x ${viewports.length} viewports`);
   return failed;
@@ -1249,6 +1302,16 @@ async function checkLanguageBehavior(browser) {
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
     await page.goto(URL_);
+    page.setDefaultTimeout(8000);
+    const visibleScreens = await page.evaluate(() => [...document.querySelectorAll('.view')]
+      .filter(v => getComputedStyle(v).display !== 'none').length);
+    if (visibleScreens !== 1) {
+      failed++;
+      console.log(`  FAIL  ${locale} default / saved override`);
+      console.log(`        ${visibleScreens} screens visible at once`);
+      await page.close();
+      continue;
+    }
     const boot = await page.evaluate(() => ({
       lang: state.lang,
       documentLang: document.documentElement.lang,
@@ -1259,27 +1322,31 @@ async function checkLanguageBehavior(browser) {
     if (boot.lang !== initial || boot.documentLang !== initial || boot.picked || boot.storedLang !== undefined)
       bad.push(`${locale} default is ${JSON.stringify(boot)}, want ${initial} without a saved choice`);
 
-    await page.click('#aboutStart');
-    const rules = await page.evaluate(() => Object.fromEntries(['it', 'en'].map(lang => {
-      const section = document.querySelector(`#viewRules section[lang="${lang}"]`);
-      return [lang, section && getComputedStyle(section).display !== 'none'];
-    })));
-    if (!rules[initial] || rules[initial === 'it' ? 'en' : 'it'])
-      bad.push(`${locale} default shows the wrong rules sections: ${JSON.stringify(rules)}`);
-    await page.click('#rulesBack');
-    await page.click('#viewStart [data-nav="settings"]');
-    await page.selectOption('#langSel', chosen);
-    const selected = await page.evaluate(() => ({
-      lang: state.lang,
-      documentLang: document.documentElement.lang,
-      storedLang: JSON.parse(localStorage.getItem('scopetta.settings') || '{}').lang,
-    }));
-    if (selected.lang !== chosen || selected.documentLang !== chosen || selected.storedLang !== chosen)
-      bad.push(`${locale} choice ${chosen} was not applied and saved: ${JSON.stringify(selected)}`);
-    await page.reload();
-    const restored = await page.evaluate(() => ({ lang: state.lang, picked: state.langPicked }));
-    if (restored.lang !== chosen || !restored.picked)
-      bad.push(`${locale} choice ${chosen} did not override the device after reload: ${JSON.stringify(restored)}`);
+    try {
+      await page.click('#aboutStart');
+      const rules = await page.evaluate(() => Object.fromEntries(['it', 'en'].map(lang => {
+        const section = document.querySelector(`#viewRules section[lang="${lang}"]`);
+        return [lang, section && getComputedStyle(section).display !== 'none'];
+      })));
+      if (!rules[initial] || rules[initial === 'it' ? 'en' : 'it'])
+        bad.push(`${locale} default shows the wrong rules sections: ${JSON.stringify(rules)}`);
+      await page.click('#rulesBack');
+      await page.click('#viewStart [data-nav="settings"]');
+      await page.selectOption('#langSel', chosen);
+      const selected = await page.evaluate(() => ({
+        lang: state.lang,
+        documentLang: document.documentElement.lang,
+        storedLang: JSON.parse(localStorage.getItem('scopetta.settings') || '{}').lang,
+      }));
+      if (selected.lang !== chosen || selected.documentLang !== chosen || selected.storedLang !== chosen)
+        bad.push(`${locale} choice ${chosen} was not applied and saved: ${JSON.stringify(selected)}`);
+      await page.reload();
+      const restored = await page.evaluate(() => ({ lang: state.lang, picked: state.langPicked }));
+      if (restored.lang !== chosen || !restored.picked)
+        bad.push(`${locale} choice ${chosen} did not override the device after reload: ${JSON.stringify(restored)}`);
+    } catch (e) {
+      bad.push(`language behavior could not be driven: ${String(e).split('\n')[0]}`);
+    }
     bad.push(...errors);
     if (bad.length) {
       failed++;
@@ -1502,183 +1569,178 @@ async function checkTable(browser, only, inflate) {
     ['phone landscape', 'narrow phone', 'Android small', 'laptop',
      'tiny window', 'shortest window', 'shorter window'].includes(v[0]));
 
-  for (const [vname, w, h] of list) {
-    // Two decks even in the quick grid: Romagnole's cards are the widest, so it
-    // is the only one where the width term of the budget binds, and a break
-    // that takes a term out of that budget has nowhere else to show.
-    for (const deck of (QUICK ? ['Trevisane', 'Romagnole'] : DECKS)) {
-      for (const n of (QUICK ? [4, 13] : TABLE_SIZES)) {
-        const page = await openPage(browser, { width: w, height: h });
-        const errs = [];
-        page.on('pageerror', e => errs.push(String(e)));
-        page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
-        await page.goto(URL_);
-        await page.addStyleTag({ content: STILL });
-        if (inflate) await page.addStyleTag({ content: INFLATE });
-        await page.click('#play');
-        // Off the table. Clicking leaves the pointer where the button was, and
-        // a pointer resting on a card changes what is painted over what — so
-        // every measurement below would carry a hover nobody asked for. Hover
-        // is asserted on purpose in checkChoice instead.
-        await page.mouse.move(0, 0);
-        // The settings sheet that lets a player pick a deck is iteration 4, so
-        // each deck is applied directly — applyDeck is the same call it will
-        // make.
-        await page.evaluate(d => applyDeck(d), deck);
-        await page.evaluate(setTavola(n));
-        await page.waitForTimeout(40);
+  // Two decks even in the quick grid: Romagnole's cards are the widest, so it
+  // is the only one where the width term of the budget binds, and a break
+  // that takes a term out of that budget has nowhere else to show.
+  const cases = list.flatMap(([vname, w, h]) =>
+    (QUICK ? ['Trevisane', 'Romagnole'] : DECKS).flatMap(deck =>
+      (QUICK ? [4, 13] : TABLE_SIZES).map(n => [vname, w, h, deck, n])));
+  failed += await inParallel(cases, async ([vname, w, h, deck, n]) => {
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    if (inflate) await page.addStyleTag({ content: INFLATE });
+    await page.click('#play');
+    // Off the table. Clicking leaves the pointer where the button was, and
+    // a pointer resting on a card changes what is painted over what — so
+    // every measurement below would carry a hover nobody asked for. Hover
+    // is asserted on purpose in checkChoice instead.
+    await page.mouse.move(0, 0);
+    // The settings sheet that lets a player pick a deck is iteration 4, so
+    // each deck is applied directly — applyDeck is the same call it will
+    // make.
+    await page.evaluate(d => applyDeck(d), deck);
+    await page.evaluate(setTavola(n));
+    await page.waitForTimeout(40);
 
-        const m = await page.evaluate(measure);
-        const bad = [];
+    const m = await page.evaluate(measure);
+    const bad = [];
 
-        if (!m.sayShown || m.sayH < 10)
-          bad.push(`the say line is ${m.sayH}px tall — it must cost --say whether or not it has something to say`);
+    if (!m.sayShown || m.sayH < 10)
+      bad.push(`the say line is ${m.sayH}px tall — it must cost --say whether or not it has something to say`);
 
-        for (const e of m.offScreen)
-          bad.push(`${e} runs off the screen`);
-        bad.push(...m.plateBad);
+    for (const e of m.offScreen)
+      bad.push(`${e} runs off the screen`);
+    bad.push(...m.plateBad);
 
-        if (m.overlapsHand)
-          bad.push(`${m.overlapsHand} table card(s) land on a hand`);
+    if (m.overlapsHand)
+      bad.push(`${m.overlapsHand} table card(s) land on a hand`);
 
-        const wantRows = (m.portrait && n > 1) ? 2 : 1;
-        if (m.rowCount !== wantRows)
-          bad.push(`the middle draws ${m.rowCount} row(s) in `
-            + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
+    const wantRows = (m.portrait && n > 1) ? 2 : 1;
+    if (m.rowCount !== wantRows)
+      bad.push(`the middle draws ${m.rowCount} row(s) in `
+        + `${m.portrait ? 'portrait' : 'landscape'}, want ${wantRows}`);
 
-        // Issue #5. Where the budget wants a card narrower than --cw's clamp
-        // floor, the floor decides the card, not the budget, and the table may
-        // scroll by what the floor adds: the designed fallback, since reaching a
-        // card by scrolling beats a card too small to touch. "No scrolling" there
-        // tested the clamp rather than the derivation, which is why 1100x320
-        // left the grid and why 1100x330 tested nothing. So on the floor the
-        // derivation is asked directly: lift the floor, let the card be what the
-        // budget says, and the page must fit — the same rule as everywhere else.
-        // The page as drawn, floor and all, is still held to every other rule in
-        // this pass; only its scroll is the stated fallback.
-        //
-        // Only the DESIGNED floor earns this. A card held up by any other floor —
-        // "the portrait card has a floor of its own" raises it to 36px — is a
-        // defect the strict rule has to see, so a card that is not exactly
-        // the designed floor's width (the page's --cw-floor token, read by
-        // measure) is held to "no scrolling" whatever the budget wants.
-        const wanted = Math.min(m.cwHeight, m.cwWidth);
-        // Floored means both: the card is the designed floor's width, AND it is
-        // wider than the budget wants. With the floor lowered to 20px, a card at
-        // 500x425 is 31.9px because the budget wants 31.9px — near 32 and not
-        // held up by any floor — and counting it as floored would have left the
-        // rail below satisfied by a case the rule never had to lift.
-        //
-        // What this costs, and where: with the floor lifted the budget has its
-        // full --slack again, where the strict rule on the floored page had only
-        // what the floor left of it — 2-5px on the short landscape windows. A
-        // defect that small, confined to those windows, passes this pass; it is
-        // the inflated pass, with --slack at 0 and 640x480 to 1100x330 in TIGHT,
-        // that catches it (the break "the icon bar grows on short landscape
-        // windows"). 320x568 keeps about 3px of that difference, since the
-        // inflated pass does not run it.
-        casesAt[vname] = (casesAt[vname] || 0) + 1;
-        floorsRead.add(Math.round(m.cwFloor * 10) / 10);
-        if (!(m.cwFloor > 0))
-          bad.push('the page declares no --cw-floor, so the designed card floor cannot be read');
-        const floored = m.cwFloor > 0 && Math.abs(m.cwExact - m.cwFloor) < 0.5 && m.cwExact - wanted > 0.05;
-        // Issue #58. The budget can also run out: when the chrome alone is
-        // taller than the screen, --cw-height is negative and the probe reads 0.
-        // Lifting the floor then leaves a card of nothing, the page still
-        // overflows by the deficit, and "a term of --chrome is missing" would
-        // blame a term that is there. Measured on correctly budgeted pages at
-        // 1100x330, inflated: plate rows at 1.6 x --t-tiny leave 0.69px and fit,
-        // at 1.7 x the budget reads 0.00 and overflows 4px. So "exhausted" is a
-        // budget that reads zero, and it is asked apart. In the inflated pass it
-        // is not a defect of the page — the inflation made the screen too short
-        // — so the case is skipped and the summary counts it; in the plain pass
-        // it is one, and it fails with its own message.
-        const exhausted = floored && wanted < 0.05;
-        if (floored) {
-          flooredCases++;
-          if (vname === 'shortest window') flooredShortest++;
-          if (vname === 'narrow phone') flooredNarrow++;
-        }
-        if (exhausted) {
-          if (inflate) { exhaustedCases++; exhaustedAt[vname] = (exhaustedAt[vname] || 0) + 1; }
-          else bad.push('the budget leaves no card at all here: the chrome alone is taller than the '
-            + 'screen, so no card size fits — not a missing term, a screen too short for the table');
-        } else {
-          const fit = floored ? await (async () => {
-            await page.addStyleTag({ content: UNFLOOR });
-            await page.waitForTimeout(40);
-            return page.evaluate(measure);
-          })() : m;
-          const lifted = floored ? 'with the card\'s floor lifted, ' : '';
-          if (fit.tableScroll > 1)
-            bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
-          if (fit.youSeatBottom > fit.viewportH + 1)
-            bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
-              + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
-        }
-
-        if (m.tavolaInsideTable > 1)
-          bad.push(`the table row runs ${m.tavolaInsideTable}px outside the table`);
-
-        if (m.tavolaCount !== m.engineCount)
-          bad.push(`the middle shows ${m.tavolaCount} cards, the engine holds ${m.engineCount}`);
-
-        // The rows must not drift apart: cards hit their cap and the grid hands
-        // the leftover height to the gaps until a third of the table is empty.
-        // Before the per-card lines below, which can be many: a failure that is
-        // about the whole table is the one worth printing first.
-        if (m.gapSpread > Math.max(24, m.cw * 0.5))
-          bad.push(`the rows drift apart — gaps differ by ${m.gapSpread}px`);
-
-        // The fan floors, moved here from Tressette's hand. A strip too narrow
-        // to touch does not error — it just makes a capture unreachable, and a
-        // misplay costs the deal.
-        const floor = Math.min(24, Math.round(m.cw * 0.45));
-        for (const row of m.rowStats) {
-          if (row.n > 1 && row.minStep < floor)
-            bad.push(`a table row steps ${row.minStep}px between cards, want ${floor} `
-              + `(${row.n} cards, ${m.cw}px each)`);
-          if (row.stepSpread > 1)
-            bad.push(`a table row's steps are uneven by ${row.stepSpread}px — the derivation has drifted`);
-          if (row.spillRight > 1 || row.spillLeft > 1)
-            bad.push(`a table row spills ${row.spillRight || row.spillLeft}px past its own box`);
-          // Tressette asserted here that the last card of the fan is a whole
-          // card. That assertion is gone, measured rather than argued away:
-          // its cards are `width: --cw; flex: none` and the row's negative
-          // margins keep the content inside the box, so nothing shrinks them.
-          // `flex: 1 1 auto` on .card — the regression it was written against
-          // — changes not one measurement. An assertion that cannot fail reads
-          // like cover and is not any. What can fail is the spill above.
-
-          // The strip the layout promises and the strip a thumb gets are two
-          // different numbers, and only the second one plays the card. Every
-          // card is reachable across its own step — the last one across a whole
-          // card — unless something is painted over it.
-          // One line per row, not one per card: a row that loses its strips
-          // loses all of them, and thirteen copies of the same finding push the
-          // assertion that explains it off the end of the report.
-          const want = Math.min(row.minStep, m.cw);
-          const reach = row.reach || [];
-          const starved = reach.findIndex(g => g < floor);
-          const robbed = reach.findIndex(g => g >= floor && g < want - 2);
-          if (starved >= 0)
-            bad.push(`table card ${starved} is ${reach[starved]}px wide to a thumb, `
-              + `want ${floor} (${row.n} cards, ${m.cw}px each)`);
-          else if (robbed >= 0)
-            bad.push(`table card ${robbed} loses ${want - reach[robbed]}px of its strip to `
-              + `whatever is painted over it (${reach[robbed]}px reachable of ${want}px)`);
-        }
-
-        const all = [...bad, ...errs];
-        if (all.length) {
-          failed++;
-          console.log(`  FAIL  ${vname} / ${deck} / ${n} cards`);
-          all.forEach(b => console.log(`        ${b}`));
-        }
-        await page.close();
-      }
+    // Issue #5. Where the budget wants a card narrower than --cw's clamp
+    // floor, the floor decides the card, not the budget, and the table may
+    // scroll by what the floor adds: the designed fallback, since reaching a
+    // card by scrolling beats a card too small to touch. "No scrolling" there
+    // tested the clamp rather than the derivation, which is why 1100x320
+    // left the grid and why 1100x330 tested nothing. So on the floor the
+    // derivation is asked directly: lift the floor, let the card be what the
+    // budget says, and the page must fit — the same rule as everywhere else.
+    // The page as drawn, floor and all, is still held to every other rule in
+    // this pass; only its scroll is the stated fallback.
+    //
+    // Only the DESIGNED floor earns this. A card held up by any other floor —
+    // "the portrait card has a floor of its own" raises it to 36px — is a
+    // defect the strict rule has to see, so a card that is not exactly
+    // the designed floor's width (the page's --cw-floor token, read by
+    // measure) is held to "no scrolling" whatever the budget wants.
+    const wanted = Math.min(m.cwHeight, m.cwWidth);
+    // Floored means both: the card is the designed floor's width, AND it is
+    // wider than the budget wants. With the floor lowered to 20px, a card at
+    // 500x425 is 31.9px because the budget wants 31.9px — near 32 and not
+    // held up by any floor — and counting it as floored would have left the
+    // rail below satisfied by a case the rule never had to lift.
+    //
+    // What this costs, and where: with the floor lifted the budget has its
+    // full --slack again, where the strict rule on the floored page had only
+    // what the floor left of it — 2-5px on the short landscape windows. A
+    // defect that small, confined to those windows, passes this pass; it is
+    // the inflated pass, with --slack at 0 and 640x480 to 1100x330 in TIGHT,
+    // that catches it (the break "the icon bar grows on short landscape
+    // windows"). 320x568 keeps about 3px of that difference, since the
+    // inflated pass does not run it.
+    casesAt[vname] = (casesAt[vname] || 0) + 1;
+    floorsRead.add(Math.round(m.cwFloor * 10) / 10);
+    if (!(m.cwFloor > 0))
+      bad.push('the page declares no --cw-floor, so the designed card floor cannot be read');
+    const floored = m.cwFloor > 0 && Math.abs(m.cwExact - m.cwFloor) < 0.5 && m.cwExact - wanted > 0.05;
+    // Issue #58. The budget can also run out: when the chrome alone is
+    // taller than the screen, --cw-height is negative and the probe reads 0.
+    // Lifting the floor then leaves a card of nothing, the page still
+    // overflows by the deficit, and "a term of --chrome is missing" would
+    // blame a term that is there. Measured on correctly budgeted pages at
+    // 1100x330, inflated: plate rows at 1.6 x --t-tiny leave 0.69px and fit,
+    // at 1.7 x the budget reads 0.00 and overflows 4px. So "exhausted" is a
+    // budget that reads zero, and it is asked apart. In the inflated pass it
+    // is not a defect of the page — the inflation made the screen too short
+    // — so the case is skipped and the summary counts it; in the plain pass
+    // it is one, and it fails with its own message.
+    const exhausted = floored && wanted < 0.05;
+    if (floored) {
+      flooredCases++;
+      if (vname === 'shortest window') flooredShortest++;
+      if (vname === 'narrow phone') flooredNarrow++;
     }
-  }
+    if (exhausted) {
+      if (inflate) { exhaustedCases++; exhaustedAt[vname] = (exhaustedAt[vname] || 0) + 1; }
+      else bad.push('the budget leaves no card at all here: the chrome alone is taller than the '
+        + 'screen, so no card size fits — not a missing term, a screen too short for the table');
+    } else {
+      const fit = floored ? await (async () => {
+        await page.addStyleTag({ content: UNFLOOR });
+        await page.waitForTimeout(40);
+        return page.evaluate(measure);
+      })() : m;
+      const lifted = floored ? 'with the card\'s floor lifted, ' : '';
+      if (fit.tableScroll > 1)
+        bad.push(`${lifted}the table needs ${fit.tableScroll}px of scrolling — a term of --chrome is missing`);
+      if (fit.youSeatBottom > fit.viewportH + 1)
+        bad.push(`${lifted}your seat runs ${fit.youSeatBottom - fit.viewportH}px below the fold `
+          + `(${fit.youSeatBottom} vs ${fit.viewportH})`);
+    }
+
+    if (m.tavolaInsideTable > 1)
+      bad.push(`the table row runs ${m.tavolaInsideTable}px outside the table`);
+
+    if (m.tavolaCount !== m.engineCount)
+      bad.push(`the middle shows ${m.tavolaCount} cards, the engine holds ${m.engineCount}`);
+
+    // The rows must not drift apart: cards hit their cap and the grid hands
+    // the leftover height to the gaps until a third of the table is empty.
+    // Before the per-card lines below, which can be many: a failure that is
+    // about the whole table is the one worth printing first.
+    if (m.gapSpread > Math.max(24, m.cw * 0.5))
+      bad.push(`the rows drift apart — gaps differ by ${m.gapSpread}px`);
+
+    // The fan floors, moved here from Tressette's hand. A strip too narrow
+    // to touch does not error — it just makes a capture unreachable, and a
+    // misplay costs the deal.
+    const floor = Math.min(24, Math.round(m.cw * 0.45));
+    for (const row of m.rowStats) {
+      if (row.n > 1 && row.minStep < floor)
+        bad.push(`a table row steps ${row.minStep}px between cards, want ${floor} `
+          + `(${row.n} cards, ${m.cw}px each)`);
+      if (row.stepSpread > 1)
+        bad.push(`a table row's steps are uneven by ${row.stepSpread}px — the derivation has drifted`);
+      if (row.spillRight > 1 || row.spillLeft > 1)
+        bad.push(`a table row spills ${row.spillRight || row.spillLeft}px past its own box`);
+      // Tressette asserted here that the last card of the fan is a whole
+      // card. That assertion is gone, measured rather than argued away:
+      // its cards are `width: --cw; flex: none` and the row's negative
+      // margins keep the content inside the box, so nothing shrinks them.
+      // `flex: 1 1 auto` on .card — the regression it was written against
+      // — changes not one measurement. An assertion that cannot fail reads
+      // like cover and is not any. What can fail is the spill above.
+
+      // The strip the layout promises and the strip a thumb gets are two
+      // different numbers, and only the second one plays the card. Every
+      // card is reachable across its own step — the last one across a whole
+      // card — unless something is painted over it.
+      // One line per row, not one per card: a row that loses its strips
+      // loses all of them, and thirteen copies of the same finding push the
+      // assertion that explains it off the end of the report.
+      const want = Math.min(row.minStep, m.cw);
+      const reach = row.reach || [];
+      const starved = reach.findIndex(g => g < floor);
+      const robbed = reach.findIndex(g => g >= floor && g < want - 2);
+      if (starved >= 0)
+        bad.push(`table card ${starved} is ${reach[starved]}px wide to a thumb, `
+          + `want ${floor} (${row.n} cards, ${m.cw}px each)`);
+      else if (robbed >= 0)
+        bad.push(`table card ${robbed} loses ${want - reach[robbed]}px of its strip to `
+          + `whatever is painted over it (${reach[robbed]}px reachable of ${want}px)`);
+    }
+
+    const all = [...bad, ...errs];
+    await page.close();
+    return all.length ? [`  FAIL  ${vname} / ${deck} / ${n} cards`, ...all.map(b => `        ${b}`)] : [];
+  });
   // The floor rule is behind a condition, so say whether it was ever asked.
   // 1100x320 is in the grid to be on the floor; if no case there was, the
   // rule above went unasked and this pass would look exactly as if it held.
@@ -1732,7 +1794,7 @@ async function checkChoice(browser) {
   console.log('\nthe capture choice, and the toast');
   let failed = 0;
   const list = QUICK ? ['Android small'] : CHOICE_VIEWPORTS;
-  for (const [vi, vname] of list.entries()) {
+  failed += await inParallel(list, async (vname, vi) => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     const page = await openPage(browser, { width: w, height: h });
     const errs = [];
@@ -1980,13 +2042,9 @@ async function checkChoice(browser) {
     }
 
     const all = [...bad, ...toastBad, ...crowdBad, ...sayBad, ...rungBad, ...errs];
-    if (all.length) {
-      failed++;
-      console.log(`  FAIL  ${vname} / ${deck}`);
-      all.forEach(b => console.log(`        ${b}`));
-    }
     await page.close();
-  }
+    return all.length ? [`  FAIL  ${vname} / ${deck}`, ...all.map(b => `        ${b}`)] : [];
+  });
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
     + `${list.length} viewports, seven positions each`);
   return failed;
@@ -2004,7 +2062,7 @@ async function checkStates(browser) {
   console.log('\nthe sweep, and the beat between rounds');
   let failed = 0;
   const list = QUICK ? ['Android small'] : SCREEN_VIEWPORTS;
-  for (const [vi, vname] of list.entries()) {
+  failed += await inParallel(list, async (vname, vi) => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     const page = await openPage(browser, { width: w, height: h });
     const errs = [];
@@ -2347,17 +2405,13 @@ async function checkStates(browser) {
 
     const all = [...lands, ...flying, ...oppLands, ...flyingOpp, ...laidBad,
                  ...sweep, ...ending, ...between, ...firstDeal, ...errs];
-    if (all.length) {
-      failed++;
-      console.log(`  FAIL  ${vname} / ${deck}`);
-      // Every one of them. This pass makes eight groups of assertions and up to
-      // thirteen lines can precede the newest; truncating at six reported a
-      // MISMATCH for an assertion that had fired and was simply off the end of
-      // the list, which is what forced one EXPECT to be loosened a commit ago.
-      all.forEach(b => console.log(`        ${b}`));
-    }
     await page.close();
-  }
+    // Every one of them. This pass makes eight groups of assertions and up to
+    // thirteen lines can precede the newest; truncating at six reported a
+    // MISMATCH for an assertion that had fired and was simply off the end of
+    // the list, which is what forced one EXPECT to be loosened a commit ago.
+    return all.length ? [`  FAIL  ${vname} / ${deck}`, ...all.map(b => `        ${b}`)] : [];
+  });
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${list.length} viewports`);
   return failed;
 }
@@ -2527,7 +2581,7 @@ async function checkRotation(browser) {
 async function checkRules(browser) {
   console.log('\nthe rules');
   let failed = 0;
-  for (const vname of (QUICK ? ['narrow phone'] : SCREEN_VIEWPORTS)) {
+  failed += await inParallel(QUICK ? ['narrow phone'] : SCREEN_VIEWPORTS, async vname => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     const page = await openPage(browser, { width: w, height: h });
     const errs = [];
@@ -2633,13 +2687,9 @@ async function checkRules(browser) {
     }, before));
 
     const all = [...bad, ...errs];
-    if (all.length) {
-      failed++;
-      console.log(`  FAIL  ${vname}`);
-      all.forEach(b => console.log(`        ${b}`));
-    }
     await page.close();
-  }
+    return all.length ? [`  FAIL  ${vname}`, ...all.map(b => `        ${b}`)] : [];
+  });
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
     + `${QUICK ? 1 : SCREEN_VIEWPORTS.length} viewports, both ways in`);
   return failed;
@@ -2711,59 +2761,56 @@ async function checkFallbackFonts(browser) {
   let failed = 0;
   const list = QUICK ? ['Android small'] : FALLBACK_VIEWPORTS;
   const stacks = QUICK ? LABEL_STACKS.slice(0, 2) : LABEL_STACKS;
-  for (const vname of list) {
+  const plates = list.flatMap(vname => stacks.map(([label, stack]) => [vname, label, stack]));
+  failed += await inParallel(plates, async ([vname, label, stack]) => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
-    for (const [label, stack] of stacks) {
-      const page = await openPage(browser, { width: w, height: h });
-      const errs = [];
-      page.on('pageerror', e => errs.push(String(e)));
-      page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
-      await page.goto(URL_);
-      await page.addStyleTag({ content: STILL });
-      // The label face only. It is what the role and the mazziere tag are set
-      // in, and the role is what sets the plate's minimum — §5 measured the
-      // whole roster and `avversario` is longer than any name in it.
-      await page.addStyleTag({ content: `:root{ --font-label: ${stack} !important; }` });
-      await page.click('#play');
-      await page.mouse.move(0, 0);
-      // The longest name in §0's roster, as everywhere else that measures a
-      // plate: only Franco exists until iteration 5.
-      await page.evaluate(`(() => { state.opponent = "Graziano"; render(); })()`);
-      await page.waitForTimeout(40);
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    // The label face only. It is what the role and the mazziere tag are set
+    // in, and the role is what sets the plate's minimum — §5 measured the
+    // whole roster and `avversario` is longer than any name in it.
+    await page.addStyleTag({ content: `:root{ --font-label: ${stack} !important; }` });
+    await page.click('#play');
+    await page.mouse.move(0, 0);
+    // The longest name in §0's roster, as everywhere else that measures a
+    // plate: only Franco exists until iteration 5.
+    // The epoch for setTavola's reason: nothing may play into the table
+    // between here and the measurement.
+    await page.evaluate(`(() => { epoch++; state.opponent = "Graziano"; render(); })()`);
+    await page.waitForTimeout(40);
 
-      const m = await page.evaluate(measure);
-      const bad = [...m.plateBad];
-      for (const e of m.offScreen) bad.push(`${e} runs off the screen`);
-      if (m.tableScroll > 1)
-        bad.push(`the table needs ${m.tableScroll}px of scrolling`);
-      if (m.youSeatBottom > m.viewportH + 1)
-        bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
+    const m = await page.evaluate(measure);
+    const bad = [...m.plateBad];
+    for (const e of m.offScreen) bad.push(`${e} runs off the screen`);
+    if (m.tableScroll > 1)
+      bad.push(`the table needs ${m.tableScroll}px of scrolling`);
+    if (m.youSeatBottom > m.viewportH + 1)
+      bad.push(`your seat runs ${m.youSeatBottom - m.viewportH}px below the fold`);
 
-      // And the say line, which is in the label face too, with a card raised on
-      // the widest line it keeps. In the face the page ships, that line is 274px
-      // of text and fits a 320px screen even in a box sized by its content — so
-      // the break that takes the say line's width away, measured at −22..342 in
-      // system-ui when it was written, went quiet once the condensed face
-      // shipped, and passed everywhere the say line was asked. The rung the page
-      // picks is read back from a rendered height, so a wider face is exactly
-      // what it exists for, and a player sees that face while the webfont is
-      // still on its way.
-      await page.evaluate(poseWidestSay);
-      await page.waitForTimeout(40);
-      const raised = await page.evaluate(measure);
-      if (!await page.evaluate(() => document.querySelector('.sel-name').textContent.trim()))
-        bad.push('the say line is empty with a card raised, so the rule below was never asked');
-      for (const e of raised.offScreen) bad.push(`with a card raised, ${e} runs off the screen`);
+    // And the say line, which is in the label face too, with a card raised on
+    // the widest line it keeps. In the face the page ships, that line is 274px
+    // of text and fits a 320px screen even in a box sized by its content — so
+    // the break that takes the say line's width away, measured at −22..342 in
+    // system-ui when it was written, went quiet once the condensed face
+    // shipped, and passed everywhere the say line was asked. The rung the page
+    // picks is read back from a rendered height, so a wider face is exactly
+    // what it exists for, and a player sees that face while the webfont is
+    // still on its way.
+    await page.evaluate(poseWidestSay);
+    await page.waitForTimeout(40);
+    const raised = await page.evaluate(measure);
+    if (!await page.evaluate(() => document.querySelector('.sel-name').textContent.trim()))
+      bad.push('the say line is empty with a card raised, so the rule below was never asked');
+    for (const e of raised.offScreen) bad.push(`with a card raised, ${e} runs off the screen`);
 
-      const all = [...bad, ...errs];
-      if (all.length) {
-        failed++;
-        console.log(`  FAIL  ${vname} / ${label}`);
-        all.forEach(b => console.log(`        ${b}`));
-      }
-      await page.close();
-    }
-  }
+    const all = [...bad, ...errs];
+    await page.close();
+    return all.length ? [`  FAIL  ${vname} / ${label}`, ...all.map(b => `        ${b}`)] : [];
+  });
   // And the sheets, in a whole type scale this machine does not have. The audit
   // is the right instrument here rather than `measure`: what can go wrong on a
   // sheet in a wider face is text past the screen edge, text clipped by a box
@@ -2772,33 +2819,27 @@ async function checkFallbackFonts(browser) {
   // font.
   const shapes = QUICK ? ['narrow phone'] : ['narrow phone', 'Android small', 'tiny window'];
   const faces = QUICK ? FALLBACK_FACES.slice(0, 2) : FALLBACK_FACES;
-  for (const vname of shapes) {
+  const sheets = shapes.flatMap(vname => faces.flatMap(face =>
+    FALLBACK_SCREENS.map(([sname, open]) => [vname, face, sname, open])));
+  failed += await inParallel(sheets, async ([vname, [label, sans, serif, body], sname, open]) => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
-    for (const [label, sans, serif, body] of faces) {
-      for (const [sname, open] of FALLBACK_SCREENS) {
-        const page = await openPage(browser, { width: w, height: h });
-        const errs = [];
-        page.on('pageerror', e => errs.push(String(e)));
-        page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
-        await page.goto(URL_);
-        await page.addStyleTag({ content: STILL });
-        await page.addStyleTag({ content: `:root{
-          --font-label: ${sans} !important;
-          --font-display: ${serif} !important;
-          --font-body: ${body} !important; }` });
-        await open(page);
-        await page.waitForTimeout(60);
-        const bad = await page.evaluate(audit);
-        const all = [...bad, ...errs];
-        if (all.length) {
-          failed++;
-          console.log(`  FAIL  ${sname} @ ${vname} / ${label}`);
-          all.forEach(b => console.log(`        ${b}`));
-        }
-        await page.close();
-      }
-    }
-  }
+    const page = await openPage(browser, { width: w, height: h });
+    const errs = [];
+    page.on('pageerror', e => errs.push(String(e)));
+    page.on('console', m => { if (m.type() === 'error' && !noisy(m)) errs.push(m.text()); });
+    await page.goto(URL_);
+    await page.addStyleTag({ content: STILL });
+    await page.addStyleTag({ content: `:root{
+      --font-label: ${sans} !important;
+      --font-display: ${serif} !important;
+      --font-body: ${body} !important; }` });
+    await open(page);
+    await page.waitForTimeout(60);
+    const bad = await page.evaluate(audit);
+    const all = [...bad, ...errs];
+    await page.close();
+    return all.length ? [`  FAIL  ${sname} @ ${vname} / ${label}`, ...all.map(b => `        ${b}`)] : [];
+  });
 
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  `
     + `${list.length} viewports x ${stacks.length} label faces on the table, `
@@ -2842,7 +2883,7 @@ async function checkSheets(browser) {
   console.log('\nthe sheets, and the partita');
   let failed = 0;
   const list = QUICK ? ['Android small'] : SCREEN_VIEWPORTS;
-  for (const vname of list) {
+  failed += await inParallel(list, async vname => {
     const [, w, h] = VIEWPORTS.find(v => v[0] === vname);
     const page = await openPage(browser, { width: w, height: h });
     const errs = [];
@@ -3635,13 +3676,9 @@ async function checkSheets(browser) {
     }
 
     const all = [...bad, ...errs];
-    if (all.length) {
-      failed++;
-      console.log(`  FAIL  ${vname}`);
-      all.forEach(b => console.log(`        ${b}`));
-    }
     await page.close();
-  }
+    return all.length ? [`  FAIL  ${vname}`, ...all.map(b => `        ${b}`)] : [];
+  });
   console.log(`  ${failed ? failed + ' case(s) failed' : 'pass'}  ${list.length} viewports`);
   return failed;
 }
@@ -3959,21 +3996,53 @@ const browser = await chromium.launch({ ...(CHROME && { executablePath: CHROME }
 // playwright-core for the same reason: two runs that do not agree about the
 // environment are not two runs of the same check.
 console.log(`chromium ${browser.version()}`);
+// tools/break_ui.mjs sets STOP_AFTER to the assertion a break was written for.
+// Its verdict is "the check failed, and a line naming that assertion was
+// printed", so once both are true nothing a later pass does can change it:
+// `failed` only grows, and a line once printed stays printed. The check then
+// stops at the end of that pass and exits through the same door as a finished
+// run, failure count and all. It stops only on a FAILED check: a line printed
+// by a check that counted nothing is exactly what the harness must go on
+// seeing as a check that passed. Nothing else sets STOP_AFTER.
+const STOP_AFTER = process.env.STOP_AFTER || null;
+let named = false;
+if (STOP_AFTER) {
+  const log = console.log;
+  console.log = (...args) => {
+    if (args.join(' ').split('\n').some(l => /^\s{8}/.test(l) && l.trim().includes(STOP_AFTER)))
+      named = true;
+    log(...args);
+  };
+}
+
 let failed = 0;
-failed += await checkDocument(browser);
-failed += await checkFonts(browser);
-failed += await checkLanguageBehavior(browser);
-failed += await checkScreens(browser, 'it-IT');
-failed += await checkScreens(browser, 'en-GB');
-failed += await checkTable(browser, null, false);
-failed += await checkTable(browser, TIGHT, true);
-failed += await checkChoice(browser);
-failed += await checkStates(browser);
-failed += await checkRotation(browser);
-failed += await checkRules(browser);
-failed += await checkFallbackFonts(browser);
-failed += await checkSheets(browser);
-failed += await checkDeal(browser);
+const T0 = Date.now();
+const PASSES = [
+  ['document',       () => checkDocument(browser)],
+  ['fonts',          () => checkFonts(browser)],
+  ['language',       () => checkLanguageBehavior(browser)],
+  ['screens (it)',   () => checkScreens(browser, 'it-IT')],
+  ['screens (en)',   () => checkScreens(browser, 'en-GB')],
+  ['table',          () => checkTable(browser, null, false)],
+  ['table inflated', () => checkTable(browser, TIGHT, true)],
+  ['choice',         () => checkChoice(browser)],
+  ['states',         () => checkStates(browser)],
+  ['rotation',       () => checkRotation(browser)],
+  ['rules',          () => checkRules(browser)],
+  ['fallback fonts', () => checkFallbackFonts(browser)],
+  ['sheets',         () => checkSheets(browser)],
+  ['deal',           () => checkDeal(browser)],
+];
+for (const [label, run] of PASSES) {
+  const t = Date.now();
+  failed += await run();
+  console.log(`  [${label}: ${((Date.now() - t) / 1000).toFixed(1)}s]`);
+  if (named && failed) {
+    console.log(`\nstopped after ${label}: STOP_AFTER was printed and the check has failed`);
+    break;
+  }
+}
+console.log(`  [total: ${((Date.now() - T0) / 1000).toFixed(1)}s]`);
 await browser.close();
 
 console.log(failed ? `\n${failed} case(s) failed` : '\nAll checks pass.');

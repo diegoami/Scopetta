@@ -19,6 +19,10 @@
 // repository. It runs with QUICK=1, which trims the viewport grid: a quick run
 // is for proving an assertion bites, never for clearing one.
 //
+// Several breaks are checked at once (JOBS, below), and a break's check stops
+// once it has failed and printed the assertion written for it, which is all
+// its verdict reads. Neither changes a verdict or the report: see `run`.
+//
 // A break must be caught by the assertion written for it, not merely by some
 // assertion — EXPECT names which, and a break caught only by others is
 // MISMATCH and red. That distinction is the whole point: "the check went red"
@@ -118,14 +122,16 @@
 // timer ever fired. The first is deleted and the second plays a card first.
 
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, cpSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, availableParallelism } from "node:os";
 
 const PAGE = fileURLToPath(new URL("../public/index.html", import.meta.url));
 const PUBLIC = dirname(PAGE);
-const CHECK = fileURLToPath(new URL("./check_ui.mjs", import.meta.url));
+// CHECK_UI points the harness at another check, which is how
+// tools/break_ui.test.mjs hands it a stand-in whose exit code it controls.
+const CHECK = process.env.CHECK_UI || fileURLToPath(new URL("./check_ui.mjs", import.meta.url));
 // LF, whatever the checkout: a `find` that spans lines is written with "\n",
 // and Git for Windows checks index.html out CRLF, where 54 of the breaks
 // matched nothing and came back INVALID — issue #43.
@@ -256,7 +262,7 @@ const EXPECT = {
   "the points are not counted out": "never counted out",
   "the breakdown leaves a row out": "the breakdown lists",
   "the settebello is counted for the wrong player": "settebello, the piles hold",
-  "the rules are Italian only": "never mention",
+  "the rules are Italian only": "English rules section is not visible",
   "the rules go back to the start sheet whatever they were opened from": "went back to the start sheet",
   "the rows do not say what they are worth": "the points marked on the rows",
   "the rule the total comes from is not stated": "does not say what the total is made of",
@@ -661,7 +667,7 @@ const BREAKS = [
    "const LABEL_CHARS = 39;", "const LABEL_CHARS = 0;"],
   ["the say line names the card instead of the capture",
     '    t("takeWith", lista, breve(card)),',
-    '    t("takeCards", lista),'],
+    '    t("playCard", breve(card)),'],
   ["the say line drops the suit that tells two sevens apart",
    "  const presi = presa.map(i => art(nomePresa(state.tavola[i])));",
    "  const presi = presa.map(i => art(breve(state.tavola[i])));"],
@@ -693,10 +699,10 @@ const BREAKS = [
    "    const pts = who => won === \"scope\" ? r.scope[who] : (won === who ? 1 : 0);",
    "    const pts = who => 0;"],
   ["the rule the total comes from is not stated",
-   "        <p class=\"result__rule\">Un punto per le carte, i denari, il settebello e la\n          primiera, più un punto per ogni scopa.</p>\n",
+    "        <p class=\"result__rule\" data-i18n=\"resultRule\">Un punto per le carte, i denari, il settebello e la\n          primiera, più un punto per ogni scopa.</p>\n",
    ""],
   ["the rules are Italian only",
-   "      <section lang=\"en\">", "      <section>"],
+    "      <section lang=\"en\" hidden>", "      <section hidden>"],
   ["the rules go back to the start sheet whatever they were opened from",
    "  cameFrom = onScreen === \"table\" ? \"table\" : \"start\";",
    "  cameFrom = \"start\";"],
@@ -704,7 +710,7 @@ const BREAKS = [
    "  const has = w => piles[w].some(isSettebello) ? 1 : 0;",
    "  const has = w => piles[1 - w].some(isSettebello) ? 1 : 0;"],
   ["the breakdown leaves a row out",
-   "    [\"scope\",      r.scope[BASSO], r.scope[ALTO], \"scope\"],", ""],
+    '    [t("resultRows")[4], r.scope[BASSO], r.scope[ALTO], "scope"],', ""],
   ["the breakdown totals something else",
    "  out.push(num(r.punti[BASSO], \"r-num r-total\", 0));",
    "  out.push(num(r.punti[BASSO] + 1, \"r-num r-total\", 0));"],
@@ -751,14 +757,14 @@ const BREAKS = [
    "  const prim = state.prese ? primieraTotale(pile) : null;",
    "  const prim = state.prese ? primieraTotale(state.prese[1 - who]) : null;"],
   ["the counters stop at three points",
-   "    [\"primiera\", prim === null || prim === undefined ? \"—\" : String(prim),\n      prim !== null && prim !== undefined],\n",
+    '    [t("pointNames")[3], prim === null || prim === undefined ? "—" : String(prim),\n      prim !== null && prim !== undefined],\n',
    ""],
   // The fifth point, which the running score used to omit entirely: a scope
   // accumulates through the deal like the other four, and the box now counts it.
   // Named for the running score to keep it apart from the result breakdown's own
   // scope break, which shares the word.
   ["the running score's scope row stops counting",
-   "    [\"scope\", String(scope), scope > 0],",
+    '    [t("pointNames")[4], String(scope), scope > 0],',
    "    [\"scope\", \"0\", false],"],
   ["the scopa marks stop counting",
    "  const s = state.scope ? state.scope[who] : 0;",
@@ -1186,23 +1192,55 @@ const chosen = filter ? BREAKS.filter(b => b[0].includes(filter)) : BREAKS;
 if (!chosen.length){ console.error(`no break matches ${JSON.stringify(filter)}`); process.exit(2); }
 
 const dir = mkdtempSync(join(tmpdir(), "scopetta-ui-"));
-const env = { ...process.env, QUICK: "1" };
+// How many breaks are checked at once. Each is its own check on its own copy
+// of the page, with its own Chromium, and nothing but the report is shared —
+// which is printed in the order of BREAKS, whatever finishes first. JOBS=1 is
+// one break at a time.
+const JOBS = Math.max(1, Math.floor(Number(process.env.JOBS))
+  || Math.min(4, availableParallelism()));
 
-const run = file => {
-  try {
-    execFileSync(process.execPath, [CHECK, file],
-      { stdio: "pipe", timeout: 600000, maxBuffer: 64 * 1024 * 1024, env });
-    return null;                                  // clean
-  } catch (e) {
-    return String(e.stdout || "") + String(e.stderr || "");
-  }
-};
+// And how many pages each of those checks keeps open, so that the machine as a
+// whole runs about as many pages as it has cores. The check's own default is
+// sized for a check that has the machine to itself; four of them at four pages
+// each ran sixteen on four cores, and the states pass, which samples a beat
+// 600-900ms after a play at 700ms, sampled it late and found the capture
+// already gone: "the capture was not drawn leaving the table", on a page it
+// passes alone. It failed an equivalence claim once in a full run and once in
+// four runs looped under one. A WORKERS set by hand is passed through as it is.
+const env = { ...process.env, QUICK: "1",
+  WORKERS: process.env.WORKERS || String(Math.max(1, Math.floor(availableParallelism() / JOBS))) };
+
+// Runs the check on `file`: null if it exits 0, else everything it printed —
+// the same rule the harness always had, and the only place a verdict of
+// "clean" comes from.
+//
+// With `want`, the check is told (STOP_AFTER) to stop at the end of the first
+// pass after which it has both failed and printed a line naming `want`. That
+// is the whole verdict for a caught break, and neither half can be undone by
+// a later pass, so a finished run would end the same way. The CHECK decides
+// that it has failed, by its own count and its own exit code; the harness
+// kills nothing and infers nothing from the lines alone. A check that prints
+// the line and exits 0 is clean, as it always was (the review of #91).
+// Without `want` — the unbroken page, an equivalence claim, a break with no
+// EXPECT — the check runs to the end.
+const run = (file, want = null) => new Promise(resolve => {
+  const child = spawn(process.execPath, [CHECK, file], {
+    env: want ? { ...env, STOP_AFTER: want } : env, stdio: ["ignore", "pipe", "pipe"] });
+  let out = "", timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; child.kill(); }, 600000);
+  child.stdout.on("data", d => { out += d; });
+  child.stderr.on("data", d => { out += d; });
+  child.on("close", code => {
+    clearTimeout(timer);
+    resolve(code === 0 && !timedOut ? null : out);
+  });
+});
 
 // The page has to pass before any of this means anything.
 {
   const base = join(dir, "base");
   cpSync(PUBLIC, base, { recursive: true });
-  if (run(join(base, "index.html")) !== null){
+  if (await run(join(base, "index.html")) !== null){
     console.error("the check does not pass on the unbroken page — fix that first");
     rmSync(dir, { recursive: true, force: true });
     process.exit(2);
@@ -1211,7 +1249,10 @@ const run = file => {
 
 let caught = 0; const survived = [], mismatched = [], invalid = [], equivalent = [];
 
-for (const [name, find, replace] of chosen){
+// One break, start to verdict. It prints nothing itself: it returns the line
+// for the report and a function that files the verdict, both applied in the
+// order of BREAKS so the report and the summary read as a serial run's would.
+const judge = async ([name, find, replace]) => {
   // A break is one edit, except where one edit cannot express the defect: two
   // rules can hold the same thing up, and removing either alone changes
   // nothing. Then `find` and `replace` are equal-length arrays and the edits
@@ -1219,38 +1260,55 @@ for (const [name, find, replace] of chosen){
   const finds = Array.isArray(find) ? find : [find];
   const reps  = Array.isArray(replace) ? replace : [replace];
   const bad = finds.map(f => TEXT.split(f).length - 1).filter(h => h !== 1).length;
-  if (bad || finds.length !== reps.length){
-    invalid.push([name, `${bad} of ${finds.length} edits did not match exactly once`]);
-    console.log(`INVALID  ${name} — ${bad} edit(s) did not match exactly once`);
-    continue;
-  }
+  if (bad || finds.length !== reps.length)
+    return [`INVALID  ${name} — ${bad} edit(s) did not match exactly once`,
+            () => invalid.push([name, `${bad} of ${finds.length} edits did not match exactly once`])];
   const work = join(dir, name.replace(/[^a-z0-9]+/gi, "-"));
   cpSync(PUBLIC, work, { recursive: true });
   writeFileSync(join(work, "index.html"),
     finds.reduce((text, f, i) => text.replace(f, reps[i]), TEXT));
 
-  const out = run(join(work, "index.html"));
   const why = EQUIVALENT[name];
-  if (why){
-    if (out === null){ equivalent.push([name, why]); console.log(`equivalent ${name}`); }
-    else { mismatched.push([name, "claimed equivalent, but the check caught it", ""]);
-           console.log(`NOT EQUIV ${name} — the equivalence claim is wrong`); }
-    continue;
-  }
-  if (out === null){ survived.push(name); console.log(`SURVIVED ${name}`); continue; }
-
   const want = EXPECT[name];
-  const lines = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim());
-  if (!want){ mismatched.push([name, "no expected assertion declared", lines[0] || ""]);
-              console.log(`UNDECLARED ${name}`); continue; }
-  const hit = lines.find(l => l.includes(want));
-  if (!hit){
-    mismatched.push([name, want, lines.slice(0, 2).join(" | ")]);
-    console.log(`MISMATCH ${name}\n         wanted: ${want}\n         saw:    ${lines.slice(0, 2).join(" | ")}`);
-    continue;
+  const out = await run(join(work, "index.html"), why ? null : want);
+  if (why){
+    if (out === null) return [`equivalent ${name}`, () => equivalent.push([name, why])];
+    // With what the check said, as a MISMATCH does: a claim that fails once in
+    // a full run and passes alone is otherwise a verdict nobody can explain.
+    const said = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim()).slice(0, 2).join(" | ");
+    return [`NOT EQUIV ${name} — the equivalence claim is wrong\n         saw:    ${said}`,
+            () => mismatched.push([name, "claimed equivalent, but the check caught it", said])];
   }
-  caught++;
-  console.log(`caught   ${name}  →  ${hit.slice(0, 74)}`);
+  if (out === null) return [`SURVIVED ${name}`, () => survived.push(name)];
+
+  const lines = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim());
+  const evidence = lines.slice(0, 2).join(" | ")
+    || out.split(/\r?\n/).filter(l => /Error|Timeout|FAIL|stopped after|\s+at\s+/i.test(l))
+      .slice(-6).map(l => l.trim()).join(" | ");
+  if (!want) return [`UNDECLARED ${name}`,
+                     () => mismatched.push([name, "no expected assertion declared", lines[0] || ""])];
+  const hit = lines.find(l => l.includes(want));
+  if (!hit)
+    return [`MISMATCH ${name}\n         wanted: ${want}\n         saw:    ${evidence}`,
+            () => mismatched.push([name, want, evidence])];
+  return [`caught   ${name}  →  ${hit.slice(0, 74)}`, () => caught++];
+};
+
+{
+  const done = new Array(chosen.length);
+  let next = 0, printed = 0;
+  const worker = async () => {
+    while (next < chosen.length) {
+      const i = next++;
+      done[i] = await judge(chosen[i]);
+      while (printed < chosen.length && done[printed]) {
+        const [line, file] = done[printed++];
+        console.log(line);
+        file();
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(JOBS, chosen.length) }, worker));
 }
 
 rmSync(dir, { recursive: true, force: true });

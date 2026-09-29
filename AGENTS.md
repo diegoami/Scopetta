@@ -95,7 +95,7 @@ a PR (`Fixes #n`) or rebut it on the issue with evidence.
 ## Verification
 
 - Gates: `npm test` (the engine tests: rules, opponent, roster, release
-  decisions); `npm run check` (the UI check, ~25 min); and, after adding,
+  decisions); `npm run check` (the UI check, several minutes); and, after adding,
   changing or removing an assertion or a rule test, `node tools/break_ui.mjs`
   or `node tools/break.mjs`. A red gate does not merge.
 - The engine tests run on every push. The full UI check runs before a push
