@@ -3194,6 +3194,14 @@ function buildOpponents(){
 // Each option shows a real card from its deck — the asso, the most
 // characteristic card in any of them. The name goes beside the section label,
 // not under every swatch, which is what lets them fit one row on a phone.
+function updateDeckLabels(){
+  for (const b of el.decks.children){
+    const label = t("deckLabel", b.dataset.deck);
+    b.title = label;
+    b.setAttribute("aria-label", label);
+  }
+}
+
 function buildDecks(){
   // The column count comes from the deck table, not from the stylesheet: a
   // sixth deck against a hard-coded repeat(5, 1fr) wraps onto a second row and
@@ -3204,8 +3212,6 @@ function buildDecks(){
     b.type = "button";
     b.className = "deck-opt";
     b.dataset.deck = name;
-    b.title = t("deckLabel", name);
-    b.setAttribute("aria-label", t("deckLabel", name));
     b.style.setProperty("--sheet", deckSheet(name));
     b.style.setProperty("--ratio", DECK_RATIO[name]);
     // No --col/--row here: .deck-opt .card pins the background to the top-left
@@ -3216,6 +3222,7 @@ function buildDecks(){
     b.addEventListener("click", () => { applyDeck(name); save(); });
     return b;
   }));
+  updateDeckLabels();
 }
 
 // How much room to hold open for the dossier, measured rather than declared:
@@ -3421,6 +3428,7 @@ el.soundSel.addEventListener("change", () => { state.sound = el.soundSel.checked
 el.langSel.addEventListener("change", () => {
   state.langPicked = true;
   applyLanguage(el.langSel.value);
+  updateDeckLabels();
   el.dossier.textContent = DOSSIER[state.lang][state.opponent] || "";
   renderLastResult();
   render();

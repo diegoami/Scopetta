@@ -157,6 +157,7 @@ const EXPECT = {
   "the English result title is not a verdict": "English result title is not a translated verdict",
   "a translation key is missing from one language": "translation tables do not have the same keys",
   "both rules sections are shown at once": "shows the wrong rules sections",
+  "deck-choice labels keep the boot language": "deck-choice labels do not follow the chosen language",
 
   // --- the screens ----------------------------------------------------------
   "[hidden] stops beating the display rule": "screens visible at once",
@@ -461,6 +462,9 @@ const BREAKS = [
    'historyHasNoDeals: "No deals yet. The history stays in this browser."'],
   ["both rules sections are shown at once",
    'section.hidden = section.lang !== lang;', 'section.hidden = false;'],
+  ["deck-choice labels keep the boot language",
+   '  updateDeckLabels();\n  el.dossier.textContent = DOSSIER[state.lang][state.opponent] || "";',
+   '  // leave the deck labels in their boot language\n  el.dossier.textContent = DOSSIER[state.lang][state.opponent] || "";'],
 
   // --- every screen at once, and the page's own width -----------------------
   ["[hidden] stops beating the display rule",

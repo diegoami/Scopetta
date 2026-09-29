@@ -1337,9 +1337,17 @@ async function checkLanguageBehavior(browser) {
         lang: state.lang,
         documentLang: document.documentElement.lang,
         storedLang: JSON.parse(localStorage.getItem('scopetta.settings') || '{}').lang,
+        deckLabels: [...document.querySelectorAll('.deck-opt')].map(b => ({
+          deck: b.dataset.deck, title: b.title, aria: b.getAttribute('aria-label'),
+        })),
       }));
       if (selected.lang !== chosen || selected.documentLang !== chosen || selected.storedLang !== chosen)
         bad.push(`${locale} choice ${chosen} was not applied and saved: ${JSON.stringify(selected)}`);
+      for (const { deck, title, aria } of selected.deckLabels){
+        const want = chosen === 'en' ? `${deck} deck` : `Mazzo ${deck}`;
+        if (title !== want || aria !== want)
+          bad.push(`deck-choice labels do not follow the chosen language: ${deck} has ${JSON.stringify({ title, aria })}, want ${JSON.stringify(want)}`);
+      }
       await page.reload();
       const restored = await page.evaluate(() => ({ lang: state.lang, picked: state.langPicked }));
       if (restored.lang !== chosen || !restored.picked)
