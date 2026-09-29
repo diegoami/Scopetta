@@ -226,7 +226,7 @@ This section is the release-status source of truth.
 |---|---|---|---|---|
 | 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **done** |
 | 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **done** |
-| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, v1.0.1 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, and v1.0.2 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2> |
+| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, v1.0.1 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, v1.0.2 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>, and v1.0.3 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3> |
 | 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **done** — installed on the owner's tablet and played |
 | 5 | Add the about-screen link, run the check | either, after 3 | **done in this change** |
 
@@ -239,9 +239,19 @@ All five steps are done: the key exists, the releases repo exists and carries
 v1.0.0, it was published from this machine, and the owner installed and played
 it. The build, the debug APK and the offline emulator run are recorded above.
 
-**v1.0.2 is the current release** (2026-09-27), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>: the APK
+**v1.0.3 is the current release** (2026-09-29), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3>: the APK
+(`versionCode 4`, signed on the same key, `fdf7ca01…`) and the Windows executable
+beside it. The candidate `cc23db13954d86066c633cde2f0894dae5866975` was reviewed
+by DeepSeek V4.1 Flash, which gave AGREE on #96 in round 2. The owner completed
+the candidate device check before the tag. The annotated tag `v1.0.3` went on
+exactly that commit; the release was packaged from a detached checkout of the
+tag with `tools/package_release.mjs`, which built both targets, smoked the exe
+and verified staging. Both assets, downloaded back from the release, match
+`SHA256SUMS.txt`.
+
+**v1.0.2 was the previous release** (2026-09-27), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>: the APK
 (`versionCode 3`, signed on the same key, `fdf7ca01…`) and the Windows executable
-beside it. It is the first release made as a milestone (`AGENTS.md`,
+beside it. It was the first release made as a milestone (`AGENTS.md`,
 *Releases*): the
 candidate `5b2fd93` was reviewed by a model other than Claude, which gave AGREE
 on #81. The annotated tag `v1.0.2` went on exactly that commit, and the release
@@ -268,7 +278,7 @@ README pushed before `--confirm` can work.
 2. **Version numbering.** `versionName` is the version, and since 1.0.1 the
    desktop wrapper declares it in six more places; `tools/release.test.mjs` holds
    all seven to it on every pull request. `versionCode` only ever increases:
-   1.0.0 was `versionCode 1`, 1.0.1 `2`, 1.0.2 `3`. There is still no changelog; the
+   1.0.0 was `versionCode 1`, 1.0.1 `2`, 1.0.2 `3`, 1.0.3 `4`. There is still no changelog; the
    release notes' subtitle is the one line that says what changed.
 3. **A Play Store listing** is deliberately not in the table above: sideloading
    needs none of the paperwork, and the paperwork outweighs the code.
