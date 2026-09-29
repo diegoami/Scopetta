@@ -6,11 +6,13 @@ conosce. La versione inglese è `RULES.md`.
 
 La schermata delle regole dentro al gioco porta le stesse regole nelle due
 lingue, in breve: quel che sta in uno schermo che si legge sul telefono a metà
-smazzata. Questo file è la forma lunga, e i due non sono indipendenti — una
-regola scritta due volte in due posti prende strade diverse — quindi dove si
-sovrappongono qui si cita la schermata invece di riscriverla, e
-`node tools/check_ui.mjs` verifica che ciascuna metà di quella schermata sia
-ancora le regole e non un riassunto.
+smazzata. Mostra solo la lingua selezionata, mantenendo nel documento entrambe
+le sezioni `section[lang]`. Questo file è la forma lunga in italiano, e `RULES.md`
+quella inglese; i documenti e la schermata non sono indipendenti — una regola
+scritta due volte in due posti prende strade diverse — quindi dove si
+sovrappongono qui si cita la schermata invece di riscriverla.
+`node tools/check_ui.mjs` verifica che entrambe le sezioni siano ancora le regole
+e non un riassunto, e che sia mostrata solo quella selezionata.
 
 Ogni regola che cambia da casa a casa è una **costante con un nome** in
 `public/engine.js`, e questo file la nomina, così cambiarla è una riga e non uno

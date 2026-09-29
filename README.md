@@ -11,6 +11,9 @@ so it plays from a folder.
 You against one of four opponents, one deal at a time. Everything — your
 settings, your last hundred smazzate — stays in your browser.
 
+The interface follows your device language — Italian on an Italian device,
+English otherwise. Choose either language in Settings to save your preference.
+
 ## Playing
 
 Your hand is three whole cards, sorted by suit and then from the strongest down,

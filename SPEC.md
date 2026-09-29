@@ -21,8 +21,11 @@ runtime dependencies, the 1997 card art from
 imported sixth (§11). Nothing it draws with comes from the network. You against
 one of four opponents, one deal at a time, everything kept in the browser.
 
-Player-facing text is Italian. Comments, commit messages and documents are
-English, except `REGOLE.md`, which is the rules screen's long form for a player.
+Player-facing copy follows the selected language: Italian on `it-*` devices,
+English otherwise, with a saved choice in Settings taking precedence. Established
+Italian card, deck and Scopa terms remain Italian. Comments, commit messages and
+project documentation are English; `RULES.md` and `REGOLE.md` are the English and
+Italian long forms of the rules shown in the in-game rules screen.
 
 ## 2. The repository
 
@@ -40,7 +43,7 @@ tools/engine.test.mjs    the rules, on node --test
 tools/opponent.test.mjs  the trap positions, the roster, the golden fixture
 tools/selfplay.mjs       the harness every number in this file came from
 tools/golden.json        sixty frozen deals and four weight vectors
-tools/check_ui.mjs       the UI check: twelve passes
+tools/check_ui.mjs       the UI check: fourteen passes, including both languages
 tools/serve.mjs          public/ over http, standard library only
 tools/make_icons.mjs     cuts the settebello out of the Napoletane sheet
 tools/import_bresciane.mjs  builds the sixth deck from its source repo
@@ -286,8 +289,10 @@ the engine tests are the rules, the traps, the roster, the release decisions and
 the golden fixture — 94 in all, 93 passing and 1 skipped on Windows; the UI check
 needs `playwright-core` and a Chromium and its passes are the **document**, the
 **fonts** (every character inside the shipped subset, every `@font-face` loading
-with the network cut, no subresource from outside), the **screens** (every screen
-and every mid-deal state at seven shapes), the **table** (27 viewports × 6 decks ×
+with the network cut, no subresource from outside), the **language** (device
+defaults and saved overrides in both locales), the **screens** (every screen and
+every mid-deal state in Italian at seven shapes and English at three, with an
+English-copy and translation-key audit), the **table** (27 viewports × 6 decks ×
 4 table sizes, then the tightest again with the spacing inflated and `--slack:
 0`; where the card sits on its 32px clamp floor, the no-scrolling rule is asked
 with the floor lifted instead, #5), the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
@@ -305,7 +310,7 @@ bug it names, and confirming it still fails there.
 
 | key | shape |
 |---|---|
-| `scopetta.settings` | `{opponent, deck, felt, speed, showPoints, sound}` |
+| `scopetta.settings` | `{opponent, deck, felt, speed, showPoints, sound, lang?}`; `lang` is `it` or `en` only after an explicit choice |
 | `scopetta.history` | `[{t, o, d, y, a}, …]` newest first, capped at 100 |
 
 Everything read back is validated, because what comes out of storage is not

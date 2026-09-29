@@ -5,11 +5,13 @@ deals, stated plainly, so that you can tell whether it is playing the Scopa you
 know. The Italian version is `REGOLE.md`.
 
 The rules screen inside the game carries the same rules in both languages, in
-short: what fits a screen somebody reads on a phone mid-deal. This file is the
-long form and the two are not independent — a rule stated twice in two places
-drifts — so where the two overlap, the screen's own wording is quoted here
-rather than paraphrased, and `node tools/check_ui.mjs` asserts that each half of
-that screen is still the rules rather than a note.
+short: what fits a screen somebody reads on a phone mid-deal. It shows only the
+selected language, while keeping both `section[lang]` sections in the document.
+This file is the English long form and `REGOLE.md` the Italian one; the documents
+and screen are not independent — a rule stated twice in two places drifts — so
+where they overlap, the screen's wording is quoted here rather than paraphrased.
+`node tools/check_ui.mjs` asserts that both sections remain the rules rather
+than a note, and that only the selected one is shown.
 
 Every rule that varies between houses is a **named constant** in
 `public/engine.js`, and this file names it, so that changing one is a line

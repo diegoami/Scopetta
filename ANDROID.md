@@ -207,9 +207,9 @@ checksum are, which is what somebody about to sideload an APK should read.
 Since 1.0.1 `/windows` does the same for the Windows executable, which the
 same release carries (`DESKTOP.md`).
 
-**The about screen carries the links**, Android and Windows, as a pair of lines — one per
-`section[lang]`, because that screen carries its body twice — at the release
-page's **absolute URL**, not `/android`: the redirect only exists on Netlify,
+**The about screen carries the links**, Android and Windows, as a pair of lines
+in each language-tagged `section`; only the selected language is visible — at
+the release page's **absolute URL**, not `/android`: the redirect only exists on Netlify,
 and the page also lives in a folder and inside the APK, where `/android`
 resolves against the wrong root and 404s.
 

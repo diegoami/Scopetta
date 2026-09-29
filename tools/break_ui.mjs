@@ -146,7 +146,18 @@ const EXPECT = {
   "the viewport meta goes missing": "viewport meta",
   "the doctype goes missing": "quirks mode",
   "the charset is wrong": "charset is",
-  "the lang attribute goes missing": "no lang",
+  "the lang attribute goes missing": "the English screen has html lang",
+  "the device language is ignored": "it-IT default is",
+  "the saved language choice is ignored": "did not override the device",
+  "Italian copy is left in the English UI": "Italian copy remains in the English UI",
+  "an untagged Italian aria label is left in English": "an Italian accessible label remains in the English UI",
+  "English static copy is not applied": "the English copy for \"tagline\" does not match its translation",
+  "English accessible labels are not applied": "the English title/accessible label for \"history\" is not translated",
+  "English rich copy is not applied": "the English rich copy for \"weightsNote\" does not match its translation",
+  "the English result title is not a verdict": "English result title is not a translated verdict",
+  "a translation key is missing from one language": "translation tables do not have the same keys",
+  "both rules sections are shown at once": "shows the wrong rules sections",
+  "deck-choice labels keep the boot language": "deck-choice labels do not follow the chosen language",
 
   // --- the screens ----------------------------------------------------------
   "[hidden] stops beating the display rule": "screens visible at once",
@@ -252,7 +263,7 @@ const EXPECT = {
   "the points are not counted out": "never counted out",
   "the breakdown leaves a row out": "the breakdown lists",
   "the settebello is counted for the wrong player": "settebello, the piles hold",
-  "the rules are Italian only": "never mention",
+  "the rules are Italian only": "English rules section is not visible",
   "the rules go back to the start sheet whatever they were opened from": "went back to the start sheet",
   "the rows do not say what they are worth": "the points marked on the rows",
   "the rule the total comes from is not stated": "does not say what the total is made of",
@@ -421,7 +432,39 @@ const BREAKS = [
    `<meta name="viewport" content="width=device-width, initial-scale=1">\n`, ""],
   ["the doctype goes missing", "<!DOCTYPE html>\n", ""],
   ["the charset is wrong", `<meta charset="utf-8">`, `<meta charset="iso-8859-1">`],
-  ["the lang attribute goes missing", `<html lang="it">`, "<html>"],
+  ["the lang attribute goes missing",
+   "  document.documentElement.lang = lang;", "  // document language not updated"],
+  ["the device language is ignored",
+   'const deviceLang = () => /^it(?:-|$)/i.test(navigator.language || "") ? "it" : "en";',
+   'const deviceLang = () => "en";'],
+  ["the saved language choice is ignored",
+   'applyLanguage(state.langPicked ? saved.lang : deviceLang());',
+   'applyLanguage(deviceLang());'],
+  ["Italian copy is left in the English UI",
+   'tagline: "Two-player Scopa. One deal, thirty-six cards played, four points plus scopas."',
+   'tagline: "Una smazzata, trentasei carte giocate, quattro punti più le scope."'],
+  ["an untagged Italian aria label is left in English",
+   'b.setAttribute("aria-label", t("deckLabel", name));',
+   'b.setAttribute("aria-label", `Mazzo ${name}`);'],
+  ["English static copy is not applied",
+   'node.textContent = t(node.dataset.i18n);',
+   'node.textContent = node.dataset.i18n === "tagline" ? "wrong" : t(node.dataset.i18n);'],
+  ["English accessible labels are not applied",
+   'const label = t(node.dataset.i18nLabel);',
+   'const label = node.dataset.i18nLabel === "history" ? "Nuova smazzata" : t(node.dataset.i18nLabel);'],
+  ["English rich copy is not applied",
+   'node.innerHTML = t(node.dataset.i18nHtml);', 'node.innerHTML = "wrong";'],
+  ["the English result title is not a verdict",
+   'win === BASSO ? t("won") : win === ALTO ? t("lost") : t("drawn");',
+   't("resultDone");'],
+  ["a translation key is missing from one language",
+   'historyEmpty: "No deals yet. The history stays in this browser."',
+   'historyHasNoDeals: "No deals yet. The history stays in this browser."'],
+  ["both rules sections are shown at once",
+   'section.hidden = section.lang !== lang;', 'section.hidden = false;'],
+  ["deck-choice labels keep the boot language",
+   '  updateDeckLabels();\n  el.dossier.textContent = DOSSIER[state.lang][state.opponent] || "";',
+   '  // leave the deck labels in their boot language\n  el.dossier.textContent = DOSSIER[state.lang][state.opponent] || "";'],
 
   // --- every screen at once, and the page's own width -----------------------
   ["[hidden] stops beating the display rule",
@@ -627,8 +670,8 @@ const BREAKS = [
   ["the say line gives up before it has to",
    "const LABEL_CHARS = 39;", "const LABEL_CHARS = 0;"],
   ["the say line names the card instead of the capture",
-   "    `Prendi ${lista} con ${art(breve(card))}`,",
-   "    `Il ${breve(card)}`,"],
+    '    t("takeWith", lista, breve(card)),',
+    '    t("playCard", breve(card)),'],
   ["the say line drops the suit that tells two sevens apart",
    "  const presi = presa.map(i => art(nomePresa(state.tavola[i])));",
    "  const presi = presa.map(i => art(breve(state.tavola[i])));"],
@@ -660,10 +703,10 @@ const BREAKS = [
    "    const pts = who => won === \"scope\" ? r.scope[who] : (won === who ? 1 : 0);",
    "    const pts = who => 0;"],
   ["the rule the total comes from is not stated",
-   "        <p class=\"result__rule\">Un punto per le carte, i denari, il settebello e la\n          primiera, più un punto per ogni scopa.</p>\n",
+    "        <p class=\"result__rule\" data-i18n=\"resultRule\">Un punto per le carte, i denari, il settebello e la\n          primiera, più un punto per ogni scopa.</p>\n",
    ""],
   ["the rules are Italian only",
-   "      <section lang=\"en\">", "      <section>"],
+    "      <section lang=\"en\" hidden>", "      <section hidden>"],
   ["the rules go back to the start sheet whatever they were opened from",
    "  cameFrom = onScreen === \"table\" ? \"table\" : \"start\";",
    "  cameFrom = \"start\";"],
@@ -671,7 +714,7 @@ const BREAKS = [
    "  const has = w => piles[w].some(isSettebello) ? 1 : 0;",
    "  const has = w => piles[1 - w].some(isSettebello) ? 1 : 0;"],
   ["the breakdown leaves a row out",
-   "    [\"scope\",      r.scope[BASSO], r.scope[ALTO], \"scope\"],", ""],
+    '    [t("resultRows")[4], r.scope[BASSO], r.scope[ALTO], "scope"],', ""],
   ["the breakdown totals something else",
    "  out.push(num(r.punti[BASSO], \"r-num r-total\", 0));",
    "  out.push(num(r.punti[BASSO] + 1, \"r-num r-total\", 0));"],
@@ -718,14 +761,14 @@ const BREAKS = [
    "  const prim = state.prese ? primieraTotale(pile) : null;",
    "  const prim = state.prese ? primieraTotale(state.prese[1 - who]) : null;"],
   ["the counters stop at three points",
-   "    [\"primiera\", prim === null || prim === undefined ? \"—\" : String(prim),\n      prim !== null && prim !== undefined],\n",
+    '    [t("pointNames")[3], prim === null || prim === undefined ? "—" : String(prim),\n      prim !== null && prim !== undefined],\n',
    ""],
   // The fifth point, which the running score used to omit entirely: a scope
   // accumulates through the deal like the other four, and the box now counts it.
   // Named for the running score to keep it apart from the result breakdown's own
   // scope break, which shares the word.
   ["the running score's scope row stops counting",
-   "    [\"scope\", String(scope), scope > 0],",
+    '    [t("pointNames")[4], String(scope), scope > 0],',
    "    [\"scope\", \"0\", false],"],
   ["the scopa marks stop counting",
    "  const s = state.scope ? state.scope[who] : 0;",
@@ -830,7 +873,7 @@ const BREAKS = [
   // With `state.opponent` above it, because `reserveDossier` writes the same
   // line when it measures each name in turn and a find has to match once.
   ["the dossier is left empty",
-   "  state.opponent = name;\n  el.dossier.textContent = DOSSIER[name] || \"\";",
+    "  state.opponent = name;\n  el.dossier.textContent = DOSSIER[state.lang][name] || \"\";",
    "  state.opponent = name;"],
   ["the deck row loses a deck",
    "  el.decks.replaceChildren(...Object.keys(SHEET).map(name => {",
@@ -863,7 +906,7 @@ const BREAKS = [
   // only way to the app is through the rules; there but not drawn, and it is
   // gone just as surely while the markup still says otherwise.
   ["the start sheet loses its download link",
-   "        <p class=\"hero-link\"><a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\">Scarica per Android e Windows</a></p>\n",
+    "        <p class=\"hero-link\"><a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\" data-i18n=\"download\">Scarica per Android e Windows</a></p>\n",
    ""],
   ["the start sheet's download link is not drawn",
    ".hero .hero-link{ font-size: var(--t-tiny); }",
@@ -962,8 +1005,8 @@ const BREAKS = [
    "  if (!state.dealt || state.over){ after(); return; }",
    "  if (!state.dealt){ after(); return; }"],
   ["the verdict is not read off the totals",
-   "  el.resultTitle.textContent =\n    win === BASSO ? \"Hai vinto\" : win === ALTO ? \"Hai perso\" : \"Pareggio\";",
-   "  el.resultTitle.textContent = \"Hai vinto\";"],
+    '  el.resultTitle.textContent =\n    win === BASSO ? t("won") : win === ALTO ? t("lost") : t("drawn");',
+    '  el.resultTitle.textContent = t("won");'],
   ["nothing says what decided the smazzata",
    "  el.resultNote.textContent = notaFinale(r);", ""],
   // The whole of what this line is: not a phrase chosen from a table, but the
@@ -977,8 +1020,8 @@ const BREAKS = [
   // nothing — so the property rule was skipped and the whole check stayed
   // green. The break above cannot catch it; it makes the note name something.
   ["the note names no component at all",
-   "  const decise = [...PUNTI_SEMPLICI, \"scope\"].filter(k => senza(k) !== finale);\n  if (decise.length === 1) return DECISE[decise[0]];",
-   "  const decise = [];"],
+    '  if (decise.length === 1) return t("decided")[decise[0]];',
+    "  // the cause is not named"],
   ["a draw is described as a win",
    "  if (finale === 0){", "  if (false){"],
   // Two edits, and not for the usual reason. Taking the button out of the
@@ -987,7 +1030,7 @@ const BREAKS = [
   // every pass fails with the same TypeError, and the mutant stops being a
   // statement about the result panel at all. A break has to break ONE thing.
   ["the result offers one way on",
-   ["        <button class=\"btn\" id=\"resultChange\" type=\"button\">Cambia avversario o mazzo</button>\n",
+    ["        <button class=\"btn\" id=\"resultChange\" data-i18n=\"changeOpponentOrDeck\" type=\"button\">Cambia avversario o mazzo</button>\n",
     "el.resultChange.addEventListener(\"click\", abandon);\n"],
    ["", ""]],
   ["the result panel is never taken down",
@@ -1013,11 +1056,11 @@ const BREAKS = [
    "    score.textContent = `${m.y}–${m.a}`;",
    "    score.textContent = `${m.a}–${m.y}`;"],
   ["the history row always reads as a win",
-   "    res.textContent = pari ? \"P\" : vinta ? \"V\" : \"S\";",
-   "    res.textContent = \"V\";"],
+    '    res.textContent = t("resultLetter")[pari ? "d" : vinta ? "w" : "l"];',
+    '    res.textContent = t("resultLetter").w;'],
   ["the tally counts something else",
-   "  for (const [n, label] of [[list.length, \"smazzate\"], [vinte, \"vinte\"], [perse, \"perse\"],",
-   "  for (const [n, label] of [[vinte, \"smazzate\"], [vinte, \"vinte\"], [perse, \"perse\"],"],
+    '  for (const [n, label] of [[list.length, t("historyTally")[0]], [vinte, t("historyTally")[1]],',
+    '  for (const [n, label] of [[vinte, t("historyTally")[0]], [vinte, t("historyTally")[1]],'],
   // One entry of another shape took Tressette's history sheet down along with
   // the button that clears it, so there was no way out from inside the game.
   ["a row this build did not write is rendered anyway",
@@ -1065,11 +1108,11 @@ const BREAKS = [
   // invisible, so a regression that left it hidden rendered an empty start
   // sheet and reported `pass`.
   ["the last result says nothing about the smazzata",
-   "  el.lastResult.textContent =\n    `Ultima smazzata: hai ${verbo} ${last.y}–${last.a} contro ${last.o}`;\n  el.lastResult.hidden = false;",
+    '  el.lastResult.textContent = t("lastResult", last.y, last.a, last.o);\n  el.lastResult.hidden = false;',
    "  el.lastResult.hidden = true;"],
   ["the last result names the wrong winner",
-   "  const verbo = last.y > last.a ? \"vinto\" : last.y < last.a ? \"perso\" : \"pareggiato\";",
-   "  const verbo = last.y > last.a ? \"perso\" : last.y < last.a ? \"vinto\" : \"pareggiato\";"],
+    '  lastResult: (y, a, opponent) => `Ultima smazzata: hai ${y > a ? "vinto" : y < a ? "perso" : "pareggiato"} ${y}–${a} contro ${opponent}`',
+    '  lastResult: (y, a, opponent) => `Ultima smazzata: hai ${y > a ? "perso" : y < a ? "vinto" : "pareggiato"} ${y}–${a} contro ${opponent}`'],
 
   // The argument for putting the counters opposite the plate rather than on it
   // is that --seat-extra had already bought the column. Put them anywhere the
@@ -1141,11 +1184,11 @@ const BREAKS = [
    "  const prim = w => primieraTotale(piles[w]) ?? \"\u2014\";",
    "  const prim = w => primieraTotale(piles[1 - w]) ?? \"\u2014\";"],
   ["carte counts something other than the pile",
-   "    [\"carte\",      piles[BASSO].length, piles[ALTO].length, r.carte],",
-   "    [\"carte\",      piles[BASSO].length + 1, piles[ALTO].length, r.carte],"],
+    '    [t("resultRows")[0], piles[BASSO].length, piles[ALTO].length, r.carte],',
+    '    [t("resultRows")[0], piles[BASSO].length + 1, piles[ALTO].length, r.carte],'],
   ["the scope row stops counting",
-   "    [\"scope\",      r.scope[BASSO], r.scope[ALTO], \"scope\"],",
-   "    [\"scope\",      0, 0, \"scope\"],"],
+    '    [t("resultRows")[4], r.scope[BASSO], r.scope[ALTO], "scope"],',
+    '    [t("resultRows")[4], 0, 0, "scope"],'],
 ];
 
 const filter = process.argv[2];
@@ -1243,12 +1286,15 @@ const judge = async ([name, find, replace]) => {
   if (out === null) return [`SURVIVED ${name}`, () => survived.push(name)];
 
   const lines = out.split("\n").filter(l => /^\s{8}/.test(l)).map(l => l.trim());
+  const evidence = lines.slice(0, 2).join(" | ")
+    || out.split(/\r?\n/).filter(l => /Error|Timeout|FAIL|stopped after|\s+at\s+/i.test(l))
+      .slice(-6).map(l => l.trim()).join(" | ");
   if (!want) return [`UNDECLARED ${name}`,
                      () => mismatched.push([name, "no expected assertion declared", lines[0] || ""])];
   const hit = lines.find(l => l.includes(want));
   if (!hit)
-    return [`MISMATCH ${name}\n         wanted: ${want}\n         saw:    ${lines.slice(0, 2).join(" | ")}`,
-            () => mismatched.push([name, want, lines.slice(0, 2).join(" | ")])];
+    return [`MISMATCH ${name}\n         wanted: ${want}\n         saw:    ${evidence}`,
+            () => mismatched.push([name, want, evidence])];
   return [`caught   ${name}  →  ${hit.slice(0, 74)}`, () => caught++];
 };
 
