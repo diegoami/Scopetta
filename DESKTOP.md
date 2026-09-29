@@ -6,8 +6,8 @@ same for the APK.
 
 **Status.** The [`desktop/`](desktop/README.md) wrapper is built and passes
 `tools/smoke_desktop.mjs` (below). **v1.0.1 first carried it beside the
-APK** (2026-09-23), and **v1.0.2 is the current release**, published on
-2026-09-27 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>. The rules screen, the start sheet and `/windows` link
+APK** (2026-09-23), and **v1.0.3 is the current release**, published on
+2026-09-29 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3>. The rules screen, the start sheet and `/windows` link
 to it. Installers and code signing are deferred.
 
 ## Recorded decision

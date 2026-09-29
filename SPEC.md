@@ -394,7 +394,7 @@ review or a break finding something green and wrong. The ones a newcomer should 
   `http://localhost` origin and a WebView will not load it without the
   permission. Dropping it can only be verified by installing the result, and
   `ANDROID.md` §7 makes that the first device to try it.
-- **The APK and the Windows executable are live**: v1.0.2 is the current
+- **The APK and the Windows executable are live**: v1.0.3 is the current
   release at `diegoami/scopetta-releases`: the APK signed and checksummed, the
   executable checksummed and deliberately unsigned, as `ANDROID.md` and
   `DESKTOP.md` describe. v1.0.1 was the first with the executable; v1.0.0 was
