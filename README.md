@@ -8,6 +8,8 @@ so it plays from a folder.
 
 **Play it: [scopetta.netlify.app](https://scopetta.netlify.app)**
 
+**Android app:** download it from [scopetta-releases](https://github.com/diegoami/scopetta-releases).
+
 You against one of four opponents, one deal at a time. Everything — your
 settings, your last hundred smazzate — stays in your browser.
 
