@@ -99,7 +99,7 @@ plays them out exactly — so all four play those last six cards alike.
 ```sh
 npm run setup                       # playwright-core and a Chromium, once
 npm test                            # 94 tests: 93 pass, 1 skipped on Windows
-npm run check                       # the UI check
+npm run check                       # the UI check: every screen, viewport and the itch frame
 npm start                           # public/ on http://localhost:8080
 node tools/selfplay.mjs             # the opponents against the baselines
 ```
@@ -144,7 +144,8 @@ There is an Android app — the same `public/` directory in an APK, no build ste
 [`ANDROID.md`](ANDROID.md). Because the fonts ship with the page, it plays with
 the radio off. From 1.0.1 the same release carries a Windows executable,
 portable and unsigned, built by a Tauri wrapper in `desktop/` and described in
-[`DESKTOP.md`](DESKTOP.md).
+[`DESKTOP.md`](DESKTOP.md). The itch.io HTML5 build, and the three channels it
+is uploaded to, are described in [`ITCH.md`](ITCH.md).
 
 The opponent is this game's own. There was no 1997 Scopa to transcribe, so the
 formula was designed here and tuned by self-play; its seven weights and the

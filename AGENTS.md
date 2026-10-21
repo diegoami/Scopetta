@@ -107,7 +107,7 @@ a PR (`Fixes #n`) or rebut it on the issue with evidence.
 - **After any UI change, run `node tools/check_ui.mjs`.** It is not optional,
   and not only when something looks wrong. Every UI defect this project shipped
   was invisible in the diff and threw no error. The `ui-check` skill says what
-  the fourteen passes cover, how to read a failure, and which defect each
+  the fifteen passes cover, how to read a failure, and which defect each
   threshold was written for.
 - **After any engine change, run `npm test`.** The tests are deterministic
   (seeded RNG) and cover what the UI check cannot see: the capture rules, the

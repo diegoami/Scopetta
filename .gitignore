@@ -10,6 +10,10 @@ node_modules
 # Packaged release artifacts (built by tools/package_release.mjs).
 dist-release
 
+# Packaged itch.io HTML5 artifacts and their source records (built by
+# tools/package_itch.mjs).
+dist-itch
+
 # Worktrees of Claude Code forked subagents, so they do not show up as
 # untracked files in the main checkout.
 .claude/worktrees/

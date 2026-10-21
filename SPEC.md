@@ -43,7 +43,8 @@ tools/engine.test.mjs    the rules, on node --test
 tools/opponent.test.mjs  the trap positions, the roster, the golden fixture
 tools/selfplay.mjs       the harness every number in this file came from
 tools/golden.json        sixty frozen deals and four weight vectors
-tools/check_ui.mjs       the UI check: fourteen passes, including both languages
+tools/check_ui.mjs       the UI check: fifteen passes, including both languages
+                         and the itch.io frame
 tools/serve.mjs          public/ over http, standard library only
 tools/make_icons.mjs     cuts the settebello out of the Napoletane sheet
 tools/import_bresciane.mjs  builds the sixth deck from its source repo
@@ -53,6 +54,10 @@ tools/publish_release.mjs   both to the releases repo, on --confirm
 tools/source_tag.mjs        the tree is exactly HEAD; the tag names the build
 tools/stage_assets.mjs      the staged copies checked against the built files
 tools/smoke_desktop.mjs  the built desktop app, launched twice and played
+tools/package_itch.mjs   the itch.io HTML5 zip of public/ into dist-itch/ (ITCH.md)
+tools/smoke_itch_zip.mjs that zip, extracted by another tool and loaded at 480x720
+tools/publish_itch.mjs   the zip, the APK and the exe to three butler channels
+tools/itch.test.mjs / itch_lib.mjs / zip_lib.mjs  the itch decisions and the zip writer
 tools/pack_cards.py      carried from Discola, for repacking a deck
 mobile/              the Capacitor wrapper and the Android project
 desktop/             the Tauri wrapper, the Windows build (DESKTOP.md)
@@ -64,6 +69,7 @@ RULES.md / REGOLE.md the rules as this game plays them, English and Italian
 PLAN.md              the plan and the record, iteration by iteration
 ANDROID.md           the APK: what is done, and what is left and whose
 DESKTOP.md           the Windows build: the decision, and how it is checked
+ITCH.md              the itch.io build: the page, the three channels, the order
 AGENTS.md            the one instructions file: the project, the gates, the rules
 CLAUDE.md            a one-line import of AGENTS.md, for Claude Code
 ```
@@ -291,13 +297,14 @@ needs `playwright-core` and a Chromium and its passes are the **document**, the
 **fonts** (every character inside the shipped subset, every `@font-face` loading
 with the network cut, no subresource from outside), the **language** (device
 defaults and saved overrides in both locales), the **screens** (every screen and
-every mid-deal state in Italian at seven shapes and English at three, with an
-English-copy and translation-key audit), the **table** (27 viewports × 6 decks ×
+every mid-deal state in Italian at eight shapes and English at four, the itch.io
+embed among them, with an English-copy and translation-key audit), the **table** (28 viewports × 6 decks ×
 4 table sizes, then the tightest again with the spacing inflated and `--slack:
 0`; where the card sits on its 32px clamp floor, the no-scrolling rule is asked
 with the floor lifted instead, #5), the **choice**, the **sweep and beat**, the **rotation**, the **rules**, the
-**plates in a fallback font**, the **sheets and the partita**, and **one whole
-deal**. `.claude/skills/ui-check/SKILL.md` explains what each threshold is
+**plates in a fallback font**, the **sheets and the partita**, **one whole
+deal**, and the **framed** pass (no fullscreen or orientation lock on Gioca,
+top-level and inside an iframe, as itch.io embeds the page). `.claude/skills/ui-check/SKILL.md` explains what each threshold is
 calibrated against.
 
 **Every threshold in it was calibrated against a defect that actually shipped.**

@@ -1063,26 +1063,36 @@ button.card:disabled{ cursor: default; }
    pinning it to the top with everything empty below. `safe`, so a screen too
    short for it still shows the top. */
 #viewStart .sheet-body{ display: grid; align-content: safe center; justify-items: center; }
-/* Gioca pinned as a footer row. The content above it may scroll on a small
-   phone, but the primary action never leaves the screen — Tressette made the
-   text readable and pushed the button past the fold at 393px, and the answer
-   to that is to pin the button rather than to shrink the text again. */
-/* Three rows now, not two: the icon bar, the sheet, the Gioca footer. With two,
-   the bar took the 1fr row and left a band of bare rail under it — the felt
-   started a third of the way down the screen, and nothing errored, because an
-   empty grid row is not an overflow, clips nothing and is not text. */
-#viewStart{ grid-template-rows: auto minmax(0,1fr) auto; }
+/* Gioca above the deck picker inside the sheet, not a footer row under it: the
+   content may scroll on a small phone, but the primary action never leaves the
+   screen — Tressette made the text readable and pushed the button past the
+   fold at 393px, and the answer to that is to pin the button rather than to
+   shrink the text again. It is pinned by `position: sticky` now, as a row of
+   the sheet: parked at the very bottom of a short window it sat under the
+   Android fullscreen toast itch.io raises (Tressette #95, from Discola #128). */
+/* Two rows, one per child: the icon bar and the sheet (it was three while
+   Gioca's footer was the third child). With a row too few the bar takes the 1fr
+   row and leaves a band of bare rail under it — the felt starts a third of the
+   way down the screen, and nothing errors, because an empty grid row is not an
+   overflow, clips nothing and is not text. */
+#viewStart{ grid-template-rows: auto minmax(0,1fr); }
 
 /* The start screen's copy of the icon bar. It carries no wordmark, so the tools
    go to the right on their own; the table's bar keeps space-between because it
    has the wordmark to separate them from. */
 .topbar--start{ justify-content: flex-end; }
+/* Sticky to the bottom edge when the sheet scrolls, so the primary action never
+   leaves the screen. A row of the sheet, not a bar: a fade under it keeps the
+   content scrolling behind it legible without drawing a band across a roomy
+   screen. */
 .start-foot{
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  width: 100%;
   display: grid;
-  padding: .85rem 16px;
-  padding-bottom: calc(.85rem + env(safe-area-inset-bottom, 0px));
-  background: var(--rail);
-  border-top: 1px solid var(--rail-line);
+  padding: 1rem 0 calc(.35rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--edge) 65%, transparent);
 }
 .start-foot .btn{ width: min(620px, 100%); margin-inline: auto; }
 
@@ -1468,6 +1478,38 @@ button.card:disabled{ cursor: default; }
   .chips{ grid-template-columns: 1fr 1fr; }
 }
 
+/* Phones in portrait: stack from the top instead of centring, so what is left
+   over lands below Gioca, not split above the title. itch.io's fullscreen
+   toast covers the bottom 9% of the screen for a few seconds (Discola #128);
+   Gioca ends above it with room to spare. */
+@media (orientation: portrait) and (max-width: 560px) and (max-height: 1000px){
+  #viewStart .sheet-body{ align-content: start; padding-top: 1rem; }
+}
+
+/* itch.io's canonical embed is 480x720: every widget on the start screen fits
+   it without scrolling, in both languages (Tressette #95, from Discola #123).
+   That window is portrait but wider than 3/5, so the phone tier above does not
+   apply; take the sheet's padding and gaps back, put the four names on one
+   row, and shrink the deck previews a little, rather than shrinking the text.
+   Each deck keeps its own aspect ratio, so the previews scale by width, never
+   by a fixed height. */
+@media (orientation: portrait) and (min-width: 480px) and (min-height: 720px) and (max-height: 760px){
+  #viewStart .sheet-body{ padding-block: .15rem; }
+  #viewStart .sheet-inner{ gap: .5rem; }
+  #viewStart .hero{ gap: .1rem; }
+  #viewStart .chips{ grid-template-columns: repeat(4, 1fr); }
+  #viewStart .chip{ padding-block: .35rem; }
+  .start-foot{ padding-block: 0; }
+  #play{ padding-block: .7rem; }
+  /* The dossier holds the tallest description open, six lines here; a tighter
+     leading pays for the start sheet's one extra row, the rules button,
+     which Tressette's start sheet does not have. The returning player's
+     last-result line is the other row the sheet has to hold, and the deck
+     previews give up the most for it. */
+  #viewStart .dossier{ line-height: 1.35; }
+  #viewStart .deck-opt .card{ width: 72%; }
+}
+
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{
     animation-duration: .001ms !important;
@@ -1812,6 +1854,15 @@ button.card:disabled{ cursor: default; }
         <p class="dossier" id="dossier" aria-live="polite"></p>
       </div>
 
+      <!-- Gioca sits above the deck picker, and sticks to the bottom of the sheet
+           only when the sheet scrolls (Tressette #95, from Discola #128).
+           itch.io opens the game fullscreen on phones and Android lays a toast
+           over the bottom edge for a few seconds; a button parked at the very
+           bottom sat under it. -->
+      <footer class="start-foot">
+        <button class="btn btn--primary btn--big" id="play" data-i18n="play" type="button">Gioca</button>
+      </footer>
+
       <div class="group">
         <div class="group-head">
           <span class="eyebrow" data-i18n="deck">Mazzo</span><span class="pick" id="deckName">Trevisane</span>
@@ -1826,9 +1877,6 @@ button.card:disabled{ cursor: default; }
       <button class="btn" id="aboutStart" data-i18n="gameRules" type="button">Regole del gioco</button>
     </div>
   </div>
-  <footer class="start-foot">
-    <button class="btn btn--primary btn--big" id="play" data-i18n="play" type="button">Gioca</button>
-  </footer>
 </div>
 
 <!-- ============================ settings ============================ -->
