@@ -322,6 +322,12 @@ const EXPECT = {
   "the start sheet's download link is not drawn": "link to the download is in the page but not on the screen",
   "the start sheet's download link is hidden": "link to the download is in the page but not on the screen",
   "the start sheet's download link is under the sheet": "link to the download is in the page but not on the screen",
+  "Gioca goes back under the deck picker": "Gioca is below the deck picker",
+  "Gioca is parked at the very bottom again": "under the fullscreen toast zone",
+  "the itch embed's start sheet loses its tier": "the start sheet scrolls at 480x720",
+  "a control runs off the itch embed's first screen": "is off the 480x720 first screen",
+  "Gioca takes the page fullscreen": "fullscreen requested",
+  "Gioca locks the orientation": "lock requested",
 
   // --- the settings sheet ---------------------------------------------------
   "the weights disclosure loses a weight": "the engine has",
@@ -895,13 +901,13 @@ const BREAKS = [
    "  if (el.deckName) el.deckName.textContent = name;", ""],
   ["the settings sheet is not told which deck was picked",
    "  if (el.deckSel) el.deckSel.value = name;", ""],
-  // The bar the start sheet gained needs a grid row of its own. With two rows
-  // and three children the bar takes the 1fr row and leaves a band of bare rail
-  // under it — the felt starts a third of the way down the screen, and nothing
+  // The bar the start sheet gained needs a grid row of its own. With one row
+  // and two children (Gioca is inside the sheet since the itch.io work) the bar
+  // takes the 1fr row and leaves a band of bare rail under it — the felt starts a third of the way down the screen, and nothing
   // errors, because an empty grid row is not an overflow and is not text.
   ["the start sheet has no row for its icon bar",
-   "#viewStart{ grid-template-rows: auto minmax(0,1fr) auto; }",
-   "#viewStart{ grid-template-rows: minmax(0,1fr) auto; }"],
+   "#viewStart{ grid-template-rows: auto minmax(0,1fr); }",
+   "#viewStart{ grid-template-rows: minmax(0,1fr); }"],
   // The way to the builds from the screen somebody lands on. Gone, and the
   // only way to the app is through the rules; there but not drawn, and it is
   // gone just as surely while the markup still says otherwise.
@@ -921,6 +927,33 @@ const BREAKS = [
   ["the start sheet's download link is under the sheet",
    ".hero .hero-link a{ color: var(--brass); }",
    ".hero .hero-link a{ color: var(--brass); position: relative; z-index: -1; }"],
+  // The itch.io embed (Tressette #95, from Discola #121, #123 and #128). Gioca
+  // is above the deck picker in portrait, because itch.io runs the game
+  // fullscreen on a phone and Android's toast covers the bottom of the screen
+  // for a few seconds; the order break puts it last in the sheet, the fixed
+  // one parks it on the bottom edge as the old footer did.
+  ["Gioca goes back under the deck picker",
+   ".start-foot{\n  position: sticky;",
+   ".start-foot{\n  order: 1;\n  position: sticky;"],
+  ["Gioca is parked at the very bottom again",
+   ".start-foot{\n  position: sticky;",
+   ".start-foot{\n  position: fixed; left: 0;"],
+  // The canonical 480x720 embed fits its whole start sheet without scrolling,
+  // by a tier of its own; without the tier it scrolls, and a control pushed
+  // sideways is off the first screen whether or not anything scrolls.
+  ["the itch embed's start sheet loses its tier",
+   "and (min-height: 720px) and (max-height: 760px){\n  #viewStart .sheet-body{",
+   "and (min-height: 720px) and (max-height: 1px){\n  #viewStart .sheet-body{"],
+  ["a control runs off the itch embed's first screen",
+   "  #viewStart .chips{ grid-template-columns: repeat(4, 1fr); }",
+   "  #viewStart .chips{ grid-template-columns: repeat(4, 160px); }"],
+  // Discola tried both on the first Start and the owner rejected them.
+  ["Gioca takes the page fullscreen",
+   'el.play.addEventListener("click", () => { show("table");',
+   'el.play.addEventListener("click", () => { document.documentElement.requestFullscreen?.()?.catch?.(() => {}); show("table");'],
+  ["Gioca locks the orientation",
+   'el.play.addEventListener("click", () => { show("table");',
+   'el.play.addEventListener("click", () => { screen.orientation?.lock?.("portrait")?.catch?.(() => {}); show("table");'],
   // Four lines held open, so that choosing a name does not move the deck row
   // under a thumb already on its way to it.
   // The reservation is a measured height now rather than a count of lines, so

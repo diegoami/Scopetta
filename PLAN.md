@@ -43,6 +43,10 @@ and the sections below say what moves.
 | 8 | What *scopa d'assi* means, if it is ever wanted | **Not built, and not guessed at.** Raised by iteration 1: §5 lists it among the variants left out, but this plan never says what it does, and the house rule genuinely differs — in some it is another name for *asso piglia tutto*, in others a scopa scored for an asso played to an empty table. The other three variants are live branches behind constants that are off; this one is a documented gap instead, because a constant guessing between two rules would be worse than none. | Nothing, unless the owner wants it. If so, say which of the two it is and it becomes a fourth constant like the others. |
 | 9 | The UI language | **Follow the device language**: Italian for `it-*`, English otherwise; let the player choose either in Settings and save that choice. Player-facing prose, including the strategy-weights disclosure, follows the selected language; code identifiers and established card/deck/Scopa terms stay as written. | Defaults and the saved override are measured in both locales; the rules screen shows only the selected `section[lang]`, while keeping both sections in the document. Decided in #88. |
 
+The owner confirmed the itch.io project on 2026-10-23:
+<https://diegoami.itch.io/scopetta> (`diegoami/scopetta` for butler), and
+authorized publishing there. The upload procedure is in `ITCH.md`.
+
 **Four smaller ones were settled at iteration 4**, and they are here rather than
 in a pull request comment because §7.5 says a decision lives in this section and
 nowhere else:

@@ -38,7 +38,7 @@ goes red — not merely that something did. The gate that runs it is in
 node tools/check_ui.mjs
 ```
 
-Exit code 0 means clean. It is fourteen passes and over a thousand fresh pages,
+Exit code 0 means clean. It is fifteen passes and over a thousand fresh pages,
 including device-language and saved-choice cases and an English screens pass.
 The grid passes run their cases side by side, up to four at a time (or the
 machine's core count, if lower): on a 4-core Linux container the twelve-pass
@@ -167,7 +167,7 @@ a check that silently passes. **Two of them are played rather than posed** — t
 sweep and the beat between rounds — because neither is a state the engine will
 sit in; see the pass below.
 
-**Table pass** — the card table at all twenty-seven viewports in all six decks,
+**Table pass** — the card table at all twenty-eight viewports in all six decks,
 **with the middle row holding 0, 4, 8 and 13 cards**. Asserts that no table card
 lands on a card in either hand, that your whole seat is above the fold, that the
 middle stays inside the table and draws one row in landscape and two in
@@ -397,6 +397,25 @@ never offers one cannot exercise the two ways of choosing. Clearing the dealer
 matters because `newDeal` *alternates* from whatever the state already holds, so
 seeding the rng alone does not reproduce a cold start — the dealer differs, the
 lead differs, and the whole deal differs.
+
+**Framed pass, and the start sheet at the itch.io embed** — Tressette's #95,
+from Discola's #121, #123 and #128. itch.io's canonical embed is 480x720,
+portrait, and it is a row of `VIEWPORTS` like any other, in both screens passes.
+At that size the start rows assert the whole first screen fits **without the
+sheet scrolling**, every control on it — the tools, the four names, the six
+decks, the download link, the rules button and Gioca — on the screen. #123 is
+the exact failure: the viewport existed but no row rendered the start sheet at
+it, so the no-scroll assertion never ran. In portrait Gioca is above the deck
+picker, and on a phone at least 780px tall it ends above the bottom 12% of the
+screen, because itch.io runs the game fullscreen there and Android's toast
+covers the bottom edge for a few seconds (#128). The framed pass loads the page
+top-level and inside a same-origin iframe, at 480x720, 360x800 and 640x480 in
+both languages, asks the start sheet's itch rows again from inside the frame,
+taps Gioca, and **counts** `requestFullscreen` and `screen.orientation.lock`
+calls rather than watching for them: headless Chromium will not really go
+fullscreen, and Discola's owner rejected both (#121, #93). The returning
+player's row is the tight one at 480x720 — the last-result line is the one row
+the empty start sheet does not have, and it overflowed the first tier by 16px.
 
 ## The thing this check cannot do for you
 
