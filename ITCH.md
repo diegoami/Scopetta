@@ -19,8 +19,9 @@ never join that release.
 **Butler pushes builds, not page text.** The description, the embed size, the
 cover, the screenshots, the tags and the fullscreen toggle are all edited on
 itch.io by hand, so a change here is not live until the owner pastes it. The
-project slug is the owner's to confirm before the publisher is used; check what
-is uploaded with `butler status <owner>/<slug>` (all three channels).
+project is **diegoami/scopetta**, confirmed by the owner on 2026-10-23:
+<https://diegoami.itch.io/scopetta>. Check what is uploaded with
+`butler status diegoami/scopetta` (all three channels).
 
 - **Kind of project: HTML.** Under *Uploads*, the ZIP on the `html5` channel has
   **This file will be played in the browser** ticked, once, and it stays
@@ -56,10 +57,10 @@ bottom of the screen for a few seconds:
 > resta sul dispositivo. In italiano e in inglese. Per un'esperienza migliore
 > gioca su <https://scopetta.netlify.app> .
 
-**Deferred until the page exists and its URL is confirmed:** the project slug in
-this file, an `/itch` redirect in `netlify.toml`, the in-game link to the itch
-page, and a listing kit (cover and screenshots) like Tressette's
-`itch-listing/`. None is added before the owner confirms the project URL.
+**Follow-up page work:** an `/itch` redirect in `netlify.toml`, the in-game
+link to the itch page, and a listing kit (cover and screenshots) like
+Tressette's `itch-listing/`. The project URL is now confirmed; these are not
+required by the build uploader.
 
 ## The three channels
 

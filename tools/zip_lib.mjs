@@ -77,7 +77,7 @@ export function buildZip(entries){
     central.writeUInt16LE(0, 32);         // file comment length
     central.writeUInt16LE(0, 34);         // disk number start
     central.writeUInt16LE(0, 36);         // internal file attributes
-    central.writeUInt32LE(0, 38);         // external file attributes
+    central.writeUInt32LE((0o100644 << 16) >>> 0, 38); // UNIX regular file, readable after extraction
     central.writeUInt32LE(offset, 42);    // relative offset of local header
     centralChunks.push(central, nameBuf);
 
