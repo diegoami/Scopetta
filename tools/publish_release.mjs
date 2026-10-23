@@ -27,7 +27,7 @@ import {
 import { parseSource, tagCommit } from './source_tag.mjs';
 
 // The one line of the notes that changes from release to release.
-const SUBTITLE = 'Italiano sui dispositivi impostati in italiano, inglese altrimenti; scegli e salva la lingua nelle impostazioni';
+const SUBTITLE = 'Scopetta arriva su itch.io: gioca nel browser o scarica le versioni Windows e Android';
 
 const RELEASES_REPO = 'diegoami/scopetta-releases';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
