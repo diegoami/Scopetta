@@ -644,6 +644,16 @@ const SWEEP_MS = 1050;
 // which is the worst case and the state every player sees first.
 async function openPage(browser, viewport, locale = 'it-IT') {
   const page = await browser.newPage({ viewport, locale });
+  // Count requests in every document, including child frames. A fullscreen
+  // mutant must not change the real browser window before the rotation pass
+  // resizes it: otherwise that pass crashes before the framed assertion runs.
+  await page.addInitScript(() => {
+    window.__fs = { fullscreen: 0, lock: 0 };
+    const grant = () => { window.__fs.fullscreen++; return Promise.resolve(); };
+    for (const m of ['requestFullscreen', 'webkitRequestFullscreen'])
+      Element.prototype[m] = grant;
+    try { screen.orientation.lock = () => { window.__fs.lock++; return Promise.resolve(); }; } catch (_) {}
+  });
   return page;
 }
 
@@ -3758,7 +3768,7 @@ async function checkSheets(browser) {
 // it and the owner rejected it: on a phone the embed launched in landscape and
 // flipped back on Start, and the jump to fullscreen was too invasive. No other
 // pass would see it come back — every one of them loads the page top-level, and
-// headless Chromium will not really enter fullscreen anyway — so the requests
+// real fullscreen can also prevent later viewport resizes — so the requests
 // are counted instead, at the 480x720 embed, on a phone and at 640x480,
 // top-level and inside a same-origin iframe. The start sheet's own itch rows are asked again
 // from inside the frame, which is where itch.io actually runs the page.
@@ -3767,13 +3777,6 @@ async function checkFramed(browser) {
   const hostPath = path.join(tmpdir(), `scopetta-host-${process.pid}.html`);
   writeFileSync(hostPath, `<!doctype html><style>html,body{margin:0;height:100%}</style>` +
     `<iframe src="${URL_}" style="display:block;width:100%;height:100%;border:0"></iframe>`);
-  const stub = () => {
-    window.__fs = { fullscreen: 0, lock: 0 };
-    const grant = () => { window.__fs.fullscreen++; return Promise.resolve(); };
-    for (const m of ['requestFullscreen', 'webkitRequestFullscreen'])
-      Element.prototype[m] = grant;
-    try { screen.orientation.lock = () => { window.__fs.lock++; return Promise.resolve(); }; } catch (_) {}
-  };
   // 360x800 is a phone, which is where itch.io runs the embed fullscreen and
   // where the toast covers the bottom of the screen; it is in the quick grid
   // because no other quick shape is a phone tall enough for that assertion.
@@ -3788,7 +3791,6 @@ async function checkFramed(browser) {
     const page = await openPage(browser, { width, height }, locale);
     const errs = [];
     page.on('pageerror', e => errs.push('script error: ' + e.message));
-    await page.addInitScript(stub);
     await page.goto(c.url);
     const frame = c.pick(page);
     const issues = [...errs];

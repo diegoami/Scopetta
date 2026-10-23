@@ -22,8 +22,8 @@
  * refusal before any upload.
  *
  * Needs butler (https://itch.io/docs/butler/) on PATH, or BUTLER set to its
- * path, and BUTLER_API_KEY in the environment. The key is read from the
- * environment and never written, printed or stored.
+ * path, and authentication through `butler login` or BUTLER_API_KEY. Butler
+ * manages the credentials; this script never reads, prints or stores them.
  *
  * Nothing is uploaded without --confirm. Tressette's publisher, ported
  * (ITCH.md).
@@ -142,10 +142,9 @@ if (!CONFIRM){
   console.log('\nDry run. Re-run with --confirm to push.');
   process.exit(0);
 }
-if (!process.env.BUTLER_API_KEY)
-  fail('BUTLER_API_KEY is not set. Export the itch.io API key first; it is never stored in the repo.');
-
 // --- push, one channel at a time, stopping and reporting on failure ---
+// Let butler use its stored login or environment token. Authentication failures
+// follow the same stop-and-report path as any failed upload.
 const done = [];
 for (const t of targets){
   console.log(`\n> butler push ${path.relative(ROOT, fileFor(t))} ${t.target} --userversion ${t.userversion}`);
