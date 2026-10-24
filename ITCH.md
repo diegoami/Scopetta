@@ -60,10 +60,15 @@ bottom of the screen for a few seconds:
 > resta sul dispositivo. In italiano e in inglese. Per un'esperienza migliore
 > gioca su <https://scopetta.netlify.app> .
 
-**Follow-up page work:** an `/itch` redirect in `netlify.toml`, the in-game
-link to the itch page, and a listing kit (cover and screenshots) like
-Tressette's `itch-listing/`. The project URL is now confirmed; these are not
-required by the build uploader.
+**Listing images:** [`itch-listing/README.md`](itch-listing/README.md) maps the
+v1.0.4 cover, four screenshots and optional banner to the page editor's fields.
+The kit uses the original cards/fonts and screenshots of the verified released
+ZIP. `node tools/capture_itch_listing.mjs` reproduces it and writes a ZIP of
+the upload-ready images under `dist-itch/`.
+
+**Follow-up page work:** an `/itch` redirect in `netlify.toml` and the in-game
+link to the itch page. The project URL is confirmed; neither is required by the
+build uploader.
 
 ## The three channels
 

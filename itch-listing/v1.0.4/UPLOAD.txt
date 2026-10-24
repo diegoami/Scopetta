@@ -1,0 +1,10 @@
+Scopetta v1.0.4 - itch.io images
+
+Cover image: cover-630x500.png (or the 2x cover-1260x1000.png).
+Screenshots: upload 01-gameplay.png, 02-choose-a-capture.png, 03-phone-italian.png, 04-opponents-and-decks.png in that order.
+Optional header: banner-1600x500.png goes in Edit theme > Banner/Header image.
+
+The screenshots are the released v1.0.4 game, captured from its verified ZIP. Seed 16 makes the legal-play sequence reproducible. No game UI, scores or cards were invented or retouched.
+The cover/banner reuse the original 1997 Napoletane bitmaps, the bundled Bodoni Moda/Barlow fonts and the game's felt/brass colours.
+Source: c5d8a57dbe6f85fa2dc58b6adf08ccdc2c717f2c
+HTML5 ZIP SHA256: 7c9e81d128b6c3b79b5ee9a99091d32048ee92ce13e93aac2793309af9cebccc
