@@ -51,14 +51,9 @@ project is **diegoami/scopetta**, confirmed by the owner on 2026-10-23:
 - **Free**, with tags `card-game`, `italian`, `singleplayer`, `offline`,
   `retro`, `browser`.
 
-A one-line description is enough; the phone player is sent to the web version
-for the better experience, because the runner's fullscreen toast covers the
-bottom of the screen for a few seconds:
-
-> Scopa a due contro quattro avversari con carattere, con i mazzi regionali
-> italiani. Funziona offline, senza account e senza pubblicità: lo storico
-> resta sul dispositivo. In italiano e in inglese. Per un'esperienza migliore
-> gioca su <https://scopetta.netlify.app> .
+**Page copy:** [`ITCHIO.md`](ITCHIO.md) holds the owner-approved title, short
+description and long description, including the Android reinstall/data-loss
+notice and Windows installation note. Paste those fields into the page editor.
 
 **Listing images:** [`itch-listing/README.md`](itch-listing/README.md) maps the
 v1.0.4 cover, four screenshots and optional banner to the page editor's fields.
