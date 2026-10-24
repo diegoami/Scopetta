@@ -26,6 +26,9 @@ project is **diegoami/scopetta**, confirmed by the owner on 2026-10-23:
 - **Kind of project: HTML.** Under *Uploads*, the ZIP on the `html5` channel has
   **This file will be played in the browser** ticked, once, and it stays
   ticked. The APK and the `.exe` stay downloads.
+- **Android key change from v1.0.4.** Include the uninstall and local-data-loss
+  warning from the generated GitHub release notes beside the Android download:
+  users of v1.0.3 or earlier cannot install the new-key APK over the old app.
 - **Embed size: 480×720, portrait.** On phones itch.io launches the game
   fullscreen and fixes the orientation from the embed's aspect ratio before any
   game code runs, so a portrait embed is what keeps a phone upright. This is the

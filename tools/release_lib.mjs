@@ -14,14 +14,12 @@
 import path from 'node:path';
 
 // The SHA-256 digest of the release certificate, recorded in ANDROID.md §3.
-// Every future release must be signed with this key: Android treats a different
-// signer as a different app, and no installed copy will take it as an update.
-//
-// Recorded from the first release build on 2026-09-22
-// (`node tools/package_release.mjs`, apksigner --print-certs):
-//   CN=Diego Amicabile, SHA-256 fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447
+// The owner lost the original key and authorized a replacement on 2026-10-24.
+// From v1.0.4, builds use this certificate (CN=Scopetta, O=Diego Amicabile).
+// v1.0.3 and earlier used fdf7ca01...d4447 and must be uninstalled first;
+// releaseNotes records that break and the resulting loss of local app data.
 export const EXPECTED_CERT =
-  'fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447';
+  'c7007e1d47b098107ff6554deb5508590747ee70bd9dd518789341d3cbe69aeb';
 
 // `vX.Y.Z` (the only shape package_release writes) to [X, Y, Z], else null.
 export function parseVersion(name){
@@ -297,10 +295,20 @@ export function checksumProblems(manifestText, hashOf, { expected, present } = {
 export function releaseNotes(version, { subtitle, tag, commit } = {}){
   const [apk, exe] = releaseAssets(version);
   const title = subtitle ? `Scopetta ${version}: ${subtitle}.` : `Scopetta ${version}.`;
+  const [major, minor, patch] = parseVersion(`v${version}`) ?? [0, 0, 0];
+  const newAndroidKey = major > 1 || (major === 1 && (minor > 0 || patch >= 4));
+  const androidKeyNotice = newAndroidKey
+    ? `**Android — nuova chiave di firma dalla 1.0.4:** se hai la 1.0.3 o una ` +
+      `versione precedente, disinstallala prima di installare questa APK. ` +
+      `La disinstallazione cancella impostazioni e storico locali.\n\n` +
+      `**Android upgrade from 1.0.3 or earlier:** uninstall the old app before ` +
+      `installing this APK. Uninstalling deletes local settings and history.\n\n`
+    : '';
   const source = commit
     ? `**Sorgente:** il tag \`${tag}\` di diegoami/Scopetta, commit \`${commit}\`.\n\n`
     : '';
   return `${title}\n\n` +
+    androidKeyNotice +
     `**Windows:** scarica \`${exe}\` e avvialo. L'eseguibile non è firmato ` +
     `digitalmente, quindi Windows mostrerà l'avviso «Windows ha protetto il PC»: ` +
     `clicca «Ulteriori informazioni», poi «Esegui comunque». È portabile, senza ` +

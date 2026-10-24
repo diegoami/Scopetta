@@ -138,25 +138,37 @@ Then copy `mobile/android/keystore.properties.example` to
 `keystore.properties` and fill it in. That file and the `.jks` are gitignored
 and must stay that way: committing them lets anyone sign as us.
 
-**The certificate is recorded.** `tools/release_lib.mjs`'s `EXPECTED_CERT` holds
-it, and `apksigner verify` on the first release build reports:
+**Historical certificate (v1.0.0–v1.0.3).** `apksigner verify` on the first
+release build reported:
 
 ```
 Signer #1 certificate DN: CN=Diego Amicabile, OU=Unknown, O=Unknown, L=Berlin, ST=Berlin, C=DE
 Signer #1 certificate SHA-256 digest: fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447
 ```
 
-That fingerprint is the thing every future release has to match: an APK signed
-by anything else is a different app to Android, and no installed copy will take
-it as an update. `package_release.mjs` prints the digest on every build and
-**refuses if it differs** — and refuses while the recorded value is still the
-all-zero placeholder, printing the digest to record.
+**Replacement certificate from v1.0.4.** The owner confirmed on 2026-10-24 that
+the original key was lost and authorized the new signing key. `apksigner verify`
+on the new build reports:
+
+```
+Signer #1 certificate DN: CN=Scopetta, O=Diego Amicabile
+Signer #1 certificate SHA-256 digest: c7007e1d47b098107ff6554deb5508590747ee70bd9dd518789341d3cbe69aeb
+```
+
+`tools/release_lib.mjs`'s `EXPECTED_CERT` now holds the replacement fingerprint.
+`package_release.mjs` prints the digest on every build and **refuses if it
+differs** — the signature check remains mandatory.
+
+The app ID stays `com.scopetta.app`. **Users of v1.0.3 or earlier must uninstall
+the old app before installing v1.0.4 or later. Uninstalling deletes local settings
+and history.** The generated release notes state this in Italian and English;
+the same warning must be visible beside the Android download on itch.io.
 
 Android identifies the app by this signature forever — an update installs over
 an existing copy only if it is signed with the same key — and the password
 cannot be recovered. It is encrypted with a key derived from itself: no reset,
 no backdoor, nobody to ask. For a sideloaded game the cost of losing it is
-bounded (a new `appId`, and everyone reinstalls), but it is still the one secret
+bounded (everyone uninstalls and reinstalls), but it is still the one secret
 in this project worth backing up somewhere that outlives the machine.
 
 ## 4. Publishing

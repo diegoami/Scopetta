@@ -47,6 +47,12 @@ The owner confirmed the itch.io project on 2026-10-23:
 <https://diegoami.itch.io/scopetta> (`diegoami/scopetta` for butler), and
 authorized publishing there. The upload procedure is in `ITCH.md`.
 
+On 2026-10-24 the owner confirmed that the original Android signing key was
+lost and authorized using the replacement from v1.0.4, keeping `com.scopetta.app`.
+Users of v1.0.3 or earlier must uninstall before installing the new APK; that
+deletes local settings and history. The release notes must state both effects.
+`ANDROID.md` records the historical and replacement certificate fingerprints.
+
 **Four smaller ones were settled at iteration 4**, and they are here rather than
 in a pull request comment because §7.5 says a decision lives in this section and
 nowhere else:
