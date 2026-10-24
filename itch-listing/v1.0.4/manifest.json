@@ -1,0 +1,63 @@
+{
+  "version": "1.0.4",
+  "source": "c5d8a57dbe6f85fa2dc58b6adf08ccdc2c717f2c",
+  "releaseZipSha256": "7c9e81d128b6c3b79b5ee9a99091d32048ee92ce13e93aac2793309af9cebccc",
+  "images": [
+    {
+      "file": "cover-630x500.png",
+      "width": 630,
+      "height": 500,
+      "bytes": 204195,
+      "sha256": "51ea897b776955a6aa4416c981d4a09a19b76ed4688b8f9b66d0d39427603298",
+      "description": "Cover: original Napoletane cards and the game typography/colours."
+    },
+    {
+      "file": "cover-1260x1000.png",
+      "width": 1260,
+      "height": 1000,
+      "bytes": 611527,
+      "sha256": "5dea45b4cdf57cdf1440ea845698d48fab4e6b63709012bfb8435f385ba2ef5f",
+      "description": "Cover: original Napoletane cards and the game typography/colours."
+    },
+    {
+      "file": "banner-1600x500.png",
+      "width": 1600,
+      "height": 500,
+      "bytes": 364307,
+      "sha256": "d22c72b865d86dbb047a314f4ff320e7f180952fc41a667427713fdce6dc944d",
+      "description": "Optional itch.io page header."
+    },
+    {
+      "file": "04-opponents-and-decks.png",
+      "width": 2560,
+      "height": 2000,
+      "bytes": 1054969,
+      "sha256": "bd6ff456c37c9a72557acaed7efcf6110cdded44c24ace9983c33d8473c6c855",
+      "description": "Released English start screen: the four opponents and six regional decks."
+    },
+    {
+      "file": "02-choose-a-capture.png",
+      "width": 2560,
+      "height": 1600,
+      "bytes": 2428140,
+      "sha256": "7396fdf8757bf1254776fe9887a9382cd632d3f9b2917d08b95c0ee3e3c80569",
+      "description": "Real legal capture choice: selected hand card and highlighted proposed capture."
+    },
+    {
+      "file": "01-gameplay.png",
+      "width": 2560,
+      "height": 1600,
+      "bytes": 2398170,
+      "sha256": "9235887bfae9617924763a96086b382d5a8e28a08f6cc92c3ebdf30745e10e73",
+      "description": "Real seeded deal after twelve legal plays, English, Napoletane deck."
+    },
+    {
+      "file": "03-phone-italian.png",
+      "width": 960,
+      "height": 1600,
+      "bytes": 1256648,
+      "sha256": "86a391bf352f9da88bb6b384c5c89fd5e4ee165ab411a79a885dde5c891de3c5",
+      "description": "Actual portrait layout, Italian, Romagnole deck, after legal play."
+    }
+  ]
+}
