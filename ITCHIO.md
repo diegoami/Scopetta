@@ -8,7 +8,7 @@ Scopetta
 
 ## Short description
 
-Italian Scopa against four distinctive opponents, with six classic decks. Play in your browser or download for Windows and Android.
+Italian Scopa with four opponents and six classic decks. Play in your browser, on Windows or Android.
 
 ## Long description
 
