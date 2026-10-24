@@ -67,7 +67,8 @@ On this machine, present tense:
   `local.properties` and the regenerated `capacitor-cordova-android-plugins/`
   are gitignored).
 - Identity in the generated project is `com.scopetta.app` / `Scopetta`, matching
-  `capacitor.config.json`. `versionName "1.0.3"`, `versionCode 4` (1.0.2 was
+  `capacitor.config.json`. `versionName "1.0.4"`, `versionCode 5` (1.0.3 was
+  `versionCode 4`, 1.0.2 was
   `versionCode 3`, 1.0.1 `2`, 1.0.0 `1`).
 - Launcher icons generated at every density from `assets/` by
   `@capacitor/assets --android --assetPath ../assets` — the settebello on the
@@ -251,7 +252,23 @@ All five steps are done: the key exists, the releases repo exists and carries
 v1.0.0, it was published from this machine, and the owner installed and played
 it. The build, the debug APK and the offline emulator run are recorded above.
 
-**v1.0.3 is the current release** (2026-09-29), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3>: the APK
+**v1.0.4 is the current release** (2026-10-24), at
+<https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.4>, with browser,
+Windows and Android builds also uploaded to <https://diegoami.itch.io/scopetta>.
+The annotated source tag names exactly
+`c5d8a57dbe6f85fa2dc58b6adf08ccdc2c717f2c`, independently reviewed with AGREE by
+MiniMax-M3 on milestone #108. Exact-candidate CI, tagged-build desktop and ZIP
+smoke tests passed, the owner passed the phone check on the identical browser
+ZIP, and both native assets downloaded from GitHub match `SHA256SUMS.txt`.
+
+The APK uses the replacement certificate recorded in §3: the original key was
+lost and the owner authorized the change. **Users of v1.0.3 or earlier must
+uninstall first, losing local settings and history.** The public release notes
+state this in Italian and English. `butler status` confirms all three itch.io
+channels processed successfully as version 1.0.4; page-editor settings remain
+the owner's final step.
+
+**v1.0.3 was the previous release** (2026-09-29), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3>: the APK
 (`versionCode 4`, signed on the same key, `fdf7ca01…`) and the Windows executable
 beside it. The candidate `cc23db13954d86066c633cde2f0894dae5866975` was reviewed
 by DeepSeek V4.1 Flash, which gave AGREE on #96 in round 2. The owner completed
