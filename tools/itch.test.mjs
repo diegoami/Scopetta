@@ -238,7 +238,7 @@ test('publish_itch refuses a stray file in the itch stage', () => {
   assert.match(res.stderr, /Scopetta-1\.0\.6-itch-html5\.zip is staged but not in SHA256SUMS\.txt/);
 });
 
-test('publish_itch dry-runs the three channels and uploads nothing',
+test('publish_itch dry-runs, then lets authenticated butler upload without an environment key',
   { skip: process.platform === 'win32' ? 'the butler shim here is a POSIX script' : false },
   () => {
     const tmp = publishCheckout();
@@ -285,6 +285,20 @@ test('publish_itch dry-runs the three channels and uploads nothing',
       assert.match(res.stdout, new RegExp(`diegoami/scopetta:${channel}`), channel);
     assert.match(res.stdout, /Dry run/);
     assert.equal(existsSync(marker), false, 'a dry run must not push');
+
+    // butler login stores its identity itself. The publisher must delegate
+    // authentication to butler instead of requiring an environment token.
+    // This shim records uploads locally; it never contacts itch.io.
+    const confirmed = spawnSync(process.execPath, [path.join(tmp, 'tools', 'publish_itch.mjs'),
+      '--project', 'diegoami/scopetta', '--confirm'], {
+      encoding: 'utf8',
+      env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH, BUTLER_API_KEY: '' },
+    });
+    assert.equal(confirmed.status, 0, confirmed.stderr);
+    const pushed = readFileSync(marker, 'utf8').trim().split('\n');
+    assert.equal(pushed.length, 3, 'exactly three channels must be uploaded');
+    for (const [i, channel] of ['html5', 'windows', 'android'].entries())
+      assert.ok(pushed[i].includes(`diegoami/scopetta:${channel}`), pushed[i]);
   });
 
 // --- the packager, end to end, on a temp checkout with an origin ---

@@ -137,8 +137,9 @@ node tools/publish_itch.mjs --project owner/slug --confirm  # push the three cha
   owner confirms the slug before a publisher may run, and a guessed target is a
   refusal. The three resolved targets are printed.
 - It needs `butler` (<https://itch.io/docs/butler/>) on `PATH`, or `BUTLER` set
-  to its path, and the API key in `BUTLER_API_KEY`. The key is read from the
-  environment and never written, printed or stored in the repo.
+  to its path, and a prior `butler login` or an API key in `BUTLER_API_KEY`.
+  Butler manages authentication; the publisher never reads, prints or stores
+  credentials.
 - Dry run by default; nothing is uploaded without `--confirm`. On a failed
   channel it stops and reports which channels were completed.
 - The version is this checkout's `versionName` and only that: it reads one
