@@ -349,6 +349,25 @@ test("the release notes name the tag and the commit they were built from", () =>
   assert.ok(!releaseNotes('1.0.2').includes('Sorgente'), 'no commit, no source line');
 });
 
+test("the replacement Android signing key is accepted and the lost key is refused", () => {
+  const replacement = 'c7007e1d47b098107ff6554deb5508590747ee70bd9dd518789341d3cbe69aeb';
+  const lost = 'fdf7ca019a92b99b0f84f68e5b9ad787a495d67a7d114cf8614e7366a4cd4447';
+  const verify = digest => ({ status: 0, stdout: `Signer #1 certificate SHA-256 digest: ${digest}` });
+  assert.equal(signatureVerdict({ verify: verify(replacement) }).ok, true);
+  assert.equal(signatureVerdict({ verify: verify(lost) }).ok, false);
+});
+
+test("Android key change notes require uninstalling old versions and disclose local data loss", () => {
+  for (const version of ['1.0.4', '1.0.5', '1.1.0', '2.0.0']) {
+    const notes = releaseNotes(version);
+    assert.match(notes, /1\.0\.3 or earlier/);
+    assert.match(notes, /uninstall the old app before installing/);
+    assert.match(notes, /Uninstalling deletes local settings and history/);
+    assert.match(notes, /disinstallala prima/);
+  }
+  assert.ok(!releaseNotes('1.0.3').includes('uninstall the old app'), 'historical release notes retain their original installation instructions');
+});
+
 // --- the integration half — the real script, dry-run, does not create
 
 test("the script's dry run exits clean and never calls gh release create",
