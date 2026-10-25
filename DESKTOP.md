@@ -7,7 +7,7 @@ same for the APK.
 **Status.** The [`desktop/`](desktop/README.md) wrapper is built and passes
 `tools/smoke_desktop.mjs` (below). **v1.0.1 first carried it beside the
 APK** (2026-09-23), and **v1.0.4 is the current release**, published on
-2026-10-24 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.4>
+2026-10-24 at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.4>
 and uploaded to <https://diegoami.itch.io/scopetta>. The tagged build passed the
 desktop smoke, and the downloaded executable matches `SHA256SUMS.txt`
 (milestone #108). The rules screen, the start sheet and `/windows` link
@@ -23,7 +23,7 @@ Discola's decision as Tressette took it, renamed.
 | Shell | **Tauri 2** | wraps `public/` unchanged |
 | Platforms | **Windows only** | Linux and macOS are later options |
 | Goal | **Personal use + GitHub Releases** | as for Android, not app stores |
-| Binary hosting | **`diegoami/scopetta-releases`** | the repository the APK ships from |
+| Binary hosting | **`diegoami/Scopetta`** | the repository the APK ships from |
 | Code signing | **Unsigned first** | SmartScreen warns on first run; the release notes will say so |
 | Identifier | **`com.scopetta.desktop`** | permanent: it keys the app's storage |
 | First release with it | **1.0.1** | the house's patch line, as Tressette's 1.0.4 |
@@ -123,7 +123,7 @@ in a row met the same two choices.
 ## Releasing
 
 Both targets ship as one GitHub Release on
-[`diegoami/scopetta-releases`](https://github.com/diegoami/scopetta-releases),
+[`diegoami/Scopetta`](https://github.com/diegoami/Scopetta),
 on one version line, from this machine: it holds the Android signing key and
 the Rust toolchain.
 

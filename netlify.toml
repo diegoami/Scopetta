@@ -26,7 +26,7 @@
 # an APK should land. Built and published outside Netlify — see ANDROID.md.
 [[redirects]]
   from = "/android"
-  to = "https://github.com/diegoami/scopetta-releases/releases/latest"
+  to = "https://github.com/diegoami/Scopetta/releases/latest"
   status = 302
   force = true
 
@@ -35,7 +35,7 @@
 # see DESKTOP.md.
 [[redirects]]
   from = "/windows"
-  to = "https://github.com/diegoami/scopetta-releases/releases/latest"
+  to = "https://github.com/diegoami/Scopetta/releases/latest"
   status = 302
   force = true
 
