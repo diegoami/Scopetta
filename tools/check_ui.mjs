@@ -898,7 +898,7 @@ const noisy = () => false;
 const startLink = () => {
   const out = [];
   const link = document.querySelector('#viewStart .hero-link a');
-  if (!link || !(link.getAttribute('href') || '').includes('scopetta-releases/releases')) {
+  if (!link || !(link.getAttribute('href') || '').includes('https://github.com/diegoami/Scopetta/releases/latest')) {
     out.push('the start sheet does not link to the download');
     return out;
   }
@@ -2700,7 +2700,7 @@ async function checkRules(browser) {
         const sec = document.querySelector(`#viewRules section[lang="${lang}"]`);
         if (!sec) continue;   // the language checks above already said so
         const links = [...sec.querySelectorAll('a[href]')].filter(a =>
-          a.getAttribute('href').startsWith('https://github.com/diegoami/scopetta-releases'));
+          a.getAttribute('href').startsWith('https://github.com/diegoami/Scopetta'));
         for (const app of ['Android', 'Windows'])
           if (!links.some(a => a.textContent.includes(app)))
             out.push(`the rules in ${lang} do not link to the ${app} app`);

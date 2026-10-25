@@ -47,6 +47,13 @@ The owner confirmed the itch.io project on 2026-10-23:
 <https://diegoami.itch.io/scopetta> (`diegoami/scopetta` for butler), and
 authorized publishing there. The upload procedure is in `ITCH.md`.
 
+On 2026-10-25 the owner requested consolidating every historical release in the
+now-public `diegoami/Scopetta`, preserving binaries, notes, flags and latest.
+Future releases use this repository. The old distribution repository stays
+archived with its releases intact for installed-app links. Importing its v1.0.0
+tag preserves a legacy distribution reference, not verified source provenance;
+no source revision is inferred for that binary. Issue #112 records the design.
+
 On 2026-10-24 the owner confirmed that the original Android signing key was
 lost and authorized using the replacement from v1.0.4, keeping `com.scopetta.app`.
 Users of v1.0.3 or earlier must uninstall before installing the new APK; that
@@ -1971,7 +1978,7 @@ shipped, one decision is open, and one is a follow-up rather than an open item.
   redirect. `ANDROID.md` is the record. The debug APK was built and launched on
   the emulator with the radio off — the offline run Tressette could not make —
   **v1.0.0 is published** at
-  <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, the owner
+  <https://github.com/diegoami/Scopetta/releases/tag/v1.0.0>, the owner
   installed it on a tablet and played, and the about screen carries the link.
   Item 3 is closed.
 - **The 1100x320 viewport question — issue #5. Resolved.** The shape was dropped

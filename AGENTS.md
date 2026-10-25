@@ -38,9 +38,11 @@ This is the one instructions file, for every tool. `CLAUDE.md` only imports it.
 ## Releases
 
 A release is an annotated tag `vX.Y.Z` on `main`, on the exact commit the
-published binaries are built from. Binaries go to `diegoami/scopetta-releases`,
-the tag stays here, and `tools/publish_release.mjs` refuses anything else. This
-project publishes no pre-releases. Nothing but a release is a milestone.
+published binaries are built from. Binaries go to `diegoami/Scopetta`, alongside
+the source tags, and `tools/publish_release.mjs` refuses anything else. The imported
+legacy v1.0.0 distribution tag is an exception, documented in `SPEC.md`; it does
+not identify verified application source. This project publishes no pre-releases.
+Nothing but a release is a milestone.
 
 1. **The version bump is its own PR, first.** Before a candidate is named, an
    ordinary PR bumps every version declaration to the proposed version
@@ -72,7 +74,7 @@ project publishes no pre-releases. Nothing but a release is a milestone.
    build, and publish. The annotated tag goes on exactly the reviewed SHA,
    never a later commit, and the release is built from a clean checkout of the
    tag (`ANDROID.md` §4, `DESKTOP.md`). Publishing — `publish_release.mjs
-   --confirm`, to `diegoami/scopetta-releases` — waits for the owner's
+   --confirm`, to `diegoami/Scopetta` — waits for the owner's
    go-ahead. Work merged after the candidate belongs to the next release.
 
 When a review is in, reproduce each finding before acting on it. Then fix it in

@@ -8,13 +8,34 @@ so it plays from a folder.
 
 **Play it: [scopetta.netlify.app](https://scopetta.netlify.app)**
 
-**Android app:** download it from [scopetta-releases](https://github.com/diegoami/scopetta-releases).
+**Android and Windows apps:** [download the latest release](https://github.com/diegoami/Scopetta/releases/latest).
 
 You against one of four opponents, one deal at a time. Everything — your
 settings, your last hundred smazzate — stays in your browser.
 
 The interface follows your device language — Italian on an Italian device,
 English otherwise. Choose either language in Settings to save your preference.
+
+## Install and verify a download
+
+On Android, open the downloaded APK and allow installation from that source.
+**Upgrading from 1.0.3 or earlier to 1.0.4 or later requires uninstalling the old
+app first** because the signing key changed; uninstalling deletes local settings
+and history. On Windows, run the portable x64 `.exe` from any folder. It is
+unsigned: if SmartScreen says **Windows protected your PC**, select **More info**,
+then **Run anyway**.
+
+Compare the download with its entry in the release's `SHA256SUMS.txt`:
+
+```powershell
+Get-FileHash .\Scopetta-<version>-windows-x64.exe -Algorithm SHA256
+```
+
+On Linux use `sha256sum Scopetta-<version>-android.apk`; on macOS use
+`shasum -a 256 Scopetta-<version>-android.apk`. Substitute the filename downloaded.
+
+Match history and settings stay on your device. For questions or problems,
+[open an issue](https://github.com/diegoami/Scopetta/issues).
 
 ## Playing
 
@@ -140,7 +161,7 @@ The typefaces are Bodoni Moda and Barlow, the latin subset, served from
 
 There is an Android app — the same `public/` directory in an APK, no build step
 — published at
-<https://github.com/diegoami/scopetta-releases/releases/latest> and described in
+<https://github.com/diegoami/Scopetta/releases/latest> and described in
 [`ANDROID.md`](ANDROID.md). Because the fonts ship with the page, it plays with
 the radio off. From 1.0.1 the same release carries a Windows executable,
 portable and unsigned, built by a Tauri wrapper in `desktop/` and described in

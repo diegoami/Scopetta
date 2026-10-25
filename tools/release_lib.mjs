@@ -330,5 +330,5 @@ export function releaseCreateArgs({ confirm, tag, version, dir, assets, releases
   if (!confirm) return null;
   return ['release', 'create', tag,
     ...assets.map((name) => path.join(dir, name)), path.join(dir, 'SHA256SUMS.txt'),
-    '-R', releasesRepo, '--title', `Scopetta ${version}`, '--notes-file', notesFile];
+    '-R', releasesRepo, '--verify-tag', '--title', `Scopetta ${version}`, '--notes-file', notesFile];
 }

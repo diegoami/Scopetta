@@ -50,7 +50,7 @@ tools/make_icons.mjs     cuts the settebello out of the Napoletane sheet
 tools/import_bresciane.mjs  builds the sixth deck from its source repo
 tools/release.test.mjs / release_lib.mjs  the release decisions, held in tests
 tools/package_release.mjs   signed APK and Windows exe into dist-release/
-tools/publish_release.mjs   both to the releases repo, on --confirm
+tools/publish_release.mjs   both to the source repository, on --confirm
 tools/source_tag.mjs        the tree is exactly HEAD; the tag names the build
 tools/stage_assets.mjs      the staged copies checked against the built files
 tools/smoke_desktop.mjs  the built desktop app, launched twice and played
@@ -401,8 +401,8 @@ review or a break finding something green and wrong. The ones a newcomer should 
   `http://localhost` origin and a WebView will not load it without the
   permission. Dropping it can only be verified by installing the result, and
   `ANDROID.md` §7 makes that the first device to try it.
-- **The APK and the Windows executable are live**: v1.0.3 is the current
-  release at `diegoami/scopetta-releases`: the APK signed and checksummed, the
+- **The APK and the Windows executable are live**: v1.0.4 is the current
+  release at `diegoami/Scopetta`: the APK signed and checksummed, the
   executable checksummed and deliberately unsigned, as `ANDROID.md` and
   `DESKTOP.md` describe. v1.0.1 was the first with the executable; v1.0.0 was
   Android only, and the owner installed it on a tablet and played. `ANDROID.md` §6 is the release-status
@@ -435,3 +435,58 @@ Capacitor wrapper and release scripts were adopted from discola-web and Tressett
 after they diverged — issue #9, one pull request per divergence. The opponent is
 this game's own: there was no 1997 Scopa to transcribe, which is §0's first
 decision and the reason the formula had to be designed and tuned here.
+
+
+### Release consolidation (2026-10-25, #112)
+
+All five releases, v1.0.0–v1.0.4, were copied from `diegoami/scopetta-releases`
+to this public source repository. Titles, notes, draft/prerelease flags (all
+published stable releases), asset names, labels and bytes are unchanged.
+v1.0.4 remains latest. GitHub assigns new release/asset IDs and publication
+timestamps to the copies; the original records remain in the archived mirror.
+No historical binary was rebuilt or modified.
+
+The existing annotated source tags v1.0.1–v1.0.4 were reused unchanged.
+v1.0.1 was already a retrospective, owner-confirmed baseline at
+`5e1669cf84af4633a7a797850ffd211b7ab4bebc`; its tag annotation records that
+history. v1.0.0 had no source tag or source SHA in its release notes. Its
+original lightweight distribution tag was imported unchanged: it points at
+`80360dd845129fdf29232296ef289f19e7579d33`, the old repository's README-only
+initial commit. This is a **legacy distribution tag, not verified application
+source**. The automatically generated source archives for v1.0.0 contain that
+README, not the application. No build commit has been invented. The future
+release rule still requires an annotated source tag on main and a matching
+packaged commit; the publisher also uses `--verify-tag`.
+
+The old repository had only README.md, with installation, checksum and privacy
+guidance; that useful content is preserved in this README's installation
+section. It contained no additional rules or credits. Rules remain in
+`RULES.md` / `REGOLE.md` and credits in README and this section. Current
+game content had no separate privacy/contact URL to migrate; contact now
+links to this repository's issues. The old README is now a pointer and the
+repository is archived, with its releases intact. Already-installed apps
+can still reach the old release and asset URLs. Website and Netlify redirect
+updates deploy when the consolidation PR is merged; future builds carry
+the updated links.
+
+Verification downloaded every asset from both hosts, compared SHA-256 with
+the original GitHub digest, and checked each binary against its original
+`SHA256SUMS.txt`. The manifests themselves were also compared byte for byte.
+These are the matching SHA-256 digests of all 14 assets:
+
+| Release | Asset | SHA-256 |
+|---|---|---|
+| v1.0.0 | Scopetta-1.0.0-android.apk | `9e40053a53264212c7feafeee59b804428f18b0584e3eff9e1dddfc5ee479184` |
+| v1.0.0 | SHA256SUMS.txt | `c614b0ba0619d4b7bb0de915236ecf51b57f48e1ff0603a976f31b37d48bb2a0` |
+| v1.0.1 | Scopetta-1.0.1-android.apk | `58ea4c4149c5f6f1afb0bb2e28cf76a2c907ffbd054dc5615413da3e93dd0b26` |
+| v1.0.1 | Scopetta-1.0.1-windows-x64.exe | `2c74ae4a9df6d977a49f947416974db67e38ebb8dc436f642751bd9f73ee1c43` |
+| v1.0.1 | SHA256SUMS.txt | `b5d9e2a39065d0faac1de06173f0b1ce81250873619ceae82cb614d0e32e244d` |
+| v1.0.2 | Scopetta-1.0.2-android.apk | `f758b179d49e1f4a6ffdb06b450e38a63bf2588d6125de8aeb9d6f3de042305b` |
+| v1.0.2 | Scopetta-1.0.2-windows-x64.exe | `c72ab428d66b5948ba35b13a8fa01765a4599132943dc52180846025cb7a689b` |
+| v1.0.2 | SHA256SUMS.txt | `f2d622f6a86d16c5283f1ef4b74ac7a15945f6a02c9861e1170e411cd2ae5310` |
+| v1.0.3 | Scopetta-1.0.3-android.apk | `a3e60e459233f05ba9894ea8bff1d6403ac0e415ce470e84731794f72b10280b` |
+| v1.0.3 | Scopetta-1.0.3-windows-x64.exe | `31175ec9c2a9a00da21ecc54befca708c340e5016caae9c20cc6f1defc960c10` |
+| v1.0.3 | SHA256SUMS.txt | `071e622a766013fef7821a6f51803f712e311fbeb233f541c7e4aee0cc7ba73c` |
+| v1.0.4 | Scopetta-1.0.4-android.apk | `7d405be61feb0aa43e34c6ddf6e005b16b74dafb6f8605b0649057197be7bc4c` |
+| v1.0.4 | Scopetta-1.0.4-windows-x64.exe | `8720ccb1b22352c843ce641172c0ab1a2811c147e012e2eee7796700e01befcf` |
+| v1.0.4 | SHA256SUMS.txt | `201c8d3d8788f23e65d6178696af79953475056f863e43c194ff0e65ddf6d0ae` |

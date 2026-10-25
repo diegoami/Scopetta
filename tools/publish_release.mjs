@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Publish a packaged release to the public releases repo as a GitHub Release.
+ * Publish a packaged release to the public source repository as a GitHub Release.
  *
  *   node tools/publish_release.mjs            # dry run: check everything, do nothing
  *   node tools/publish_release.mjs --confirm  # actually create the release
@@ -11,7 +11,7 @@
  * included, unless vX.Y.Z is tagged on origin, on origin/main, at the commit
  * recorded in dist-release/vX.Y.Z.source, and the notes name that commit, so
  * every published binary names its source (tools/source_tag.mjs, issue #65).
- * Needs `gh` logged in with access to the releases repo. Outward-facing and
+ * Needs `gh` logged in with access to the source repository. Outward-facing and
  * hard to take back once the tag is public, so it does nothing without
  * --confirm.
  */
@@ -29,7 +29,7 @@ import { parseSource, tagCommit } from './source_tag.mjs';
 // The one line of the notes that changes from release to release.
 const SUBTITLE = 'Scopetta arriva su itch.io: gioca nel browser o scarica le versioni Windows e Android';
 
-const RELEASES_REPO = 'diegoami/scopetta-releases';
+const RELEASES_REPO = 'diegoami/Scopetta';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIRM = process.argv.includes('--confirm');
 

@@ -8,7 +8,7 @@ its issue #95), ported onto this repository's release tooling: the source
 records are `tools/source_tag.mjs`'s, the ones `package_release.mjs` already
 writes.
 
-The GitHub release is unchanged: `diegoami/scopetta-releases` still carries
+The GitHub release assets are unchanged: `diegoami/Scopetta` carries
 exactly the APK and the Windows `.exe` and their `SHA256SUMS.txt`
 ([`ANDROID.md`](ANDROID.md) §4, [`DESKTOP.md`](DESKTOP.md)). The itch ZIP is a
 third artifact for a second storefront, staged under `dist-itch/` so it can

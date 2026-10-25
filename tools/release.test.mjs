@@ -119,7 +119,7 @@ test("a staged directory verifies, or says exactly what is wrong", () => {
 test("without --confirm there are no release-create arguments", () => {
   const base = {
     tag: 'v1.0.0', version: '1.0.0', dir: path.join('root', 'dist-release', 'v1.0.0'),
-    assets: releaseAssets('1.0.0'), releasesRepo: 'diegoami/scopetta-releases',
+    assets: releaseAssets('1.0.0'), releasesRepo: 'diegoami/Scopetta',
     notesFile: path.join('tmp', 'notes.md'),
   };
   assert.equal(releaseCreateArgs({ ...base, confirm: false }), null,
@@ -129,6 +129,7 @@ test("without --confirm there are no release-create arguments", () => {
   assert.deepEqual(args.slice(0, 2), ['release', 'create']);
   assert.equal(args[2], 'v1.0.0');
   assert.ok(args.includes('--notes-file'));
+  assert.ok(args.includes('--verify-tag'), 'publishing must require an existing source tag');
   assert.ok(!args.includes('--confirm'));
   for (const name of [...releaseAssets('1.0.0'), 'SHA256SUMS.txt'])
     assert.ok(args.some((a) => a.endsWith(name)), `the release uploads ${name}`);

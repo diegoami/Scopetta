@@ -516,10 +516,10 @@ const BREAKS = [
    ".topbar{\n  height: var(--topbar);",
    ".topbar{\n  height: calc(var(--topbar) + 12px);"],
   ["the Windows app goes unlinked in English",
-   "app</a> and a <a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\">Windows\n        one</a>:",
+   "app</a> and a <a href=\"https://github.com/diegoami/Scopetta/releases/latest\">Windows\n        one</a>:",
    "app</a> and a Windows one:"],
   ["the Android app goes unlinked in Italian",
-   "un&rsquo;<a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\">app\n        per Android</a> e una",
+   "un&rsquo;<a href=\"https://github.com/diegoami/Scopetta/releases/latest\">app\n        per Android</a> e una",
    "un&rsquo;app per Android e una"],
   ["the Windows sentence is left in English in the Italian rules",
    "Windows</a>: lo stesso gioco, da installare sul telefono o sul computer\n        e giocare senza connessione.",
@@ -912,7 +912,7 @@ const BREAKS = [
   // only way to the app is through the rules; there but not drawn, and it is
   // gone just as surely while the markup still says otherwise.
   ["the start sheet loses its download link",
-    "        <p class=\"hero-link\"><a href=\"https://github.com/diegoami/scopetta-releases/releases/latest\" data-i18n=\"download\">Scarica per Android e Windows</a></p>\n",
+    "        <p class=\"hero-link\"><a href=\"https://github.com/diegoami/Scopetta/releases/latest\" data-i18n=\"download\">Scarica per Android e Windows</a></p>\n",
    ""],
   ["the start sheet's download link is not drawn",
    ".hero .hero-link{ font-size: var(--t-tiny); }",

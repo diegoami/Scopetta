@@ -197,15 +197,14 @@ step is a refusal rather than a warning.
 
 **`node tools/publish_release.mjs`** — re-hash the staged files against
 `SHA256SUMS.txt`, require exactly the two assets and nothing else, then `gh
-release create` on `diegoami/scopetta-releases`. Dry run by default;
+release create` on `diegoami/Scopetta`. Dry run by default;
 `--confirm` to actually publish, because this is outward-facing and a public
 tag is hard to take back.
 
-**The releases repo is `diegoami/scopetta-releases`.** `diegoami/Scopetta` is
-private, and release assets on a private repo are not publicly downloadable, so
-the split is the same one Discola and Tressette use: source private, binaries
-public. Creating it was the owner's call and the one step that could not be
-undone quietly; it is done, and v1.0.0 is published there.
+**Releases live in the public source repository, `diegoami/Scopetta`.**
+The former private-source/public-binaries split is retired. Historical releases
+were copied byte for byte; `SPEC.md` records the legacy v1.0.0 tag exception.
+The archived distribution repository retains its releases for installed apps.
 
 **Build locally, not in CI.** For one target, a release workflow means putting
 the signing key in a repository secret to save a command. Revisit if the matrix
@@ -213,7 +212,7 @@ ever grows.
 
 ## 5. Linking it from the site
 
-`netlify.toml` already redirects `/android` to the releases repo's
+`netlify.toml` already redirects `/android` to the source repository's
 `/releases/latest` — the page rather than a versioned asset URL, so the link
 survives every release, and because the release page is where the notes and the
 checksum are, which is what somebody about to sideload an APK should read.
@@ -238,8 +237,8 @@ This section is the release-status source of truth.
 | # | Step | Whose | | |
 |---|---|---|---|---|
 | 1 | Generate the release key and write `keystore.properties` | owner — it is a secret | **done** |
-| 2 | Create the public `diegoami/scopetta-releases`, with a commit | owner — outward-facing | **done** |
-| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.0>, v1.0.1 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, v1.0.2 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>, and v1.0.3 at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3> |
+| 2 | Public release hosting | owner — outward-facing | **done** — consolidated in `diegoami/Scopetta`; the former distribution repository is archived |
+| 3 | `node tools/package_release.mjs`, then `publish_release.mjs --confirm` | either, after 1 and 2 | **done** — v1.0.0 is published at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.0>, v1.0.1 at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.1>, v1.0.2 at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.2>, and v1.0.3 at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.3> |
 | 4 | Install the APK on a phone and play a hand with the radio off | owner — a real device | **done** — installed on the owner's tablet and played |
 | 5 | Add the about-screen link, run the check | either, after 3 | **done in this change** |
 
@@ -248,12 +247,12 @@ beside it, and the owner installed it on a tablet and played. The Emulator run
 in §2 is what the check could reach; the tablet is the thing no check here
 could.
 
-All five steps are done: the key exists, the releases repo exists and carries
+All five steps are done: the key exists, the public source repository carries
 v1.0.0, it was published from this machine, and the owner installed and played
 it. The build, the debug APK and the offline emulator run are recorded above.
 
 **v1.0.4 is the current release** (2026-10-24), at
-<https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.4>, with browser,
+<https://github.com/diegoami/Scopetta/releases/tag/v1.0.4>, with browser,
 Windows and Android builds also uploaded to <https://diegoami.itch.io/scopetta>.
 The annotated source tag names exactly
 `c5d8a57dbe6f85fa2dc58b6adf08ccdc2c717f2c`, independently reviewed with AGREE by
@@ -268,7 +267,7 @@ state this in Italian and English. `butler status` confirms all three itch.io
 channels processed successfully as version 1.0.4; page-editor settings remain
 the owner's final step.
 
-**v1.0.3 was the previous release** (2026-09-29), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.3>: the APK
+**v1.0.3 was the previous release** (2026-09-29), at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.3>: the APK
 (`versionCode 4`, signed on the same key, `fdf7ca01…`) and the Windows executable
 beside it. The candidate `cc23db13954d86066c633cde2f0894dae5866975` was reviewed
 by DeepSeek V4.1 Flash, which gave AGREE on #96 in round 2. The owner completed
@@ -278,7 +277,7 @@ tag with `tools/package_release.mjs`, which built both targets, smoked the exe
 and verified staging. Both assets, downloaded back from the release, match
 `SHA256SUMS.txt`.
 
-**v1.0.2 was the previous release** (2026-09-27), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.2>: the APK
+**v1.0.2 was the previous release** (2026-09-27), at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.2>: the APK
 (`versionCode 3`, signed on the same key, `fdf7ca01…`) and the Windows executable
 beside it. It was the first release made as a milestone (`AGENTS.md`,
 *Releases*): the
@@ -289,15 +288,15 @@ which built both, smoked the exe and verified the staging. It was published with
 `publish_release.mjs --confirm` on the owner's go-ahead. Both assets, downloaded
 back from the release, match `SHA256SUMS.txt`.
 
-**v1.0.1** (2026-09-23), at <https://github.com/diegoami/scopetta-releases/releases/tag/v1.0.1>, was the first release to carry the
+**v1.0.1** (2026-09-23), at <https://github.com/diegoami/Scopetta/releases/tag/v1.0.1>, was the first release to carry the
 Windows executable beside the APK (`versionCode 2`). It was packaged from `main`
 at `5e1669c`, before releases were built from a tag.
 
 Two things worth knowing when publishing, both learned on Tressette:
 `storeFile` in `keystore.properties` is read as a Java properties value, so a
 Windows path needs forward slashes or doubled backslashes; and GitHub will not
-create a release on a repository with no commits — the releases repo needs its
-README pushed before `--confirm` can work.
+create a release on a repository with no commits. Releases now use this public
+source repository and require an existing source tag (`--verify-tag`).
 
 ## 7. Still open
 
